@@ -1,0 +1,7 @@
+[package]
+name = "numuya"
+version = "0.1.0"
+source-dir = "src/numuya"
+uya_min_version = "0.10.0"
+
+[dependencies]
