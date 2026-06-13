@@ -10,29 +10,68 @@
 通用命令：
 
 ```bash
-../uya/bin/uya check tests/test_shape.uya --project-root src
-../uya/bin/uya test tests/test_shape.uya --project-root src
+test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
+../uya/bin/uya upm install --manifest-path uya.toml
+../uya/bin/uya check src/numuya/_tests/test_shape.uya --manifest-path uya.toml
+../uya/bin/uya test src/numuya/_tests/test_shape.uya --manifest-path uya.toml
 ```
 
-完成一个阶段后，至少运行该阶段及之前所有测试。添加 Makefile 后改用 `make test`，但 Makefile 内部必须仍调用 `../uya/bin/uya ... --project-root src`。
+完成一个阶段后，至少运行该阶段及之前所有测试。添加 Makefile 后改用 `make test`，但 Makefile 内部必须先确认 `../uya/bin/cmd/upm` 存在，再调用 `../uya/bin/uya ... --manifest-path uya.toml` 或等价 UPM/package-mode 命令。`--project-root src` 只允许用于编译器最小复现，不作为项目常规测试入口。
+
+测试布局约定：
+
+- NumUya 的默认 TDD 单测放在 `src/numuya/_tests/`，因为新版 package-mode 只会把 root source root 物化到临时 build root。
+- 包内测试按 source-root 相对路径导入，例如 `use shape.Shape;`、`use creation.zeros_f64;`，不要依赖根包自别名 `numuya.*`。
+- 外部 consumer fixture 才使用 `use numuya.*`，用于验证其他项目通过 UPM 使用 NumUya。
+- `_tests`、`_tools`、`_benchmarks` 是内部模块，外部 consumer fixture 不得导入 `numuya._tests.*`、`numuya._tools.*` 或 `numuya._benchmarks.*`。
 
 ## Phase 0: 脚手架与测试基础
 
-- [ ] 创建目录结构：`src/numuya/`、`tests/`。
+- [ ] 验证本地 Uya UPM 子命令可用。
+  - 执行 `test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm`。
+  - 执行 `../uya/bin/uya upm --help`。
+  - 若主入口处于自举过渡状态，仅允许临时用 `../uya/bin/uya-upm-stage2` 跑 package-mode check/test；文档和 Makefile 仍以 `../uya/bin/uya` 为默认入口。
+- [ ] 创建 UPM manifest `uya.toml`。
+  - `[package].name = "numuya"`。
+  - `[package].version = "0.1.0"`。
+  - `[package].source-dir = "src/numuya"`。
+  - 可选 `package.uya_min_version = "0.10.0"`。
+  - 初始 `[dependencies]` 为空。
+- [ ] 运行 `../uya/bin/uya upm install --manifest-path uya.toml`。
+  - 无依赖时仍应成功。
+  - 若生成 `uya.lock`，保留并提交；后续依赖变更必须同步更新。
+- [ ] 创建目录结构：`src/numuya/`、`src/numuya/_tests/`、`tests/fixtures/`。
 - [ ] 创建 `src/numuya/errors.uya`，只放 error 声明，不写业务逻辑。
 - [ ] 创建 `src/numuya/testing.uya`，写 `expect_close_f64`、`expect_eq_usize`、`expect_shape_eq` 的测试占位。
-- [ ] 新增 `tests/test_testing_helpers.uya`。
+- [ ] 新增 `src/numuya/_tests/test_testing_helpers.uya`。
+  - 测试文件使用 `use testing.expect_close_f64;` 等 source-root 相对导入。
   - 先测试 `expect_close_f64(1.0, 1.0 + 1e-13, 1e-12)` 通过。
   - 测试明显不相等时返回错误。
+- [ ] 创建外部 UPM consumer fixture。
+  - 目录：`tests/fixtures/upm_consumer/`。
+  - fixture 自己有 `uya.toml`，`[package].source-dir = "src"`。
+  - 该 fixture 的 `uya.toml` 声明 `numuya = { path = "../../.." }` 或等价相对路径。
+  - fixture 代码使用 `use numuya.shape.Shape;` 和 `use numuya.creation.zeros_f64;`。
+  - 运行 `../uya/bin/uya upm install --manifest-path tests/fixtures/upm_consumer/uya.toml`。
+  - 运行 `../uya/bin/uya check tests/fixtures/upm_consumer/src/main.uya --manifest-path tests/fixtures/upm_consumer/uya.toml`。
+  - 运行 `../uya/bin/uya test tests/fixtures/upm_consumer/src/main.uya --manifest-path tests/fixtures/upm_consumer/uya.toml`。
+- [ ] 验证外部项目通过 `upm add` 使用 NumUya。
+  - 在临时目录执行 `../uya/bin/uya upm init --src-layout consumer_smoke` 或等价初始化。
+  - 执行 `../uya/bin/uya upm add numuya --path <numuya_repo> --manifest-path <tmp>/consumer_smoke/uya.toml`。
+  - consumer 源码只写 `use numuya.*`，不设置 `UYA_ROOT`，不传 `--project-root`。
+  - `../uya/bin/uya upm install --manifest-path <tmp>/consumer_smoke/uya.toml` 和 `../uya/bin/uya test <tmp>/consumer_smoke/src/main.uya --manifest-path <tmp>/consumer_smoke/uya.toml` 成功。
 - [ ] 可选创建 `Makefile`。
-  - `make test-one TEST=tests/test_shape.uya`
+  - `make bootstrap-upm`
+  - `make upm-install`
+  - `make test-one TEST=src/numuya/_tests/test_shape.uya`
   - `make test`
-  - `make check-one TEST=tests/test_shape.uya`
-- [ ] 验收：`tests/test_testing_helpers.uya` 绿。
+  - `make check-one TEST=src/numuya/_tests/test_shape.uya`
+  - `make verify-upm-consumer`
+- [ ] 验收：`src/numuya/_tests/test_testing_helpers.uya` 绿，外部 UPM consumer fixture 绿。
 
 ## Phase 1: Shape、axis、size
 
-- [ ] 写 `tests/test_shape.uya`。
+- [ ] 写 `src/numuya/_tests/test_shape.uya`。
 - [ ] 实现 `src/numuya/shape.uya` 中的 `Shape`、`Strides`、`NUMUYA_MAX_DIMS`。
 - [ ] TDD: `shape_scalar()`。
   - scalar rank 是 0。
@@ -54,11 +93,11 @@
   - `normalize_axis(0, 3) == 0`。
   - `normalize_axis(-1, 3) == 2`。
   - `axis == 3` 或 `axis == -4` 返回 `NumuyaAxisOutOfBounds`。
-- [ ] 验收：`tests/test_shape.uya` 绿。
+- [ ] 验收：`src/numuya/_tests/test_shape.uya` 绿。
 
 ## Phase 2: Storage 与 Array handle
 
-- [ ] 写 `tests/test_storage.uya`。
+- [ ] 写 `src/numuya/_tests/test_storage.uya`。
 - [ ] 实现 `src/numuya/storage.uya`。
 - [ ] TDD: `storage_new<T>(allocator, len) !&Storage<T>`。
   - len 为 0 时允许成功。
@@ -75,12 +114,12 @@
 - [ ] TDD: `array_is_c_contiguous`。
   - contiguous owner 为 true。
   - 手动构造 stride 不连续时为 false。
-- [ ] 验收：`tests/test_storage.uya` 绿。
+- [ ] 验收：`src/numuya/_tests/test_storage.uya` 绿。
 
 ## Phase 3: 创建数组与基础 get/set
 
-- [ ] 写 `tests/test_array_creation.uya`。
-- [ ] 写 `tests/test_indexing.uya`。
+- [ ] 写 `src/numuya/_tests/test_array_creation.uya`。
+- [ ] 写 `src/numuya/_tests/test_indexing.uya`。
 - [ ] 实现 `src/numuya/creation.uya`。
 - [ ] TDD: `empty<T>`。
   - shape 正确。
@@ -106,7 +145,7 @@
 
 ## Phase 4: Stride、reshape、transpose、view
 
-- [ ] 写 `tests/test_stride_views.uya`。
+- [ ] 写 `src/numuya/_tests/test_stride_views.uya`。
 - [ ] 实现 `src/numuya/stride.uya`。
 - [ ] TDD: `c_order_strides(shape)`.
   - `(2, 3, 4)` strides 是 `[12, 4, 1]`。
@@ -124,11 +163,11 @@
 - [ ] TDD: `swapaxes`.
 - [ ] TDD: view 写入。
   - 通过 transpose view set 后，owner 对应元素变化。
-- [ ] 验收：`tests/test_stride_views.uya` 绿。
+- [ ] 验收：`src/numuya/_tests/test_stride_views.uya` 绿。
 
 ## Phase 5: Slicing
 
-- [ ] 写 `tests/test_slicing.uya`。
+- [ ] 写 `src/numuya/_tests/test_slicing.uya`。
 - [ ] 实现 `SliceSpec`。
 - [ ] TDD: `slice_axis`.
   - `0:3:1`。
@@ -142,11 +181,11 @@
 - [ ] TDD: invalid slice。
   - step 为 0 返回 `NumuyaInvalidArgument`。
   - axis 越界返回 `NumuyaAxisOutOfBounds`。
-- [ ] 验收：`tests/test_slicing.uya` 绿。
+- [ ] 验收：`src/numuya/_tests/test_slicing.uya` 绿。
 
 ## Phase 6: Broadcasting
 
-- [ ] 写 `tests/test_broadcast.uya`。
+- [ ] 写 `src/numuya/_tests/test_broadcast.uya`。
 - [ ] 实现 `src/numuya/broadcast.uya`。
 - [ ] TDD: `broadcast_shapes`.
   - `(3,)` 与 `(2, 3)` -> `(2, 3)`。
@@ -159,11 +198,11 @@
 - [ ] TDD: broadcast view 默认只读或写保护。
   - 如果设置只读，`set` 返回 `NumuyaReadOnly`。
   - 如果允许写入，必须证明 stride 0 写入语义清楚；第一版推荐只读。
-- [ ] 验收：`tests/test_broadcast.uya` 绿。
+- [ ] 验收：`src/numuya/_tests/test_broadcast.uya` 绿。
 
 ## Phase 7: UFunc 基础
 
-- [ ] 写 `tests/test_ufunc.uya`。
+- [ ] 写 `src/numuya/_tests/test_ufunc.uya`。
 - [ ] 实现 `src/numuya/ufunc.uya`。
 - [ ] TDD: `add_f64/sub_f64/mul_f64/div_f64`。
   - 同 shape。
@@ -176,11 +215,11 @@
 - [ ] TDD: output 是新 owner。
   - 修改 output 不影响 input。
 - [ ] 内部重构：提取 contiguous fast path 与 generic stride path。
-- [ ] 验收：`tests/test_ufunc.uya` 绿，并回跑 `broadcast`、`stride_views`。
+- [ ] 验收：`src/numuya/_tests/test_ufunc.uya` 绿，并回跑 `broadcast`、`stride_views`。
 
 ## Phase 8: Reductions
 
-- [ ] 写 `tests/test_reductions.uya`。
+- [ ] 写 `src/numuya/_tests/test_reductions.uya`。
 - [ ] 实现 `src/numuya/reductions.uya`。
 - [ ] TDD: `sum_all_f64/prod_all_f64`。
   - 普通数组。
@@ -198,22 +237,22 @@
   - keepdims true/false。
 - [ ] TDD: `mean_axis_f64`。
 - [ ] TDD: `argmax_axis_f64`。
-- [ ] 验收：`tests/test_reductions.uya` 绿。
+- [ ] 验收：`src/numuya/_tests/test_reductions.uya` 绿。
 
 ## Phase 9: Math functions
 
-- [ ] 写 `tests/test_math.uya`。
+- [ ] 写 `src/numuya/_tests/test_math.uya`。
 - [ ] 实现 `src/numuya/math.uya`。
 - [ ] TDD: `abs_f64`。
 - [ ] TDD: `sqrt_f64`。
 - [ ] TDD: `exp_f64/log_f64`。
 - [ ] TDD: `sin_f64/cos_f64`。
 - [ ] TDD: broadcast/non-contiguous 输入通过 ufunc 内核复用。
-- [ ] 验收：`tests/test_math.uya` 绿。
+- [ ] 验收：`src/numuya/_tests/test_math.uya` 绿。
 
 ## Phase 10: Statistics
 
-- [ ] 写 `tests/test_stats.uya`。
+- [ ] 写 `src/numuya/_tests/test_stats.uya`。
 - [ ] 实现 `src/numuya/stats.uya`。
 - [ ] TDD: `var_all_f64(ddof=0)`。
 - [ ] TDD: `var_all_f64(ddof=1)`。
@@ -221,11 +260,11 @@
 - [ ] TDD: `percentile_f64`。
   - q=0、50、100。
   - q 越界返回 `NumuyaInvalidArgument`。
-- [ ] 验收：`tests/test_stats.uya` 绿。
+- [ ] 验收：`src/numuya/_tests/test_stats.uya` 绿。
 
 ## Phase 11: Sorting 与 searching
 
-- [ ] 写 `tests/test_sorting.uya`。
+- [ ] 写 `src/numuya/_tests/test_sorting.uya`。
 - [ ] 实现 `src/numuya/sorting.uya`。
 - [ ] TDD: `sort_f64`。
   - 已排序、逆序、重复元素。
@@ -234,11 +273,11 @@
 - [ ] TDD: `searchsorted_f64`。
 - [ ] TDD: `unique_f64`。
 - [ ] 第一版限制 1-D contiguous，并对其他输入返回 `NumuyaInvalidArgument` 或先 copy。
-- [ ] 验收：`tests/test_sorting.uya` 绿。
+- [ ] 验收：`src/numuya/_tests/test_sorting.uya` 绿。
 
 ## Phase 12: Linear algebra MVP
 
-- [ ] 写 `tests/test_linalg.uya`。
+- [ ] 写 `src/numuya/_tests/test_linalg.uya`。
 - [ ] 实现 `src/numuya/linalg.uya`。
 - [ ] TDD: `eye_f64`。
   - `eye(3, 3, 0)`。
@@ -252,7 +291,7 @@
   - 2-D x 2-D。
   - incompatible shape 返回 `NumuyaShapeMismatch`。
 - [ ] TDD: non-contiguous matrix input。
-- [ ] 验收：`tests/test_linalg.uya` 绿。
+- [ ] 验收：`src/numuya/_tests/test_linalg.uya` 绿。
 
 ## Phase 13: Linear algebra advanced
 
@@ -268,18 +307,18 @@
 
 ## Phase 14: Random
 
-- [ ] 写 `tests/test_random.uya`。
+- [ ] 写 `src/numuya/_tests/test_random.uya`。
 - [ ] 实现 `src/numuya/random.uya`。
 - [ ] TDD: `pcg64_seed` deterministic。
   - 固定 seed 的前 5 个 `random_u64` 用硬编码 golden。
 - [ ] TDD: `random_f64` 范围 `[0, 1)`。
 - [ ] TDD: `random_array_f64` shape 和范围。
 - [ ] TDD: `normal_array_f64` 固定 seed golden。
-- [ ] 验收：`tests/test_random.uya` 绿。
+- [ ] 验收：`src/numuya/_tests/test_random.uya` 绿。
 
 ## Phase 15: FFT
 
-- [ ] 写 `tests/test_fft.uya`。
+- [ ] 写 `src/numuya/_tests/test_fft.uya`。
 - [ ] 实现 `src/numuya/fft.uya`。
 - [ ] TDD: complex add/mul/conj helper。
 - [ ] TDD: `fft_f64` 长度 1。
@@ -287,11 +326,11 @@
 - [ ] TDD: impulse 输入。
 - [ ] TDD: `ifft(fft(x)) ~= x`。
 - [ ] TDD: 非 power-of-two 返回 `NumuyaInvalidArgument`，直到 fallback 实现完成。
-- [ ] 验收：`tests/test_fft.uya` 绿。
+- [ ] 验收：`src/numuya/_tests/test_fft.uya` 绿。
 
 ## Phase 16: `.npy` I/O
 
-- [ ] 写 `tests/test_io_npy.uya`。
+- [ ] 写 `src/numuya/_tests/test_io_npy.uya`。
 - [ ] 准备小型 `.npy` fixture。
   - 1-D f64。
   - 2-D f64。
@@ -304,11 +343,11 @@
 - [ ] TDD: `save_npy_f64`。
   - 保存后再加载 roundtrip。
 - [ ] TDD: unsupported dtype 返回 `NumuyaUnsupportedDType`。
-- [ ] 验收：`tests/test_io_npy.uya` 绿。
+- [ ] 验收：`src/numuya/_tests/test_io_npy.uya` 绿。
 
 ## Phase 17: Advanced indexing
 
-- [ ] 写 `tests/test_advanced_indexing.uya`。
+- [ ] 写 `src/numuya/_tests/test_advanced_indexing.uya`。
 - [ ] TDD: `take` 1-D。
 - [ ] TDD: `take` axis 0/1。
 - [ ] TDD: boolean mask 1-D。
@@ -318,7 +357,7 @@
 
 ## Phase 18: DType 与 type-erased ArrayAny
 
-- [ ] 写 `tests/test_dtype.uya`。
+- [ ] 写 `src/numuya/_tests/test_dtype.uya`。
 - [ ] 实现 `src/numuya/types.uya`。
 - [ ] TDD: `DType` size/name/endian helpers。
 - [ ] TDD: `ArrayAny` 包装 `Array<f64>`。
@@ -328,7 +367,7 @@
 
 ## Phase 19: SIMD 与性能
 
-- [ ] 写 `tests/test_simd_equivalence.uya`。
+- [ ] 写 `src/numuya/_tests/test_simd_equivalence.uya`。
 - [ ] 为 add/mul/sum 增加 SIMD fast path。
 - [ ] TDD: SIMD path 与标量 path 结果一致。
 - [ ] TDD: 长度不是 vector width 倍数时尾部正确。
@@ -338,13 +377,14 @@
 
 ## Phase 20: CUDA backend 基础
 
-- [ ] 写 `tests/test_cuda_driver.uya`。
+- [ ] 写 `src/numuya/_tests/test_cuda_driver.uya`。
 - [ ] 创建 `src/numuya/backend.uya`。
 - [ ] 创建 `src/numuya/cuda/driver.uya`。
 - [ ] 创建 CUDA 测试命令约定。
-  - `make test` 默认不要求 GPU。
-  - `make test-cuda` 设置 `NUMUYA_CUDA_REQUIRED=1` 并链接 `-lcuda`。
-  - `make test-cuda-vendor` 额外链接 `-lcublasLt -lcublas -lcufft -lcurand`。
+  - `make test` 默认不要求 GPU，且依赖 `make bootstrap-upm`。
+  - `make test-cuda` 依赖 `make bootstrap-upm`，设置 `NUMUYA_CUDA_REQUIRED=1` 并链接 `-lcuda`。
+  - `make test-cuda-vendor` 依赖 `make bootstrap-upm`，额外链接 `-lcublasLt -lcublas -lcufft -lcurand`。
+  - 无 Makefile 时直接命令为 `test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm` 后执行 `LDFLAGS="-lcuda" NUMUYA_CUDA_REQUIRED=1 ../uya/bin/uya test src/numuya/_tests/test_cuda_driver.uya --manifest-path uya.toml`。
 - [ ] TDD: `backend_is_cuda_available()`。
   - 本机 RTX 3060 应返回 true。
   - 无 CUDA 环境时不能崩溃。
@@ -366,11 +406,11 @@
 - [ ] TDD: context current 规则。
   - 任意 Driver API wrapper 调用前设置正确 context。
   - 跨 backend stream 使用返回 `NumuyaDeviceMismatch`。
-- [ ] 验收：`tests/test_cuda_driver.uya` 在本机 RTX 3060 上绿；没有 CUDA 时测试可标记 skip 或返回明确错误。
+- [ ] 验收：`src/numuya/_tests/test_cuda_driver.uya` 在本机 RTX 3060 上绿；没有 CUDA 时测试可标记 skip 或返回明确错误。
 
 ## Phase 21: CUDA DeviceArray 与拷贝
 
-- [ ] 写 `tests/test_cuda_device_array.uya`。
+- [ ] 写 `src/numuya/_tests/test_cuda_device_array.uya`。
 - [ ] 实现 `src/numuya/cuda/memory.uya`。
 - [ ] 实现 `src/numuya/cuda/device_array.uya`。
 - [ ] TDD: `cuda_malloc/cuda_free`。
@@ -395,16 +435,16 @@
   - alloc 后 used 增加。
   - free 后 used 减少。
   - 真实 allocation 改变 `live_allocations`，view retain/drop 不改变。
-- [ ] 验收：`tests/test_cuda_device_array.uya` 绿。
+- [ ] 验收：`src/numuya/_tests/test_cuda_device_array.uya` 绿。
 
 ## Phase 22: CUDA ufunc 与 reduction
 
-- [ ] 写 `tests/test_cuda_ufunc.uya`。
-- [ ] 写 `tests/test_cuda_reductions.uya`。
+- [ ] 写 `src/numuya/_tests/test_cuda_ufunc.uya`。
+- [ ] 写 `src/numuya/_tests/test_cuda_reductions.uya`。
 - [ ] 实现 `src/numuya/cuda/module.uya` 和 `kernels.uya`。
 - [ ] 创建 PTX source-of-truth。
   - `src/numuya/cuda/ptx/core_sm86.ptx`。
-  - `src/numuya/cuda/kernels_ptx.uya` 由 `tools/embed_ptx.uya` 生成。
+  - `src/numuya/cuda/kernels_ptx.uya` 由 `src/numuya/_tools/embed_ptx.uya` 生成。
   - 不创建必需 `.cu` 源，不把 `nvcc` 放进 TDD 主路径。
 - [ ] TDD: `make cuda-ptx-embed` 或等价命令。
   - PTX 文本嵌入到 `kernels_ptx.uya`。
@@ -439,9 +479,9 @@
 
 ## Phase 23: CUDA linalg、random、benchmark
 
-- [ ] 写 `tests/test_cuda_linalg.uya`。
-- [ ] 写 `tests/test_cuda_random.uya`。
-- [ ] 写 `benchmarks/bench_cuda.uya`。
+- [ ] 写 `src/numuya/_tests/test_cuda_linalg.uya`。
+- [ ] 写 `src/numuya/_tests/test_cuda_random.uya`。
+- [ ] 写 `src/numuya/_benchmarks/bench_cuda.uya`。
 - [ ] TDD: `gpu_matmul_f32` baseline。
   - 2x2。
   - 16x16。

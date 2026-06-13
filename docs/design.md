@@ -29,6 +29,8 @@
 
 ```text
 numuya/
+  uya.toml
+  uya.lock              # `uya upm install` 生成；有依赖后提交以固定解析结果
   docs/
     design.md
     todo.md
@@ -70,51 +72,121 @@ numuya/
         ptx/
           core_sm86.ptx
           matmul_sm86.ptx
-  tools/
-    embed_ptx.uya
-    ptx_validate.uya
-  benchmarks/
-    bench_cuda.uya
+      _tests/
+        test_shape.uya
+        test_storage.uya
+        test_array_creation.uya
+        test_indexing.uya
+        test_stride_views.uya
+        test_broadcast.uya
+        test_ufunc.uya
+        test_reductions.uya
+        test_linalg.uya
+        test_random.uya
+        test_fft.uya
+        test_io_npy.uya
+        test_backend.uya
+        test_cuda_driver.uya
+        test_cuda_device_array.uya
+        test_cuda_ufunc.uya
+        test_cuda_reductions.uya
+        test_cuda_linalg.uya
+        test_cuda_random.uya
+      _tools/
+        embed_ptx.uya
+        ptx_validate.uya
+      _benchmarks/
+        bench_cuda.uya
   tests/
-    test_shape.uya
-    test_storage.uya
-    test_array_creation.uya
-    test_indexing.uya
-    test_stride_views.uya
-    test_broadcast.uya
-    test_ufunc.uya
-    test_reductions.uya
-    test_linalg.uya
-    test_random.uya
-    test_fft.uya
-    test_io_npy.uya
-    test_backend.uya
-    test_cuda_driver.uya
-    test_cuda_device_array.uya
-    test_cuda_ufunc.uya
-    test_cuda_reductions.uya
-    test_cuda_linalg.uya
-    test_cuda_random.uya
+    fixtures/
+      upm_consumer/
 ```
 
-测试与示例从仓库根执行，模块根固定为 `src`：
+NumUya 必须是 UPM package。仓库根包含 `uya.toml`，公开源码根为 `src/numuya`：
 
-```bash
-../uya/bin/uya check tests/test_shape.uya --project-root src
-../uya/bin/uya test tests/test_shape.uya --project-root src
-../uya/bin/uya test tests/test_array_creation.uya --project-root src
+```toml
+[package]
+name = "numuya"
+version = "0.1.0"
+source-dir = "src/numuya"
+description = "NumPy-like n-dimensional arrays and numeric kernels in Uya"
+license = "MIT"
+uya_min_version = "0.10.0"
+
+[dependencies]
 ```
 
-如后续添加 `Makefile`，必须把上述命令封装为：
+`source-dir = "src/numuya"` 是刻意选择：UPM dependency alias 会成为 import 第一段。其他项目把本包声明为 alias `numuya` 后，`use numuya.shape;` 会映射到本包的 `src/numuya/shape.uya`。
+
+新版 Uya 的 `upm` 是外置子命令。canonical public UX 是 `../uya/bin/uya upm <subcommand>`，但本地 compiler checkout 必须已经构建出 `../uya/bin/cmd/upm`。所有脚本和 Makefile 在调用 UPM 前必须先执行等价 bootstrap 检查：
 
 ```bash
-make test-one TEST=tests/test_shape.uya
+test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
+../uya/bin/uya upm --help
+```
+
+若主入口处于编译器自举过渡状态，可以用 `../uya/bin/uya-upm-stage2` 做 package-mode build/check/test 的临时 fallback；项目文档、CI 和用户入口仍以 `../uya/bin/uya ... --manifest-path uya.toml` 为准。
+
+常规开发命令必须走 UPM/package mode：
+
+```bash
+test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
+../uya/bin/uya upm install --manifest-path uya.toml
+../uya/bin/uya check src/numuya/_tests/test_shape.uya --manifest-path uya.toml
+../uya/bin/uya test src/numuya/_tests/test_shape.uya --manifest-path uya.toml
+../uya/bin/uya test src/numuya/_tests/test_array_creation.uya --manifest-path uya.toml
+```
+
+package-mode 单测文件必须位于 `source-dir` 内，也就是 `src/numuya/_tests/`。当前 Uya package-mode 在输入文件不属于 root source root 时会退回编译整个 source root，因此不要把默认 TDD 单测放在仓库根 `tests/test_*.uya` 再配 `--manifest-path` 运行。仓库根 `tests/` 只用于外部 consumer fixture、脚本资产或跨包验收。
+
+Legacy `--project-root src` 只允许作为编译器问题最小复现或临时诊断路径，不能成为文档、CI 或用户安装方式。
+
+如后续添加 `Makefile`，必须把上述 package-mode 命令封装为：
+
+```bash
+make bootstrap-upm
+make upm-install
+make test-one TEST=src/numuya/_tests/test_shape.uya
 make test
 ```
 
+其他项目通过 UPM 使用 NumUya。在依赖方项目根运行：
+
+```bash
+test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
+../uya/bin/uya upm add numuya --path ../numuya
+../uya/bin/uya upm install
+```
+
+或在 `uya.toml` 中手写：
+
+```toml
+[dependencies]
+numuya = { path = "../numuya" }
+# 发布后也可以使用 git 依赖：
+# numuya = { git = "https://example.com/numuya.git", tag = "v0.1.0" }
+```
+
+依赖方代码：
+
+```uya
+use numuya.shape.Shape;
+use numuya.creation.zeros_f64;
+use numuya.ufunc.add_f64;
+```
+
+UPM 兼容承诺：
+
+- 外部项目不得需要设置 `UYA_ROOT` 或 `--project-root` 才能使用 NumUya。
+- 包内测试不得依赖根包自别名；在 `src/numuya/_tests/` 内按 source-root 相对路径导入，例如 `use shape.Shape;`、`use creation.zeros_f64;`。
+- 文档、示例和 CI 的默认路径必须覆盖 `uya upm add numuya --path ...`。
+- 发布到 Git 后，推荐依赖方使用 `tag` 或 `commit` 固定版本；`branch` 只用于开发跟踪。
+- public module 路径以 `numuya.*` 为稳定前缀；移动文件时必须提供迁移说明或兼容 re-export。
+- `numuya._tests.*`、`numuya._tools.*`、`numuya._benchmarks.*` 是内部模块，不属于 public API，外部 consumer fixture 不得导入它们。
+
 ## 3. 模块与命名
 
-模块路径以 `numuya.*` 为根：
+外部项目看到的 public module 路径以依赖 alias `numuya.*` 为根：
 
 ```uya
 use numuya.shape.Shape;
@@ -122,6 +194,16 @@ use numuya.array.Array;
 use numuya.creation.zeros_f64;
 use numuya.ufunc.add_f64;
 use numuya.cuda.device_array.to_device_f64;
+```
+
+包内源码和 `src/numuya/_tests/` 处在 root package 的 source root 下，默认按 source-root 相对路径导入，不写 `numuya.` 前缀：
+
+```uya
+use shape.Shape;
+use array.Array;
+use creation.zeros_f64;
+use ufunc.add_f64;
+use cuda.device_array.to_device_f64;
 ```
 
 顶层聚合模块可以在后期添加，但早期实现优先直接导入具体文件模块，降低模块解析不确定性。
@@ -657,26 +739,26 @@ export fn expect_array_close_f64(a: &Array<f64>, expected: &[f64], tol: f64, msg
 
 每个任务都按下面顺序：
 
-1. 在对应 `tests/test_*.uya` 增加失败测试。
-2. 运行 `../uya/bin/uya test tests/test_xxx.uya --project-root src`，确认失败原因是缺函数或断言失败。
-3. 写最小实现。
-4. 跑单测直到绿。
-5. 跑已完成模块的相关测试。
-6. 如果改了通用 helper，跑全部测试。
-7. 只在测试变绿后重构。
+1. 在对应 `src/numuya/_tests/test_*.uya` 增加失败测试。
+2. 运行 `test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm`，保证新版外置 UPM 子命令已构建。
+3. 运行 `../uya/bin/uya test src/numuya/_tests/test_xxx.uya --manifest-path uya.toml`，确认失败原因是缺函数或断言失败。
+4. 写最小实现。
+5. 跑单测直到绿。
+6. 跑已完成模块的相关测试。
+7. 如果改了通用 helper，跑全部测试。
+8. 只在测试变绿后重构。
 
 测试文件模板：
 
 ```uya
 use std.runtime.entry;
-use std.testing.assert_eq_i32;
-use std.testing.expect;
 use std.testing.run_test;
 use std.testing.test_suite_begin;
 use std.testing.test_suite_end;
+use testing.expect_close_f64;
 
 fn test_example() !void {
-    try expect(true);
+    try expect_close_f64(1.0, 1.0, 1e-12, "same");
 }
 
 export fn main() i32 {
@@ -779,8 +861,8 @@ RTX 3060 的 FP64 吞吐远低于 FP32/TF32/F16。策略：
 CUDA kernel 的 source-of-truth 必须可复现且不依赖 C/C++ helper：
 
 - MVP source-of-truth 是 `src/numuya/cuda/ptx/*.ptx` 中的 PTX 文本资产。
-- `src/numuya/cuda/kernels_ptx.uya` 是由 `tools/embed_ptx.uya` 生成的 Uya 字节/字符串嵌入文件；生成结果可以提交，便于无文件 I/O 场景加载。
-- `tools/ptx_validate.uya` 或脚本封装 `ptxas -arch=sm_86` 做离线校验，可生成 cubin cache，但 cubin 不是唯一 source-of-truth。
+- `src/numuya/cuda/kernels_ptx.uya` 是由 `src/numuya/_tools/embed_ptx.uya` 生成的 Uya 字节/字符串嵌入文件；生成结果可以提交，便于无文件 I/O 场景加载。
+- `src/numuya/_tools/ptx_validate.uya` 或脚本封装 `ptxas -arch=sm_86` 做离线校验，可生成 cubin cache，但 cubin 不是唯一 source-of-truth。
 - 默认测试加载 embedded PTX 并让 CUDA Driver JIT；性能 benchmark 可优先加载 `sm_86` cubin cache。
 - 后续可以新增 Uya kernel DSL/codegen 生成 PTX，但不能用 `.cu` 取代 PTX/Uya source-of-truth。
 
@@ -796,7 +878,8 @@ make bench-cuda
 若没有 `Makefile`，命令必须等价于：
 
 ```bash
-LDFLAGS="-lcuda" NUMUYA_CUDA_REQUIRED=1 ../uya/bin/uya test tests/test_cuda_driver.uya --project-root src
+test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
+LDFLAGS="-lcuda" NUMUYA_CUDA_REQUIRED=1 ../uya/bin/uya test src/numuya/_tests/test_cuda_driver.uya --manifest-path uya.toml
 ptxas -arch=sm_86 src/numuya/cuda/ptx/core_sm86.ptx -o build/cuda/core_sm86.cubin
 ```
 
@@ -1020,8 +1103,9 @@ CUDA 测试分三档：
 链接约定：
 
 ```bash
-LDFLAGS="-lcuda" NUMUYA_CUDA_REQUIRED=1 ../uya/bin/uya test tests/test_cuda_driver.uya --project-root src
-LDFLAGS="-lcuda -lcublasLt -lcublas -lcufft -lcurand" NUMUYA_CUDA_VENDOR=1 ../uya/bin/uya test tests/test_cuda_linalg.uya --project-root src
+test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
+LDFLAGS="-lcuda" NUMUYA_CUDA_REQUIRED=1 ../uya/bin/uya test src/numuya/_tests/test_cuda_driver.uya --manifest-path uya.toml
+LDFLAGS="-lcuda -lcublasLt -lcublas -lcufft -lcurand" NUMUYA_CUDA_VENDOR=1 ../uya/bin/uya test src/numuya/_tests/test_cuda_linalg.uya --manifest-path uya.toml
 ```
 
 CUDA 测试必须打印或断言：
