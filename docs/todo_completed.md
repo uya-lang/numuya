@@ -924,3 +924,9 @@ done
   - 验证命令：
     - `../uya/bin/uya test src/numuya/_tests/test_linalg.uya --manifest-path uya.toml`（15/15 通过，新增 3 个 det_f64 测试全部 OK）
     - `make test`（全部 14 个测试文件通过，无回归）
+
+## Phase 13: Linear algebra advanced
+
+- [x] TDD: `det_f64` 1x1、2x2、3x3。
+  - 验证：`../uya/bin/uya test src/numuya/_tests/test_linalg.uya --manifest-path uya.toml`
+  - 结果：15 tests passed, 0 failed；其中 `det_f64 computes 1x1 determinant`、`det_f64 computes 2x2 determinant`、`det_f64 computes 3x3 determinant` 均 OK。
