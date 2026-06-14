@@ -136,3 +136,10 @@
 
 - [x] TDD: 非 power-of-two 返回 `NumuyaInvalidArgument`，直到 fallback 实现完成。
   - 验证：`../uya/bin/uya test src/numuya/_tests/test_fft.uya --manifest-path uya.toml` 通过 11/11；`make test` 全绿。
+
+## Phase 15: FFT
+
+- [x] 验收：`src/numuya/_tests/test_fft.uya` 绿。
+  - 验证命令：`../uya/bin/uya test src/numuya/_tests/test_fft.uya --manifest-path uya.toml`
+  - 结果：11/11 测试通过，0 失败。
+  - 回归验证：`make test` 全绿（如 Makefile 可用）。

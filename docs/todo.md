@@ -31,10 +31,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 10: Statistics
 
-## Phase 15: FFT
-
-- [ ] 验收：`src/numuya/_tests/test_fft.uya` 绿。
-
 ## Phase 16: `.npy` I/O
 
 - [ ] 写 `src/numuya/_tests/test_io_npy.uya`。
