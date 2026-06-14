@@ -737,3 +737,7 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 生产改动：
 - `src/numuya/math.uya` 顶部添加 `@c_import("math_stub.c", "", "-lm");`，为 `extern "libc"` 数学函数链接 libm。
 - 新增 `src/numuya/math_stub.c` 作为 `@c_import` 占位文件以传递 `-lm` 链接标志。
+
+## Phase 9: Math functions
+
+- [x] TDD: `abs_f64`。
