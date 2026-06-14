@@ -31,7 +31,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 6: Broadcasting
 
-- [ ] 写 `src/numuya/_tests/test_broadcast.uya`。
 - [ ] 实现 `src/numuya/broadcast.uya`。
 - [ ] TDD: `broadcast_shapes`.
   - `(3,)` 与 `(2, 3)` -> `(2, 3)`。

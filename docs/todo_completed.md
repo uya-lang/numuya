@@ -471,3 +471,14 @@
   结果：
   - `test_slicing.uya` 通过，10 个测试全部 OK。
   - 回归测试全部通过：`test_array_creation.uya`（6 个）、`test_indexing.uya`（6 个）、`test_shape.uya`（8 个）、`test_storage.uya`（7 个）、`test_stride_views.uya`（13 个）、`test_testing_helpers.uya`（2 个）。
+
+## Phase 6: Broadcasting
+
+- [x] 写 `src/numuya/_tests/test_broadcast.uya`。
+  - 覆盖 `broadcast_shapes`：对齐尾部维度、size-1 匹配更大维度、不兼容返回 `NumuyaBroadcastError`。
+  - 覆盖 `broadcast_to`：rank 扩展产生 stride 0、前导 size-1 产生 stride 0、不兼容返回 `NumuyaBroadcastError`。
+  - 覆盖 broadcast view 默认只读：`flags.writeable` 为 false，`set` 返回 `NumuyaReadOnly`。
+  - 验证命令：
+    - `../uya/bin/uya check src/numuya/_tests/test_broadcast.uya --manifest-path uya.toml`（临时 stub `src/numuya/broadcast.uya`）
+  - 结果：checker 通过，测试文件类型与语义正确。
+  - 当前 TDD 状态：移除 stub 后同一命令失败，因 `src/numuya/broadcast.uya` 尚未实现；符合预期，等待下一轮实现。
