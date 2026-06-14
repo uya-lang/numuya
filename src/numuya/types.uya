@@ -1,0 +1,120 @@
+use array;
+use shape;
+use storage;
+
+export enum DTypeKind {
+    Float,
+    Signed,
+    Unsigned,
+}
+
+export enum Endian {
+    Little,
+}
+
+export enum DType {
+    F64,
+    F32,
+    I64,
+    I32,
+    U8,
+}
+
+export fn dtype_f64() DType {
+    return DType.F64;
+}
+
+export fn dtype_f32() DType {
+    return DType.F32;
+}
+
+export fn dtype_i64() DType {
+    return DType.I64;
+}
+
+export fn dtype_i32() DType {
+    return DType.I32;
+}
+
+export fn dtype_u8() DType {
+    return DType.U8;
+}
+
+export fn dtype_size(dt: DType) usize {
+    match dt {
+        DType.F64 => { return 8; }
+        DType.F32 => { return 4; }
+        DType.I64 => { return 8; }
+        DType.I32 => { return 4; }
+        DType.U8 => { return 1; }
+        else => { return 0; }
+    }
+}
+
+export fn dtype_name(dt: DType) &const byte {
+    match dt {
+        DType.F64 => { return "f64" as &const byte; }
+        DType.F32 => { return "f32" as &const byte; }
+        DType.I64 => { return "i64" as &const byte; }
+        DType.I32 => { return "i32" as &const byte; }
+        DType.U8 => { return "u8" as &const byte; }
+        else => { return "" as &const byte; }
+    }
+}
+
+export fn dtype_kind(dt: DType) DTypeKind {
+    match dt {
+        DType.F64 => { return DTypeKind.Float; }
+        DType.F32 => { return DTypeKind.Float; }
+        DType.I64 => { return DTypeKind.Signed; }
+        DType.I32 => { return DTypeKind.Signed; }
+        DType.U8 => { return DTypeKind.Unsigned; }
+        else => { return DTypeKind.Float; }
+    }
+}
+
+export fn dtype_endian(dt: DType) Endian {
+    return Endian.Little;
+}
+
+export struct ArrayAny {
+    dtype: DType,
+    shape: Shape,
+    payload: Array<f64>,
+}
+
+export fn array_any_from_f64(array_value: Array<f64>) ArrayAny {
+    return ArrayAny{
+        dtype: dtype_f64(),
+        shape: array_value.shape,
+        payload: array_value,
+    };
+}
+
+export fn array_any_shape(any_value: &ArrayAny) Shape {
+    return any_value.shape;
+}
+
+export fn array_any_try_as_f64(any_value: &ArrayAny) !&Array<f64> {
+    match any_value.dtype {
+        DType.F64 => { return &any_value.payload; }
+        else => { return error.NumuyaUnsupportedDType; }
+    }
+}
+
+export fn array_any_try_as_f32(any_value: &ArrayAny) !&Array<f32> {
+    return error.NumuyaUnsupportedDType;
+}
+
+export fn array_any_try_as_i32(any_value: &ArrayAny) !&Array<i32> {
+    return error.NumuyaUnsupportedDType;
+}
+
+fn _force_storage_release_instantiations() void {
+    var _sf64: &Storage<f64> = null;
+    var _sf32: &Storage<f32> = null;
+    var _si32: &Storage<i32> = null;
+    storage_release<f64>(_sf64);
+    storage_release<f32>(_sf32);
+    storage_release<i32>(_si32);
+}

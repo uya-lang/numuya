@@ -281,3 +281,13 @@
 - [x] 写 `src/numuya/_tests/test_dtype.uya`。
   - 验证：`../uya/bin/uya test src/numuya/_tests/test_dtype.uya --manifest-path uya.toml`
   - 结果：测试文件已创建；因 `src/numuya/types.uya` 尚未实现，类型检查失败（预期内的 TDD 失败）。失败摘要：`DTypeKind` 非枚举 / `array_any_try_as_f64` 非错误联合。
+
+## Phase 18: DType 与 type-erased ArrayAny
+
+- [x] 实现 `src/numuya/types.uya`。
+  - 验证：
+    ```bash
+    ../uya/bin/uya test src/numuya/_tests/test_dtype.uya --manifest-path uya.toml
+    make test
+    ```
+  - 结果：`test_dtype.uya` 9/9 通过；`make test` 全绿。
