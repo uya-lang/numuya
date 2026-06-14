@@ -306,3 +306,12 @@
   - 验证命令：`../uya/bin/uya test src/numuya/_tests/test_dtype.uya --manifest-path uya.toml`
   - 验证结果：9/9 测试通过，0 失败。
   - 回归验证：`make test` 全量测试通过。
+
+## Phase 18: DType 与 type-erased ArrayAny
+
+- [x] TDD: `ArrayAny` 包装 `Array<f64>`。
+  - 说明：本轮进入任务时，`src/numuya/types.uya` 已导出 `ArrayAny` 结构及 `array_any_from_f64`、`array_any_shape`、`array_any_try_as_f64/f32/i32`；`src/numuya/_tests/test_dtype.uya` 已包含 `ArrayAny wraps Array<f64> and preserves shape and data`、`ArrayAny try_as_f32 on f64 array returns unsupported dtype`、`ArrayAny try_as_i32 on f64 array returns unsupported dtype` 测试。本轮未修改生产代码，仅验证并通过。
+  - 验证命令：`../uya/bin/uya test src/numuya/_tests/test_dtype.uya --manifest-path uya.toml`
+  - 验证结果：9/9 测试通过，0 失败（含 3 个 ArrayAny 相关测试）。
+  - 回归验证：`../uya/bin/uya test src/numuya/_tests/test_io_npy.uya --manifest-path uya.toml` — 9/9 通过。
+  - 回归验证：`make test` 全量测试通过。

@@ -33,7 +33,7 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 18: DType 与 type-erased ArrayAny
 
-- [ ] TDD: `ArrayAny` 包装 `Array<f64>`。
+- [x] TDD: `ArrayAny` 包装 `Array<f64>`。
 - [ ] TDD: dtype mismatch 返回 `NumuyaUnsupportedDType` 或 `NumuyaInvalidArgument`。
 - [ ] 把 `.npy` 逐步扩展到 f32/i32/i64/u8。
 - [ ] 验收：dtype tests 绿，I/O 回归绿。
