@@ -30,3 +30,11 @@
 - [x] 创建目录结构：`src/numuya/`、`src/numuya/_tests/`、`tests/fixtures/`。
   - 验证命令：`ls -ld src/numuya src/numuya/_tests tests/fixtures`
   - 验证结果：通过，三个目录均存在。
+
+## Phase 0: 脚手架与测试基础
+
+- [x] 创建 `src/numuya/errors.uya`，只放 error 声明，不写业务逻辑。
+  - 验证命令：`../uya/bin/uya check src/numuya/errors.uya --manifest-path uya.toml`
+  - 验证结果：通过，checker 通过（未执行代码生成）。
+  - 验证命令：`../uya/bin/uya upm install --manifest-path uya.toml`
+  - 验证结果：通过，退出码 0。
