@@ -565,3 +565,8 @@
 - [x] TDD: `neg_f64`。
   - 验证：`../uya/bin/uya test src/numuya/_tests/test_ufunc.uya --manifest-path uya.toml`
   - 结果：`neg_f64 negates each element` 通过；整份 `test_ufunc.uya` 11/11 测试通过，0 失败。
+
+## NumUya TDD Todo / Phase 7: UFunc 基础
+
+- [x] TDD: `add_i32`。
+  - 验证：`../uya/bin/uya test src/numuya/_tests/test_ufunc.uya --manifest-path uya.toml` 通过；`make test` 全部通过。

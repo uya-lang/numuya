@@ -31,7 +31,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 7: UFunc 基础
 
-- [ ] TDD: `add_i32`。
 - [ ] TDD: non-contiguous input。
   - transpose view 输入仍能正确运算。
 - [ ] TDD: output 是新 owner。
