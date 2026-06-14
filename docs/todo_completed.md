@@ -645,3 +645,11 @@
   - non-contiguous view。
   - 验证：`../uya/bin/uya test src/numuya/_tests/test_reductions.uya --manifest-path uya.toml`
   - 结果：20/20 通过，包含 `sum_all_f64` 普通数组、空数组、non-contiguous transpose view 及 `prod_all_f64` 对应三项。
+
+## Phase 8: Reductions
+
+- [x] TDD: `min_all_f64/max_all_f64`。
+  - 普通数组。
+  - 空数组返回 `NumuyaInvalidArgument`。
+  - 验证命令：`../uya/bin/uya test src/numuya/_tests/test_reductions.uya --manifest-path uya.toml`
+  - 验证结果：20/20 通过，其中 `min_all_f64 finds the smallest element`、`min_all_f64 rejects an empty array`、`max_all_f64 finds the largest element`、`max_all_f64 rejects an empty array` 均通过。
