@@ -38,11 +38,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 
 
-- [ ] TDD: `DeviceStorage<T>` 引用计数。
-  - `device_storage_new` 初始 ref_count 为 1。
-  - `device_storage_retain` 增加计数。
-  - `device_storage_release` 非最后引用只减计数。
-  - 最后引用释放 device memory，并更新 memory pool。
 - [ ] TDD: device view 语义。
   - `device_array_view` retain 同一 storage。
   - view drop 不释放 owner 的 buffer。

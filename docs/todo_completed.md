@@ -578,3 +578,18 @@
   - 超过 budget 返回 `NumuyaGpuOutOfMemory`。
   - 验证命令：`make test-cuda TEST=src/numuya/_tests/test_cuda_device_array.uya`
   - 验证结果：7 tests passed, 0 failed（其中 `cuda_malloc allocates 1MB from pool and cuda_free releases it` 与 `cuda_malloc returns NumuyaGpuOutOfMemory when exceeding budget` 通过）。
+
+## Phase 21: CUDA DeviceArray 与拷贝
+
+- [x] TDD: `DeviceStorage<T>` 引用计数。
+  - `device_storage_new` 初始 ref_count 为 1。
+  - `device_storage_retain` 增加计数。
+  - `device_storage_release` 非最后引用只减计数。
+  - 最后引用释放 device memory，并更新 memory pool。
+  - 实现位置：`src/numuya/cuda/device_array.uya` 中 `DeviceStorage<T>` 结构、`device_storage_new<T>`、`device_storage_retain<T>`、`device_storage_release<T>`；底层 device memory 分配/释放由 `src/numuya/cuda/memory.uya` 的 `MemoryPool` 跟踪。
+  - 验证命令：
+    - `../uya/bin/uya test src/numuya/_tests/test_cuda_device_array.uya --manifest-path uya.toml` — 7/7 通过（含 `device_storage_new starts with ref_count 1`、`device_storage_retain increments ref_count`、`device_storage_release does not free device memory on non-final release`）
+    - `../uya/bin/uya test src/numuya/_tests/test_cuda_driver.uya --manifest-path uya.toml` — 21/21 通过，回归通过
+    - `../uya/bin/uya test src/numuya/_tests/test_shape.uya --manifest-path uya.toml` — 8/8 通过
+    - `../uya/bin/uya test src/numuya/_tests/test_storage.uya --manifest-path uya.toml` — 7/7 通过
+    - `../uya/bin/uya test src/numuya/_tests/test_array_creation.uya --manifest-path uya.toml` — 6/6 通过
