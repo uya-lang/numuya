@@ -245,13 +245,17 @@ export fn take<T>(allocator: IAllocator, array_value: &Array<T>, indices: &[usiz
 
 export fn boolean_mask<T>(allocator: IAllocator, array_value: &Array<T>, mask: &Array<bool>) !Array<T> {
     materialize_bool_storage_type();
-    try validate_fixed_rank<T>(array_value, 1);
-    try validate_fixed_rank<bool>(mask, 1);
+    try validate_array_metadata<T>(array_value);
+    try validate_array_metadata<bool>(mask);
 
-    const source_len: usize = array_value.shape.dims[0];
-    if mask.shape.dims[0] != source_len {
+    if shape_eq(array_value.shape, mask.shape) != true {
         return error.NumuyaShapeMismatch;
     }
+    if array_value.shape.rank != 1 {
+        return error.NumuyaInvalidArgument;
+    }
+
+    const source_len: usize = array_value.shape.dims[0];
 
     var source_indices: [usize: 1] = [0];
     var selected_len: usize = 0;

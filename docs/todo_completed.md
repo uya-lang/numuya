@@ -242,3 +242,13 @@
   - 验证命令：`../uya/bin/uya check src/numuya/_tests/test_advanced_indexing.uya --manifest-path uya.toml` — checker 通过。
   - 验证命令：`../uya/bin/uya test src/numuya/_tests/test_advanced_indexing.uya --manifest-path uya.toml` — 5/5 通过。
   - 回归验证：`../uya/bin/uya test src/numuya/_tests/test_indexing.uya --manifest-path uya.toml` — 6/6 通过。
+## Phase 17: Advanced indexing
+
+- [x] TDD: boolean mask shape mismatch。
+  - 新增测试：`src/numuya/_tests/test_advanced_indexing.uya` 添加 `boolean_mask reports shape mismatch for rank-mismatched mask`，验证 1-D 向量配 2-D 布尔 mask 会返回 `NumuyaShapeMismatch`。
+  - 实现：`src/numuya/indexing.uya` 调整 `boolean_mask<T>` 前置校验，先比较完整 shape；shape 不一致统一返回 `NumuyaShapeMismatch`，只有 shape 相等但当前仍不支持的非 1-D 输入才返回 `NumuyaInvalidArgument`。
+  - 失败确认：`../uya/bin/uya test src/numuya/_tests/test_advanced_indexing.uya --manifest-path uya.toml` — 新增用例失败，当前实现把 rank 不匹配报成 `NumuyaInvalidArgument`，未命中预期 `NumuyaShapeMismatch`。
+  - 验证命令：`../uya/bin/uya check src/numuya/_tests/test_advanced_indexing.uya --manifest-path uya.toml` — checker 通过。
+  - 验证命令：`../uya/bin/uya test src/numuya/_tests/test_advanced_indexing.uya --manifest-path uya.toml` — 6/6 通过。
+  - 回归验证：`../uya/bin/uya test src/numuya/_tests/test_indexing.uya --manifest-path uya.toml` — 6/6 通过。
+  - 回归验证：`make test` — 全量测试通过。
