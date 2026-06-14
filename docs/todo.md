@@ -31,7 +31,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 8: Reductions
 
-- [x] 实现 `src/numuya/reductions.uya`。
 - [ ] TDD: `sum_all_f64/prod_all_f64`。
   - 普通数组。
   - 空数组。

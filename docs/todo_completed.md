@@ -628,3 +628,11 @@
   - 验证命令：
     - `../uya/bin/uya test src/numuya/_tests/test_reductions.uya --manifest-path uya.toml`（20/20 通过）
     - `make test`（所有既有测试文件通过）
+
+## NumUya TDD Todo / Phase 8: Reductions
+
+- [x] 实现 `src/numuya/reductions.uya`。
+  - 验证命令：`../uya/bin/uya test src/numuya/_tests/test_reductions.uya --manifest-path uya.toml`
+  - 验证结果：20/20 通过。
+  - 回归命令：`make test`
+  - 回归结果：全部既有测试文件通过（test_array_creation 6、test_broadcast 7、test_indexing 6、test_reductions 20、test_shape 8、test_slicing 10、test_storage 7、test_stride_views 13、test_testing_helpers 2、test_ufunc 17）。
