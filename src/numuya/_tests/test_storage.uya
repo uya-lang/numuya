@@ -36,3 +36,14 @@ test "storage_new allocates non-null data for non-zero len" {
 
     free_test_storage<f64>(storage_value);
 }
+
+test "storage_retain increments ref_count" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    const storage_value: &Storage<f64> = try storage_new<f64>(allocator, 2);
+
+    storage_retain<f64>(storage_value);
+    try expect_eq_usize(storage_value.ref_count, 2);
+
+    free_test_storage<f64>(storage_value);
+}

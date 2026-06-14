@@ -27,8 +27,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 2: Storage 与 Array handle
 
-- [ ] TDD: `storage_retain<T>`。
-  - retain 后 ref_count 加 1。
 - [ ] TDD: `storage_release<T>`。
   - release 非最后引用只减计数。
   - 最后引用释放 data/header。

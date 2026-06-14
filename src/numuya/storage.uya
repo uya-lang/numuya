@@ -32,3 +32,7 @@ export fn storage_new<T>(allocator: IAllocator, len: usize) !&Storage<T> {
     };
     return header;
 }
+
+export fn storage_retain<T>(storage_value: &Storage<T>) void {
+    storage_value.ref_count = storage_value.ref_count + 1;
+}

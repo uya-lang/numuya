@@ -183,3 +183,11 @@
   - 验证：
     - `make test-one TEST=src/numuya/_tests/test_storage.uya`：通过。
     - `make test`：通过（`test_shape`、`test_storage`、`test_testing_helpers`）。
+
+## Phase 2: Storage 与 Array handle
+
+- [x] TDD: `storage_retain<T>`。
+  - retain 后 ref_count 加 1。
+  - 验证：
+    - `make test-one TEST=src/numuya/_tests/test_storage.uya`：先失败，链接错误 `undefined reference to 'storage_retain_f64'`；实现后通过，3 个 storage 测试通过。
+    - `make test`：通过（`test_shape` 8 tests passed；`test_storage` 3 tests passed；`test_testing_helpers` 2 tests passed）。
