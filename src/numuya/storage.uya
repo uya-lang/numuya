@@ -1,0 +1,8 @@
+use std.mem.allocator.IAllocator;
+
+export struct Storage<T> {
+    allocator: IAllocator,
+    data: &T,
+    len: usize,
+    ref_count: usize,
+}

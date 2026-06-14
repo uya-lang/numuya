@@ -1,6 +1,21 @@
 use storage;
 
+use std.mem.allocator.IAllocator;
+use std.mem.allocator.MallocAllocator;
+
 test "Storage test file imports Storage API" {
-    var storage_value: &Storage<f64> = undefined;
-    storage_value = storage_value;
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    const storage_value: Storage<f64> = Storage<f64>{
+        allocator: allocator,
+        data: null,
+        len: 0,
+        ref_count: 1,
+    };
+    if storage_value.len != 0 {
+        return error.NumuyaExpectationFailed;
+    }
+    if storage_value.ref_count != 1 {
+        return error.NumuyaExpectationFailed;
+    }
 }

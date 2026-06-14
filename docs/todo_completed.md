@@ -163,3 +163,13 @@
 - [x] 写 `src/numuya/_tests/test_storage.uya`。
   - 验证：`make test-one TEST=src/numuya/_tests/test_storage.uya` 通过（1 test passed）。
   - 验证：`make test` 通过（`test_shape` 8 tests passed；`test_storage` 1 test passed；`test_testing_helpers` 2 tests passed）。
+
+## Phase 2: Storage 与 Array handle
+
+- [x] 实现 `src/numuya/storage.uya`。
+  - 验证：`make test-one TEST=src/numuya/_tests/test_storage.uya`
+  - 结果：通过；`Storage<f64>` 可初始化，`allocator`、`data`、`len`、`ref_count` 字段已暴露。
+  - 验证：`make test`
+  - 结果：通过；`test_shape`、`test_storage`、`test_testing_helpers` 全通过。
+  - 验证：`make verify-upm-consumer`
+  - 结果：通过；consumer fixture 的 `check` 与 `run` 均正常。
