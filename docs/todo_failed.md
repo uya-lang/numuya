@@ -46,3 +46,14 @@
   - 失败原因：归档清理时该任务仍处于 `[f]` 状态；PTX source-of-truth 的生成/嵌入流程尚未落地，`src/numuya/_tools/embed_ptx.uya`、`src/numuya/cuda/kernels_ptx.uya` 与 `src/numuya/cuda/ptx/core_sm86.ptx` 均未实现或验证。
   - 阻塞命令/条件：无可用 `make cuda-ptx-embed` 等价命令，`ptxas -arch=sm_86` 未纳入 TDD 主路径。
   - 后续重开条件：先实现 `embed_ptx.uya` 生成 `kernels_ptx.uya`，提供稳定可重复的 PTX 文本嵌入，并验证 `sm_86` 加载/JIT fallback 可用。
+
+## Phase 22: CUDA ufunc 与 reduction
+
+- [f] TDD: 加载 embedded PTX/cubin。
+  - `sm_86` 优先。
+  - PTX JIT fallback 可用。
+
+  失败原因：遗留失败项。CUDA 嵌入式 PTX/cubin 加载尚未完成，缺少可在当前环境中验证的加载路径与设备无关测试；PTX/cubin 嵌入格式、驱动加载顺序以及 `sm_86` JIT fallback 需要在后续重开时补充实现与测试。
+  阻塞命令：无（本轮为归档清理，未执行新验证命令）。
+  后续重开条件：实现 `src/numuya/cuda/` 下嵌入式 PTX/cubin 加载 API，编写 `src/numuya/_tests/test_cuda_module.uya` 中加载失败/成功测试，并确保 `../uya/bin/uya test ...` 通过。
+

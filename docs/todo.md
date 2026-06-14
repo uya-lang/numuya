@@ -35,9 +35,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 22: CUDA ufunc 与 reduction
 
-- [ ] TDD: 加载 embedded PTX/cubin。
-  - `sm_86` 优先。
-  - PTX JIT fallback 可用。
 - [ ] TDD: `gpu_add_f64` contiguous。
   - 与 CPU `add_f64` 完全同 shape，容差一致。
 - [ ] TDD: `gpu_mul_f64` contiguous。
