@@ -16,6 +16,9 @@ extern fn numuya_cuda_init() i32;
 extern fn numuya_cuda_get_device(ordinal: i32, major: &i32, minor: &i32, total_memory_bytes: &usize) i32;
 extern fn numuya_cuda_create_context(ordinal: i32, context: &usize) i32;
 extern fn numuya_cuda_destroy_context(context: usize) i32;
+extern fn numuya_cuda_create_stream(stream: &usize) i32;
+extern fn numuya_cuda_synchronize_stream(stream: usize) i32;
+extern fn numuya_cuda_destroy_stream(stream: usize) i32;
 
 const NUMUYA_CUDA_OK: i32 = 0;
 const NUMUYA_CUDA_UNAVAILABLE: i32 = 1;
@@ -68,6 +71,46 @@ export fn cuda_destroy_context(context: usize) !void {
         return error.NumuyaInvalidArgument;
     }
     const status: i32 = numuya_cuda_destroy_context(context);
+    if status == NUMUYA_CUDA_OK {
+        return;
+    } else if status == NUMUYA_CUDA_UNAVAILABLE {
+        return error.NumuyaGpuUnavailable;
+    } else {
+        return error.NumuyaCudaError;
+    }
+}
+
+export fn cuda_create_stream() !usize {
+    var stream: usize = 0;
+    const status: i32 = numuya_cuda_create_stream(&stream);
+    if status == NUMUYA_CUDA_OK {
+        return stream;
+    } else if status == NUMUYA_CUDA_UNAVAILABLE {
+        return error.NumuyaGpuUnavailable;
+    } else {
+        return error.NumuyaCudaError;
+    }
+}
+
+export fn cuda_synchronize_stream(stream: usize) !void {
+    if stream == 0 {
+        return error.NumuyaInvalidArgument;
+    }
+    const status: i32 = numuya_cuda_synchronize_stream(stream);
+    if status == NUMUYA_CUDA_OK {
+        return;
+    } else if status == NUMUYA_CUDA_UNAVAILABLE {
+        return error.NumuyaGpuUnavailable;
+    } else {
+        return error.NumuyaCudaError;
+    }
+}
+
+export fn cuda_destroy_stream(stream: usize) !void {
+    if stream == 0 {
+        return error.NumuyaInvalidArgument;
+    }
+    const status: i32 = numuya_cuda_destroy_stream(stream);
     if status == NUMUYA_CUDA_OK {
         return;
     } else if status == NUMUYA_CUDA_UNAVAILABLE {

@@ -18,12 +18,17 @@ typedef int CUdevice;
 
 typedef void* CUcontext;
 
+typedef void* CUstream;
+
 typedef CUresult (*numuya_cuInit_t)(unsigned int);
 typedef CUresult (*numuya_cuDeviceGet_t)(CUdevice*, int);
 typedef CUresult (*numuya_cuDeviceGetAttribute_t)(int*, int, CUdevice);
 typedef CUresult (*numuya_cuDeviceTotalMem_t)(size_t*, CUdevice);
 typedef CUresult (*numuya_cuCtxCreate_t)(CUcontext*, unsigned int, CUdevice);
 typedef CUresult (*numuya_cuCtxDestroy_t)(CUcontext);
+typedef CUresult (*numuya_cuStreamCreate_t)(CUstream*, unsigned int);
+typedef CUresult (*numuya_cuStreamSynchronize_t)(CUstream);
+typedef CUresult (*numuya_cuStreamDestroy_t)(CUstream);
 
 #define NUMUYA_CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR 75
 #define NUMUYA_CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MINOR 76
@@ -35,6 +40,9 @@ static numuya_cuDeviceGetAttribute_t numuya_pfn_cuDeviceGetAttribute = NULL;
 static numuya_cuDeviceTotalMem_t numuya_pfn_cuDeviceTotalMem = NULL;
 static numuya_cuCtxCreate_t numuya_pfn_cuCtxCreate = NULL;
 static numuya_cuCtxDestroy_t numuya_pfn_cuCtxDestroy = NULL;
+static numuya_cuStreamCreate_t numuya_pfn_cuStreamCreate = NULL;
+static numuya_cuStreamSynchronize_t numuya_pfn_cuStreamSynchronize = NULL;
+static numuya_cuStreamDestroy_t numuya_pfn_cuStreamDestroy = NULL;
 
 static int numuya_cuda_load(void) {
     if (numuya_cuda_handle != NULL) {
@@ -64,13 +72,22 @@ static int numuya_cuda_load(void) {
     if (numuya_pfn_cuCtxDestroy == NULL) {
         numuya_pfn_cuCtxDestroy = (numuya_cuCtxDestroy_t)dlsym(numuya_cuda_handle, "cuCtxDestroy");
     }
+    numuya_pfn_cuStreamCreate = (numuya_cuStreamCreate_t)dlsym(numuya_cuda_handle, "cuStreamCreate");
+    numuya_pfn_cuStreamSynchronize = (numuya_cuStreamSynchronize_t)dlsym(numuya_cuda_handle, "cuStreamSynchronize");
+    numuya_pfn_cuStreamDestroy = (numuya_cuStreamDestroy_t)dlsym(numuya_cuda_handle, "cuStreamDestroy_v2");
+    if (numuya_pfn_cuStreamDestroy == NULL) {
+        numuya_pfn_cuStreamDestroy = (numuya_cuStreamDestroy_t)dlsym(numuya_cuda_handle, "cuStreamDestroy");
+    }
 
     if (numuya_pfn_cuInit == NULL ||
         numuya_pfn_cuDeviceGet == NULL ||
         numuya_pfn_cuDeviceGetAttribute == NULL ||
         numuya_pfn_cuDeviceTotalMem == NULL ||
         numuya_pfn_cuCtxCreate == NULL ||
-        numuya_pfn_cuCtxDestroy == NULL) {
+        numuya_pfn_cuCtxDestroy == NULL ||
+        numuya_pfn_cuStreamCreate == NULL ||
+        numuya_pfn_cuStreamSynchronize == NULL ||
+        numuya_pfn_cuStreamDestroy == NULL) {
         return NUMUYA_CUDA_UNAVAILABLE;
     }
 
@@ -154,6 +171,48 @@ int numuya_cuda_destroy_context(void* context) {
     }
 
     const CUresult res = numuya_pfn_cuCtxDestroy((CUcontext)context);
+    if (res != 0) {
+        return NUMUYA_CUDA_ERROR;
+    }
+    return NUMUYA_CUDA_OK;
+}
+
+int numuya_cuda_create_stream(size_t* stream) {
+    const int status = numuya_cuda_load();
+    if (status != NUMUYA_CUDA_OK) {
+        return status;
+    }
+
+    CUstream s = NULL;
+    const CUresult res = numuya_pfn_cuStreamCreate(&s, 0);
+    if (res != 0) {
+        return NUMUYA_CUDA_ERROR;
+    }
+
+    *stream = (size_t)s;
+    return NUMUYA_CUDA_OK;
+}
+
+int numuya_cuda_synchronize_stream(size_t stream) {
+    const int status = numuya_cuda_load();
+    if (status != NUMUYA_CUDA_OK) {
+        return status;
+    }
+
+    const CUresult res = numuya_pfn_cuStreamSynchronize((CUstream)stream);
+    if (res != 0) {
+        return NUMUYA_CUDA_ERROR;
+    }
+    return NUMUYA_CUDA_OK;
+}
+
+int numuya_cuda_destroy_stream(size_t stream) {
+    const int status = numuya_cuda_load();
+    if (status != NUMUYA_CUDA_OK) {
+        return status;
+    }
+
+    const CUresult res = numuya_pfn_cuStreamDestroy((CUstream)stream);
     if (res != 0) {
         return NUMUYA_CUDA_ERROR;
     }

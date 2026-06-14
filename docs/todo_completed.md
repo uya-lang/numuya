@@ -509,3 +509,10 @@
 - [x] TDD: `cuda_create_context` / destroy。
   - 验证命令：`../uya/bin/uya test src/numuya/_tests/test_cuda_driver.uya --manifest-path uya.toml`
   - 结果：14/14 测试通过，新增 `cuda_create_context(0) returns non-zero handle when cuda is available`、`cuda_destroy_context returns error for null handle`、`cuda_create_context returns error when cuda is unavailable` 均通过。
+
+## Phase 20: CUDA backend 基础
+
+- [x] TDD: `cuda_create_stream` / synchronize / destroy。
+  - 验证命令：`make test-cuda TEST=src/numuya/_tests/test_cuda_driver.uya`
+  - 结果：18 tests passed, 0 failed
+  - 改动文件：`src/numuya/cuda/driver.uya`、`src/numuya/cuda/driver_stub.c`、`src/numuya/_tests/test_cuda_driver.uya`

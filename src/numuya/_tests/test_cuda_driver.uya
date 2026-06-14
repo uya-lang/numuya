@@ -154,3 +154,53 @@ test "cuda_create_context returns error when cuda is unavailable" {
         else => { return error.NumuyaExpectationFailed; }
     }
 }
+
+test "cuda_create_stream(0) returns non-zero handle when cuda is available" {
+    if !backend_is_cuda_available() {
+        return;
+    }
+    try cuda_init();
+    const ctx: usize = try cuda_create_context(0);
+    defer cuda_destroy_context(ctx) catch {};
+    const stream: usize = try cuda_create_stream();
+    if stream == 0 {
+        return error.NumuyaExpectationFailed;
+    }
+    try cuda_destroy_stream(stream);
+}
+
+test "cuda_synchronize_stream completes for a fresh stream" {
+    if !backend_is_cuda_available() {
+        return;
+    }
+    try cuda_init();
+    const ctx: usize = try cuda_create_context(0);
+    defer cuda_destroy_context(ctx) catch {};
+    const stream: usize = try cuda_create_stream();
+    defer cuda_destroy_stream(stream) catch {};
+    try cuda_synchronize_stream(stream);
+}
+
+test "cuda_destroy_stream returns error for null handle" {
+    if !backend_is_cuda_available() {
+        return;
+    }
+    const result: !void = cuda_destroy_stream(0);
+    match result {
+        error.NumuyaInvalidArgument => {}
+        error.NumuyaCudaError => {}
+        else => { return error.NumuyaExpectationFailed; }
+    }
+}
+
+test "cuda_create_stream returns error when cuda is unavailable" {
+    if backend_is_cuda_available() {
+        return;
+    }
+    const result: !usize = cuda_create_stream();
+    match result {
+        error.NumuyaGpuUnavailable => {}
+        error.NumuyaCudaError => {}
+        else => { return error.NumuyaExpectationFailed; }
+    }
+}
