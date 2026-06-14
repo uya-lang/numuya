@@ -87,3 +87,9 @@
 - [x] 验收：`src/numuya/_tests/test_testing_helpers.uya` 绿，外部 UPM consumer fixture 绿。
   - 验证：`make test-one TEST=src/numuya/_tests/test_testing_helpers.uya` 通过（2 tests passed）。
   - 验证：`make verify-upm-consumer` 通过（UPM install、consumer check、consumer run 均成功）。
+
+## Phase 1: Shape、axis、size
+
+- [x] 写 `src/numuya/_tests/test_shape.uya`。
+  - 验证: `make test-one TEST=src/numuya/_tests/test_shape.uya` 通过，1 个测试 OK。
+  - 验证: `make test` 通过，`test_shape.uya` 与 `test_testing_helpers.uya` 全部通过。

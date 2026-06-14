@@ -1,0 +1,4 @@
+use shape;
+
+test "Shape test file imports Shape" {
+}
