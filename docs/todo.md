@@ -28,11 +28,10 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 ## Phase 3: 创建数组与基础 get/set
 
 - 注：当前 Uya codegen 对导出泛型 `!Array<T>` 路径仍有实例化限制；后续 `empty<T>/full<T>/from_slice<T>` 先用失败测试锁定可行写法，必要时抽最小复现。
-- [ ] TDD: `empty<T>`。
-  - shape 正确。
-  - size 正确。
-  - contiguous flags 正确。
-  - 不读取元素值。
+- [ ] 抽最小复现并修复 Uya C99 codegen：导出泛型 `!Array<T>` 时缺失 `Array<T>` / `Storage<T>` 完整特化定义。
+  - 以 `empty<f64>(allocator, shape2(2, 3))` 为最小入口。
+  - 验证命令：`make test-one TEST=src/numuya/_tests/test_array_creation.uya`。
+  - 完成条件：`empty<T>` 的新增测试能编译运行，且不破坏现有 `full_f64` 行为。
 - [ ] TDD: `full<T>`。
   - `full_f64(shape2(2, 3), 7.5)` 六个元素都是 7.5。
 - [ ] TDD: `zeros_f64/ones_f64/full_f64`。
