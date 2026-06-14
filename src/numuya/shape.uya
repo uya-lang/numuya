@@ -1,3 +1,11 @@
+export const NUMUYA_MAX_DIMS: usize = 16;
+
 export struct Shape {
-    rank: usize
+    rank: usize,
+    dims: [usize: NUMUYA_MAX_DIMS],
+}
+
+export struct Strides {
+    rank: usize,
+    strides: [usize: NUMUYA_MAX_DIMS],
 }

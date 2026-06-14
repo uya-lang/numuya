@@ -93,3 +93,9 @@
 - [x] 写 `src/numuya/_tests/test_shape.uya`。
   - 验证: `make test-one TEST=src/numuya/_tests/test_shape.uya` 通过，1 个测试 OK。
   - 验证: `make test` 通过，`test_shape.uya` 与 `test_testing_helpers.uya` 全部通过。
+## Phase 1: Shape、axis、size
+
+- [x] 实现 `src/numuya/shape.uya` 中的 `Shape`、`Strides`、`NUMUYA_MAX_DIMS`。
+  - 验证：`make test-one TEST=src/numuya/_tests/test_shape.uya` 通过（2 tests passed）。
+  - 验证：`make test` 通过（当前 2 个测试文件均通过）。
+

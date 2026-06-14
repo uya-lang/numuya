@@ -27,7 +27,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 1: Shape、axis、size
 
-- [ ] 实现 `src/numuya/shape.uya` 中的 `Shape`、`Strides`、`NUMUYA_MAX_DIMS`。
 - [ ] TDD: `shape_scalar()`。
   - scalar rank 是 0。
   - scalar size 是 1。
