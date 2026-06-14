@@ -394,3 +394,13 @@
   - contiguous 返回 shape `(size,)` view。
   - 验证：`../uya/bin/uya test src/numuya/_tests/test_stride_views.uya --manifest-path uya.toml` 通过（`ravel returns a rank-1 view of a contiguous array` 等 10 个测试全绿）。
   - 说明：实现已在 `src/numuya/stride.uya` 中提供，`ravel<T>` 对 contiguous 数组返回 shape `(size,)` 的 view；本轮主要完成验证与状态归档。
+
+## Phase 4: Stride、reshape、transpose、view
+
+- [x] TDD: `transpose`.
+  - `(2, 3)` transpose 得 `(3, 2)`。
+  - 读转置 view 的 `(2, 1)` 等于原 `(1, 2)`。
+  - 验证：`../uya/bin/uya test src/numuya/_tests/test_stride_views.uya --manifest-path uya.toml`
+  - 结果：通过，10/10 tests passed；其中 `transpose reverses dimensions and maps indices` 覆盖 shape 反转与索引映射，`writing through a transpose view updates the owner` 覆盖 view 写入回写 owner。
+  - 说明：实现已存在于 `src/numuya/stride.uya` 的 `transpose<T>`，测试已存在于 `src/numuya/_tests/test_stride_views.uya`；本回合主要完成验证与状态归档。
+  - 回归验证：`../uya/bin/uya test src/numuya/_tests/test_array_creation.uya --manifest-path uya.toml`、`test_indexing.uya`、`test_shape.uya`、`test_storage.uya`、`test_stride_views.uya` 均通过。
