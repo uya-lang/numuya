@@ -308,3 +308,11 @@
   - 修改源 slice 不影响 array。
   - 验证：`make test-one TEST=src/numuya/_tests/test_array_creation.uya` 通过（6 tests passed）。
   - 验证：`make test` 失败，`src/numuya/_tests/test_indexing.uya` 因 `set1_f64/get1_f64/set2_f64/get2_f64/setn_f64/getn_f64/get3_f64` 未实现导致宿主工具链链接失败；`test_array_creation` 已通过。
+
+## Phase 3: 创建数组与基础 get/set
+
+- [x] 实现 `src/numuya/indexing.uya`。
+  - 验证命令：`make test-one TEST=src/numuya/_tests/test_indexing.uya`
+  - 结果：通过，5 个 indexing 测试全部通过。
+  - 验证命令：`make test`
+  - 结果：通过，`test_array_creation`、`test_indexing`、`test_shape`、`test_storage`、`test_testing_helpers` 全绿。

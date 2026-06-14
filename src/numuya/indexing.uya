@@ -1,0 +1,125 @@
+use array;
+use shape;
+use storage;
+
+const INDEXING_MAX_USIZE: usize = 18446744073709551615;
+
+fn materialize_storage_release<T>(array_value: &Array<T>) void {
+    // Work around current generic codegen missing cross-module drop instantiation.
+    if array_value.storage == null {
+        storage_release<T>(array_value.storage);
+    }
+}
+
+fn validate_array_metadata<T>(array_value: &Array<T>) !void {
+    materialize_storage_release<T>(array_value);
+    if array_value.shape.rank > NUMUYA_MAX_DIMS {
+        return error.NumuyaInvalidArgument;
+    }
+    if array_value.strides.rank != array_value.shape.rank {
+        return error.NumuyaInvalidArgument;
+    }
+    return;
+}
+
+fn validate_fixed_rank<T>(array_value: &Array<T>, expected_rank: usize) !void {
+    try validate_array_metadata<T>(array_value);
+    if array_value.shape.rank != expected_rank {
+        return error.NumuyaInvalidArgument;
+    }
+    return;
+}
+
+fn physical_index<T>(array_value: &Array<T>, indices: &[usize]) !usize {
+    try validate_array_metadata<T>(array_value);
+    if indices.len != array_value.shape.rank {
+        return error.NumuyaShapeMismatch;
+    }
+
+    var linear_index: usize = array_value.offset as! usize catch {
+        return error.NumuyaInvalidArgument;
+    };
+
+    var axis: usize = 0;
+    while axis < indices.len {
+        const index_value: usize = indices[axis];
+        const dim: usize = array_value.shape.dims[axis];
+        if index_value >= dim {
+            return error.NumuyaIndexOutOfBounds;
+        }
+
+        const stride: usize = array_value.strides.strides[axis];
+        if index_value != 0 && stride > INDEXING_MAX_USIZE / index_value {
+            return error.NumuyaIndexOutOfBounds;
+        }
+        const contribution: usize = index_value * stride;
+        if linear_index > INDEXING_MAX_USIZE - contribution {
+            return error.NumuyaIndexOutOfBounds;
+        }
+        linear_index = linear_index + contribution;
+        axis = axis + 1;
+    }
+
+    if linear_index >= array_value.storage.len {
+        return error.NumuyaIndexOutOfBounds;
+    }
+    return linear_index;
+}
+
+fn ensure_writeable<T>(array_value: &Array<T>) !void {
+    if array_value.flags.writeable != true {
+        return error.NumuyaReadOnly;
+    }
+    return;
+}
+
+export fn get1<T>(array_value: &Array<T>, i0: usize) !T {
+    try validate_fixed_rank<T>(array_value, 1);
+    var indices: [usize: 1] = [i0];
+    const index: usize = try physical_index<T>(array_value, indices[0:1]);
+    return array_value.storage.data[index];
+}
+
+export fn get2<T>(array_value: &Array<T>, i0: usize, i1: usize) !T {
+    try validate_fixed_rank<T>(array_value, 2);
+    var indices: [usize: 2] = [i0, i1];
+    const index: usize = try physical_index<T>(array_value, indices[0:2]);
+    return array_value.storage.data[index];
+}
+
+export fn get3<T>(array_value: &Array<T>, i0: usize, i1: usize, i2: usize) !T {
+    try validate_fixed_rank<T>(array_value, 3);
+    var indices: [usize: 3] = [i0, i1, i2];
+    const index: usize = try physical_index<T>(array_value, indices[0:3]);
+    return array_value.storage.data[index];
+}
+
+export fn getn<T>(array_value: &Array<T>, indices: &[usize]) !T {
+    const index: usize = try physical_index<T>(array_value, indices);
+    return array_value.storage.data[index];
+}
+
+export fn set1<T>(array_value: &Array<T>, i0: usize, value: T) !void {
+    try validate_fixed_rank<T>(array_value, 1);
+    try ensure_writeable<T>(array_value);
+    var indices: [usize: 1] = [i0];
+    const index: usize = try physical_index<T>(array_value, indices[0:1]);
+    array_value.storage.data[index] = value;
+    return;
+}
+
+export fn set2<T>(array_value: &Array<T>, i0: usize, i1: usize, value: T) !void {
+    try validate_fixed_rank<T>(array_value, 2);
+    try ensure_writeable<T>(array_value);
+    var indices: [usize: 2] = [i0, i1];
+    const index: usize = try physical_index<T>(array_value, indices[0:2]);
+    array_value.storage.data[index] = value;
+    return;
+}
+
+export fn setn<T>(array_value: &Array<T>, indices: &[usize], value: T) !void {
+    try ensure_writeable<T>(array_value);
+    const index: usize = try physical_index<T>(array_value, indices);
+    array_value.storage.data[index] = value;
+    return;
+}
