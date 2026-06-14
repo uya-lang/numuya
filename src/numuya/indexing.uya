@@ -95,6 +95,10 @@ export fn get3<T>(array_value: &Array<T>, i0: usize, i1: usize, i2: usize) !T {
 }
 
 export fn getn<T>(array_value: &Array<T>, indices: &[usize]) !T {
+    try validate_array_metadata<T>(array_value);
+    if indices.len != array_value.shape.rank {
+        return error.NumuyaInvalidArgument;
+    }
     const index: usize = try physical_index<T>(array_value, indices);
     return array_value.storage.data[index];
 }

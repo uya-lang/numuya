@@ -316,3 +316,14 @@
   - 结果：通过，5 个 indexing 测试全部通过。
   - 验证命令：`make test`
   - 结果：通过，`test_array_creation`、`test_indexing`、`test_shape`、`test_storage`、`test_testing_helpers` 全绿。
+
+## Phase 3: 创建数组与基础 get/set
+
+- [x] TDD: `get1/get2/get3/getn`。
+  - 正常读。
+  - rank 不匹配返回 `NumuyaInvalidArgument`。
+  - index 越界返回 `NumuyaIndexOutOfBounds`。
+  - 验证：
+    - `make test-one TEST=src/numuya/_tests/test_indexing.uya`（先失败：`get helpers reject bounds and rank mismatches`，因 `getn` rank mismatch 返回 `NumuyaShapeMismatch`）
+    - `make test-one TEST=src/numuya/_tests/test_indexing.uya`（通过）
+    - `make test`（通过；`test_array_creation`、`test_indexing` 与其余当前默认单测全绿）

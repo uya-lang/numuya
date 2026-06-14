@@ -132,15 +132,27 @@ test "get helpers reject bounds and rank mismatches" {
     var array_value: Array<f64> = try make_array2(allocator, 2, 3);
     var wrong_rank: [usize: 1] = [0];
 
+    const get1_rank_result: !f64 = get1<f64>(&array_value, 0);
+    match get1_rank_result {
+        error.NumuyaInvalidArgument => {}
+        else => { return error.NumuyaExpectationFailed; }
+    }
+
     const get_result: !f64 = get2<f64>(&array_value, 2, 0);
     match get_result {
         error.NumuyaIndexOutOfBounds => {}
         else => { return error.NumuyaExpectationFailed; }
     }
 
+    const get3_rank_result: !f64 = get3<f64>(&array_value, 0, 0, 0);
+    match get3_rank_result {
+        error.NumuyaInvalidArgument => {}
+        else => { return error.NumuyaExpectationFailed; }
+    }
+
     const getn_result: !f64 = getn<f64>(&array_value, wrong_rank[0:1]);
     match getn_result {
-        error.NumuyaShapeMismatch => {}
+        error.NumuyaInvalidArgument => {}
         else => { return error.NumuyaExpectationFailed; }
     }
 }
