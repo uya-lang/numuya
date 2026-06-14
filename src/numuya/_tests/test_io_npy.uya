@@ -1,0 +1,78 @@
+use array;
+use creation;
+use indexing;
+use shape;
+use testing.expect_close_f64;
+use testing.expect_eq_usize;
+use testing.expect_shape_eq;
+
+use std.mem.allocator.IAllocator;
+use std.mem.allocator.MallocAllocator;
+
+const NPY_F64_TOLERANCE: f64 = 1e-12;
+
+fn expect_array1_close_f64(actual: &Array<f64>, expected_values: &[f64]) !void {
+    try expect_eq_usize(actual.shape.rank, 1);
+    try expect_eq_usize(actual.shape.dims[0], expected_values.len);
+    try expect_eq_usize(array_size<f64>(actual), expected_values.len);
+
+    var i: usize = 0;
+    while i < expected_values.len {
+        try expect_close_f64(try get1<f64>(actual, i), expected_values[i], NPY_F64_TOLERANCE);
+        i = i + 1;
+    }
+}
+
+fn expect_array2_close_f64(actual: &Array<f64>, dim0: usize, dim1: usize, expected_values: &[f64]) !void {
+    var expected_shape: [usize: 2] = [dim0, dim1];
+    try expect_shape_eq(actual.shape.dims[0:actual.shape.rank], expected_shape[0:2]);
+    try expect_eq_usize(array_size<f64>(actual), expected_values.len);
+    try expect_eq_usize(expected_values.len, dim0 * dim1);
+
+    var row: usize = 0;
+    while row < dim0 {
+        var col: usize = 0;
+        while col < dim1 {
+            const flat_index: usize = row * dim1 + col;
+            try expect_close_f64(
+                try get2<f64>(actual, row, col),
+                expected_values[flat_index],
+                NPY_F64_TOLERANCE,
+            );
+            col = col + 1;
+        }
+        row = row + 1;
+    }
+}
+
+fn expect_empty_array_f64(actual: &Array<f64>, expected_shape: &[usize]) !void {
+    try expect_shape_eq(actual.shape.dims[0:actual.shape.rank], expected_shape);
+    try expect_eq_usize(array_size<f64>(actual), 0);
+}
+
+test "io_npy test helpers validate planned 1d fixture shape" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var source: [f64: 4] = [1.0, 2.5, -3.0, 8.25];
+    var a: Array<f64> = try from_slice<f64>(allocator, source[0:4], shape1(4));
+
+    try expect_array1_close_f64(&a, source[0:4]);
+}
+
+test "io_npy test helpers validate planned 2d fixture shape" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var source: [f64: 6] = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
+    var a: Array<f64> = try from_slice<f64>(allocator, source[0:6], shape2(2, 3));
+
+    try expect_array2_close_f64(&a, 2, 3, source[0:6]);
+}
+
+test "io_npy test helpers validate planned empty fixture shape" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var a: Array<f64> = try full_f64(allocator, shape1(0), 0.0);
+    var expected_shape: [usize: 1] = [0];
+
+    try expect_empty_array_f64(&a, expected_shape[0:1]);
+}

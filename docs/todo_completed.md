@@ -143,3 +143,11 @@
   - 验证命令：`../uya/bin/uya test src/numuya/_tests/test_fft.uya --manifest-path uya.toml`
   - 结果：11/11 测试通过，0 失败。
   - 回归验证：`make test` 全绿（如 Makefile 可用）。
+
+## Phase 16: `.npy` I/O
+
+- [x] 写 `src/numuya/_tests/test_io_npy.uya`。
+  - 验证：`make test-one TEST=src/numuya/_tests/test_io_npy.uya`
+  - 结果：通过，3 个测试全部通过。
+  - 验证：`make test-one TEST=src/numuya/_tests/test_array_creation.uya`
+  - 结果：通过，6 个测试全部通过。

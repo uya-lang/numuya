@@ -33,7 +33,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 16: `.npy` I/O
 
-- [ ] 写 `src/numuya/_tests/test_io_npy.uya`。
 - [ ] 准备小型 `.npy` fixture。
   - 1-D f64。
   - 2-D f64。
