@@ -35,10 +35,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 20: CUDA backend 基础
 
-- [ ] TDD: `cuda_get_device(0)`。
-  - device ordinal 是 0。
-  - compute capability 应识别为 Ampere `sm_86` 或至少 major/minor 非 0。
-  - total memory 应大于 8GB。
 - [ ] TDD: `backend_init` / `backend_deinit`。
   - `BackendKind.cpu` 不初始化 CUDA。
   - `BackendKind.cuda` 初始化 CUDA，失败时返回明确错误。

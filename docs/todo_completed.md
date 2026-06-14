@@ -485,3 +485,15 @@
   - driver 初始化失败映射为 `NumuyaGpuUnavailable` 或 `NumuyaCudaError`。
   - 验证命令：`../uya/bin/uya test src/numuya/_tests/test_cuda_driver.uya --manifest-path uya.toml`
   - 验证结果：6/6 测试通过，0 失败（含 `cuda_init succeeds when cuda is available and errors gracefully otherwise`）。
+
+## Phase 20: CUDA backend 基础
+
+- [x] TDD: `cuda_get_device(0)`。
+  - device ordinal 是 0。
+  - compute capability 应识别为 Ampere `sm_86` 或至少 major/minor 非 0。
+  - total memory 应大于 8GB。
+  - 验证命令：
+    ```bash
+    make test-cuda TEST=src/numuya/_tests/test_cuda_driver.uya
+    ```
+  - 验证结果：通过 6/6 tests；`cuda_get_device(0)` 返回 ordinal=0、major/minor 非 0、total_memory_bytes > 8 GiB。
