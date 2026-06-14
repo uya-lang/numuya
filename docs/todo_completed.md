@@ -416,3 +416,10 @@
     - `writing through a swapaxes view updates the owner`
     - `swapaxes with identical axes is a no-op view`
   - 更广泛验证：`make test` 通过全部 5 个测试文件（test_array_creation、test_indexing、test_shape、test_storage、test_stride_views、test_testing_helpers），共 42 个测试。
+
+## NumUya TDD Todo / Phase 4: Stride、reshape、transpose、view
+
+- [x] TDD: view 写入。
+  - 通过 transpose view set 后，owner 对应元素变化。
+  - 验证：`../uya/bin/uya test src/numuya/_tests/test_stride_views.uya --manifest-path uya.toml` 通过，13 个测试全部通过（含 `writing through a transpose view updates the owner` 与 `writing through a swapaxes view updates the owner`）。
+  - 验证：`make test` 通过，当前 6 个测试文件（test_array_creation、test_indexing、test_shape、test_storage、test_stride_views、test_testing_helpers）全部通过，无失败。
