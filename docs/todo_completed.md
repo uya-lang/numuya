@@ -201,3 +201,10 @@
   - 验证：
     - `make test-one TEST=src/numuya/_tests/test_storage.uya`：先失败，链接错误 `undefined reference to 'storage_release_f64'`；实现后通过，`test_storage` 4 tests passed。
     - `make test`：通过（`test_shape` 8 tests passed；`test_storage` 4 tests passed；`test_testing_helpers` 2 tests passed）。
+## Phase 2: Storage 与 Array handle
+
+- [x] 实现 `src/numuya/array.uya` 的 `Array<T>` 与 `ArrayFlags`。
+  - 验证命令：`make check-one TEST=src/numuya/array.uya`
+  - 结果：通过，package-mode checker 通过。
+  - 验证命令：`make test`
+  - 结果：通过，`test_shape`、`test_storage`、`test_testing_helpers` 全部通过；`test_shape` 仍有既存 const qualifier warning，但无新增失败。

@@ -27,7 +27,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 2: Storage 与 Array handle
 
-- [ ] 实现 `src/numuya/array.uya` 的 `Array<T>` 与 `ArrayFlags`。
 - [ ] TDD: `array_rank/array_size/array_shape`。
 - [ ] TDD: `array_is_c_contiguous`。
   - contiguous owner 为 true。

@@ -1,0 +1,21 @@
+use shape;
+use storage;
+
+export struct ArrayFlags {
+    c_contiguous: bool,
+    f_contiguous: bool,
+    writeable: bool,
+    owns_data: bool,
+}
+
+export struct Array<T> {
+    storage: &Storage<T>,
+    offset: isize,
+    shape: Shape,
+    strides: Strides,
+    flags: ArrayFlags,
+
+    fn drop(self: Array<T>) void {
+        storage_release<T>(self.storage);
+    }
+}
