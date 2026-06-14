@@ -710,3 +710,16 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 - [x] 写 `src/numuya/_tests/test_math.uya`。
   验证：`../uya/bin/uya test src/numuya/_tests/test_math.uya`
   结果：文件已存在（7137 bytes），编译至类型检查阶段；因 `math.uya` 尚未实现，测试内 `try math.abs_f64(...)` 等调用报 9 处 `try 的操作数必须是错误联合类型 !T` 预期失败。后续 `实现 math.uya` 与 `验收：test_math.uya 绿` 任务继续跟进。
+
+## Phase 9: Math functions
+
+- [x] 实现 `src/numuya/math.uya`。
+  - 新增 `src/numuya/math.uya`，提供 `abs_f64`、`sqrt_f64`、`exp_f64`、`log_f64`、`sin_f64`、`cos_f64`。
+  - 复用 contiguous / stride 索引路径处理一维/多维及 transpose 等非连续输入。
+  - 通过 `extern "libc"` 调用 C 数学函数；测试与链接需 `LDFLAGS=-lm`。
+  - 验证命令：
+    ```bash
+    LDFLAGS=-lm ../uya/bin/uya test src/numuya/_tests/test_math.uya --manifest-path uya.toml
+    LDFLAGS=-lm make test
+    ```
+  - 验证结果：`src/numuya/_tests/test_math.uya` 10/10 通过；`make test` 全部 NumUya 测试通过。

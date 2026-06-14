@@ -1,0 +1,314 @@
+use array;
+use creation;
+use shape;
+use storage;
+
+const MATH_MAX_USIZE: usize = 18446744073709551615;
+const MATH_ISIZE_MAX: isize = 9223372036854775807;
+
+extern "libc" fn sqrt(x: f64) f64;
+extern "libc" fn exp(x: f64) f64;
+extern "libc" fn log(x: f64) f64;
+extern "libc" fn sin(x: f64) f64;
+extern "libc" fn cos(x: f64) f64;
+
+fn clone_shape(shape_value: &Shape) Shape {
+    var cloned: Shape = shape_scalar();
+    cloned.rank = shape_value.rank;
+    var i: usize = 0;
+    while i < shape_value.rank {
+        cloned.dims[i] = shape_value.dims[i];
+        i = i + 1;
+    }
+    return cloned;
+}
+
+fn multiply_usize_isize(index_value: usize, step: isize) !isize {
+    if step == 0 {
+        return (0 as! isize).value;
+    }
+    const signed_index: isize = index_value as! isize catch {
+        return error.NumuyaIndexOutOfBounds;
+    };
+    if signed_index == 0 {
+        return (0 as! isize).value;
+    }
+    const abs_step: isize = if step < 0 { -step } else { step };
+    if abs_step > MATH_ISIZE_MAX / signed_index {
+        return error.NumuyaIndexOutOfBounds;
+    }
+    return signed_index * step;
+}
+
+fn physical_index_ref(shape_value: &Shape, strides_value: &Strides, offset: isize, indices: &[usize]) !usize {
+    if indices.len != shape_value.rank {
+        return error.NumuyaShapeMismatch;
+    }
+
+    var linear_index: isize = offset;
+
+    var axis: usize = 0;
+    while axis < indices.len {
+        if axis >= NUMUYA_MAX_DIMS {
+            return error.NumuyaIndexOutOfBounds;
+        }
+        const index_value: usize = indices[axis];
+        const dim: usize = shape_value.dims[axis];
+        if index_value >= dim {
+            return error.NumuyaIndexOutOfBounds;
+        }
+
+        const step: isize = strides_value.steps[axis];
+        const contribution: isize = try multiply_usize_isize(index_value, step);
+        linear_index = linear_index + contribution;
+        axis = axis + 1;
+    }
+
+    if linear_index < 0 {
+        return error.NumuyaIndexOutOfBounds;
+    }
+
+    return (linear_index as! usize).value;
+}
+
+fn linear_to_indices(shape_value: &Shape, linear: usize, indices: &[usize]) !void {
+    var remaining: usize = linear;
+    var axis: usize = shape_value.rank;
+    while axis > 0 {
+        const index: usize = axis - 1;
+        if index >= NUMUYA_MAX_DIMS {
+            return error.NumuyaRankTooLarge;
+        }
+        const dim: usize = shape_value.dims[index];
+        indices[index] = remaining % dim;
+        remaining = remaining / dim;
+        axis = index;
+    }
+    return;
+}
+
+fn offset_as_usize(offset: isize) !usize {
+    if offset < 0 {
+        return error.NumuyaIndexOutOfBounds;
+    }
+    return (offset as! usize).value;
+}
+
+struct UnaryIndices {
+    input_idx: usize,
+    result_idx: usize,
+}
+
+fn unary_stride_indices<T>(input: &Array<T>, result: &Array<T>, linear: usize) !UnaryIndices {
+    var indices: [usize: NUMUYA_MAX_DIMS] = [0: NUMUYA_MAX_DIMS];
+    try linear_to_indices(&result.shape, linear, indices[0:result.shape.rank]);
+    const input_idx: usize = try physical_index_ref(&input.shape, &input.strides, input.offset, indices[0:result.shape.rank]);
+    const result_idx: usize = try physical_index_ref(&result.shape, &result.strides, result.offset, indices[0:result.shape.rank]);
+    return UnaryIndices{
+        input_idx: input_idx,
+        result_idx: result_idx,
+    };
+}
+
+fn unary_op_use_contiguous_path<T>(input: &Array<T>, result: &Array<T>) bool {
+    return array_is_c_contiguous<T>(input) && array_is_c_contiguous<T>(result);
+}
+
+fn apply_abs(x: f64) f64 {
+    if x < 0.0 {
+        return -x;
+    }
+    return x;
+}
+
+export fn abs_f64(input: &Array<f64>) !Array<f64> {
+    var result: Array<f64> = try empty<f64>(input.storage.allocator, clone_shape(&input.shape));
+
+    if unary_op_use_contiguous_path<f64>(input, &result) {
+        const input_base: usize = try offset_as_usize(input.offset);
+        const result_base: usize = try offset_as_usize(result.offset);
+        const size: usize = array_size<f64>(&result);
+        var i: usize = 0;
+        while i < size {
+            result.storage.data[result_base + i] = apply_abs(input.storage.data[input_base + i]);
+            i = i + 1;
+        }
+    } else {
+        const size: usize = array_size<f64>(&result);
+        var linear: usize = 0;
+        while linear < size {
+            const idx: UnaryIndices = try unary_stride_indices<f64>(input, &result, linear);
+            result.storage.data[idx.result_idx] = apply_abs(input.storage.data[idx.input_idx]);
+            linear = linear + 1;
+        }
+    }
+
+    storage_retain<f64>(result.storage);
+    return Array<f64>{
+        storage: result.storage,
+        offset: result.offset,
+        shape: result.shape,
+        strides: result.strides,
+        flags: result.flags,
+    };
+}
+
+export fn sqrt_f64(input: &Array<f64>) !Array<f64> {
+    var result: Array<f64> = try empty<f64>(input.storage.allocator, clone_shape(&input.shape));
+
+    if unary_op_use_contiguous_path<f64>(input, &result) {
+        const input_base: usize = try offset_as_usize(input.offset);
+        const result_base: usize = try offset_as_usize(result.offset);
+        const size: usize = array_size<f64>(&result);
+        var i: usize = 0;
+        while i < size {
+            result.storage.data[result_base + i] = sqrt(input.storage.data[input_base + i]);
+            i = i + 1;
+        }
+    } else {
+        const size: usize = array_size<f64>(&result);
+        var linear: usize = 0;
+        while linear < size {
+            const idx: UnaryIndices = try unary_stride_indices<f64>(input, &result, linear);
+            result.storage.data[idx.result_idx] = sqrt(input.storage.data[idx.input_idx]);
+            linear = linear + 1;
+        }
+    }
+
+    storage_retain<f64>(result.storage);
+    return Array<f64>{
+        storage: result.storage,
+        offset: result.offset,
+        shape: result.shape,
+        strides: result.strides,
+        flags: result.flags,
+    };
+}
+
+export fn exp_f64(input: &Array<f64>) !Array<f64> {
+    var result: Array<f64> = try empty<f64>(input.storage.allocator, clone_shape(&input.shape));
+
+    if unary_op_use_contiguous_path<f64>(input, &result) {
+        const input_base: usize = try offset_as_usize(input.offset);
+        const result_base: usize = try offset_as_usize(result.offset);
+        const size: usize = array_size<f64>(&result);
+        var i: usize = 0;
+        while i < size {
+            result.storage.data[result_base + i] = exp(input.storage.data[input_base + i]);
+            i = i + 1;
+        }
+    } else {
+        const size: usize = array_size<f64>(&result);
+        var linear: usize = 0;
+        while linear < size {
+            const idx: UnaryIndices = try unary_stride_indices<f64>(input, &result, linear);
+            result.storage.data[idx.result_idx] = exp(input.storage.data[idx.input_idx]);
+            linear = linear + 1;
+        }
+    }
+
+    storage_retain<f64>(result.storage);
+    return Array<f64>{
+        storage: result.storage,
+        offset: result.offset,
+        shape: result.shape,
+        strides: result.strides,
+        flags: result.flags,
+    };
+}
+
+export fn log_f64(input: &Array<f64>) !Array<f64> {
+    var result: Array<f64> = try empty<f64>(input.storage.allocator, clone_shape(&input.shape));
+
+    if unary_op_use_contiguous_path<f64>(input, &result) {
+        const input_base: usize = try offset_as_usize(input.offset);
+        const result_base: usize = try offset_as_usize(result.offset);
+        const size: usize = array_size<f64>(&result);
+        var i: usize = 0;
+        while i < size {
+            result.storage.data[result_base + i] = log(input.storage.data[input_base + i]);
+            i = i + 1;
+        }
+    } else {
+        const size: usize = array_size<f64>(&result);
+        var linear: usize = 0;
+        while linear < size {
+            const idx: UnaryIndices = try unary_stride_indices<f64>(input, &result, linear);
+            result.storage.data[idx.result_idx] = log(input.storage.data[idx.input_idx]);
+            linear = linear + 1;
+        }
+    }
+
+    storage_retain<f64>(result.storage);
+    return Array<f64>{
+        storage: result.storage,
+        offset: result.offset,
+        shape: result.shape,
+        strides: result.strides,
+        flags: result.flags,
+    };
+}
+
+export fn sin_f64(input: &Array<f64>) !Array<f64> {
+    var result: Array<f64> = try empty<f64>(input.storage.allocator, clone_shape(&input.shape));
+
+    if unary_op_use_contiguous_path<f64>(input, &result) {
+        const input_base: usize = try offset_as_usize(input.offset);
+        const result_base: usize = try offset_as_usize(result.offset);
+        const size: usize = array_size<f64>(&result);
+        var i: usize = 0;
+        while i < size {
+            result.storage.data[result_base + i] = sin(input.storage.data[input_base + i]);
+            i = i + 1;
+        }
+    } else {
+        const size: usize = array_size<f64>(&result);
+        var linear: usize = 0;
+        while linear < size {
+            const idx: UnaryIndices = try unary_stride_indices<f64>(input, &result, linear);
+            result.storage.data[idx.result_idx] = sin(input.storage.data[idx.input_idx]);
+            linear = linear + 1;
+        }
+    }
+
+    storage_retain<f64>(result.storage);
+    return Array<f64>{
+        storage: result.storage,
+        offset: result.offset,
+        shape: result.shape,
+        strides: result.strides,
+        flags: result.flags,
+    };
+}
+
+export fn cos_f64(input: &Array<f64>) !Array<f64> {
+    var result: Array<f64> = try empty<f64>(input.storage.allocator, clone_shape(&input.shape));
+
+    if unary_op_use_contiguous_path<f64>(input, &result) {
+        const input_base: usize = try offset_as_usize(input.offset);
+        const result_base: usize = try offset_as_usize(result.offset);
+        const size: usize = array_size<f64>(&result);
+        var i: usize = 0;
+        while i < size {
+            result.storage.data[result_base + i] = cos(input.storage.data[input_base + i]);
+            i = i + 1;
+        }
+    } else {
+        const size: usize = array_size<f64>(&result);
+        var linear: usize = 0;
+        while linear < size {
+            const idx: UnaryIndices = try unary_stride_indices<f64>(input, &result, linear);
+            result.storage.data[idx.result_idx] = cos(input.storage.data[idx.input_idx]);
+            linear = linear + 1;
+        }
+    }
+
+    storage_retain<f64>(result.storage);
+    return Array<f64>{
+        storage: result.storage,
+        offset: result.offset,
+        shape: result.shape,
+        strides: result.strides,
+        flags: result.flags,
+    };
+}

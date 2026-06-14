@@ -31,7 +31,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 9: Math functions
 
-- [ ] 实现 `src/numuya/math.uya`。
 - [ ] TDD: `abs_f64`。
 - [ ] TDD: `sqrt_f64`。
 - [ ] TDD: `exp_f64/log_f64`。
