@@ -681,3 +681,14 @@
     - `test_cuda_ufunc.uya:(8:1): 错误: 模块中未找到导出项`（`use cuda.ufunc;` 引用的模块不存在）。
     - `try 的操作数必须是错误联合类型 !T`（`gpu_add_f64`、`gpu_mul_f64` 未定义）。
   - 失败原因/后续重开条件：需先实现 `src/numuya/cuda/ufunc.uya` 并提供 `gpu_add_f64` 与 `gpu_mul_f64`，之后本测试文件应能编译并进入运行时验证。
+
+## Phase 22: CUDA ufunc 与 reduction
+
+- [x] 写 `src/numuya/_tests/test_cuda_ufunc.uya`。
+  - 验证：`ls -la src/numuya/_tests/test_cuda_ufunc.uya` 确认文件存在，包含 5 个测试用例：
+    - `gpu_add_f64 contiguous matches CPU add_f64`
+    - `gpu_mul_f64 contiguous matches CPU mul_f64`
+    - `gpu_add_f64 broadcasts row vector across matrix`
+    - `gpu_add_f64 handles non-contiguous transpose input`
+    - `gpu_add_f64 output is a new owner independent of inputs`
+  - 说明：测试文件按 TDD 先写，引用尚未实现的 `cuda.ufunc` API；完整编译/运行需等待后续 `cuda/ufunc.uya` 与 kernels 实现。
