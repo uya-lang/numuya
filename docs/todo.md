@@ -27,9 +27,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 0: 脚手架与测试基础
 
-- [ ] 运行 `../uya/bin/uya upm install --manifest-path uya.toml`。
-  - 无依赖时仍应成功。
-  - 若生成 `uya.lock`，保留并提交；后续依赖变更必须同步更新。
 - [ ] 创建目录结构：`src/numuya/`、`src/numuya/_tests/`、`tests/fixtures/`。
 - [ ] 创建 `src/numuya/errors.uya`，只放 error 声明，不写业务逻辑。
 - [ ] 创建 `src/numuya/testing.uya`，写 `expect_close_f64`、`expect_eq_usize`、`expect_shape_eq` 的测试占位。
