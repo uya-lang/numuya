@@ -31,9 +31,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 8: Reductions
 
-- [ ] TDD: `mean_all_f64`。
-  - 普通数组。
-  - 空数组返回 `NumuyaInvalidArgument`。
 - [ ] TDD: `sum_axis_f64`.
   - axis 0、axis 1。
   - negative axis。
