@@ -1,0 +1,470 @@
+use array;
+use creation;
+use shape;
+use storage;
+
+const REDUCTIONS_MAX_USIZE: usize = 18446744073709551615;
+
+fn clone_shape(shape_value: &Shape) Shape {
+    var cloned: Shape = shape_scalar();
+    cloned.rank = shape_value.rank;
+    var i: usize = 0;
+    while i < shape_value.rank {
+        cloned.dims[i] = shape_value.dims[i];
+        i = i + 1;
+    }
+    return cloned;
+}
+
+fn multiply_usize_isize(index_value: usize, step: isize) !isize {
+    if step == 0 {
+        return (0 as! isize).value;
+    }
+    const signed_index: isize = index_value as! isize catch {
+        return error.NumuyaIndexOutOfBounds;
+    };
+    if signed_index == 0 {
+        return (0 as! isize).value;
+    }
+    const abs_step: isize = if step < 0 { -step } else { step };
+    if abs_step > NUMUYA_ISIZE_MAX / signed_index {
+        return error.NumuyaIndexOutOfBounds;
+    }
+    return signed_index * step;
+}
+
+fn physical_index_ref(shape_value: &Shape, strides_value: &Strides, offset: isize, indices: &[usize]) !usize {
+    if indices.len != shape_value.rank {
+        return error.NumuyaShapeMismatch;
+    }
+
+    var linear_index: isize = offset;
+
+    var axis: usize = 0;
+    while axis < indices.len {
+        if axis >= NUMUYA_MAX_DIMS {
+            return error.NumuyaIndexOutOfBounds;
+        }
+        const index_value: usize = indices[axis];
+        const dim: usize = shape_value.dims[axis];
+        if index_value >= dim {
+            return error.NumuyaIndexOutOfBounds;
+        }
+
+        const step: isize = strides_value.steps[axis];
+        const contribution: isize = try multiply_usize_isize(index_value, step);
+        linear_index = linear_index + contribution;
+        axis = axis + 1;
+    }
+
+    if linear_index < 0 {
+        return error.NumuyaIndexOutOfBounds;
+    }
+
+    return (linear_index as! usize).value;
+}
+
+fn linear_to_indices(shape_value: &Shape, linear: usize, indices: &[usize]) !void {
+    var remaining: usize = linear;
+    var axis: usize = shape_value.rank;
+    while axis > 0 {
+        const index: usize = axis - 1;
+        if index >= NUMUYA_MAX_DIMS {
+            return error.NumuyaRankTooLarge;
+        }
+        const dim: usize = shape_value.dims[index];
+        indices[index] = remaining % dim;
+        remaining = remaining / dim;
+        axis = index;
+    }
+    return;
+}
+
+fn offset_as_usize(offset: isize) !usize {
+    if offset < 0 {
+        return error.NumuyaIndexOutOfBounds;
+    }
+    return (offset as! usize).value;
+}
+
+fn validate_array<T>(array_value: &Array<T>) !void {
+    if array_value.shape.rank > NUMUYA_MAX_DIMS {
+        return error.NumuyaInvalidArgument;
+    }
+    if array_value.strides.rank != array_value.shape.rank {
+        return error.NumuyaInvalidArgument;
+    }
+    return;
+}
+
+fn array_size_safe<T>(array_value: &Array<T>) !usize {
+    try validate_array<T>(array_value);
+    var size: usize = 1;
+    var i: usize = 0;
+    while i < array_value.shape.rank {
+        const dim: usize = array_value.shape.dims[i];
+        if dim != 0 && size > REDUCTIONS_MAX_USIZE / dim {
+            return error.NumuyaShapeOverflow;
+        }
+        size = size * dim;
+        i = i + 1;
+    }
+    return size;
+}
+
+export fn sum_all_f64(array_value: &Array<f64>) !f64 {
+    try validate_array<f64>(array_value);
+    const size: usize = try array_size_safe<f64>(array_value);
+
+    var total: f64 = 0.0;
+    if size == 0 {
+        return total;
+    }
+
+    if array_is_c_contiguous<f64>(array_value) {
+        const base: usize = try offset_as_usize(array_value.offset);
+        var i: usize = 0;
+        while i < size {
+            total = total + array_value.storage.data[base + i];
+            i = i + 1;
+        }
+    } else {
+        var indices: [usize: NUMUYA_MAX_DIMS] = [0: NUMUYA_MAX_DIMS];
+        var linear: usize = 0;
+        while linear < size {
+            try linear_to_indices(&array_value.shape, linear, indices[0:array_value.shape.rank]);
+            const idx: usize = try physical_index_ref(&array_value.shape, &array_value.strides, array_value.offset, indices[0:array_value.shape.rank]);
+            total = total + array_value.storage.data[idx];
+            linear = linear + 1;
+        }
+    }
+
+    return total;
+}
+
+export fn prod_all_f64(array_value: &Array<f64>) !f64 {
+    try validate_array<f64>(array_value);
+    const size: usize = try array_size_safe<f64>(array_value);
+
+    var total: f64 = 1.0;
+    if size == 0 {
+        return total;
+    }
+
+    if array_is_c_contiguous<f64>(array_value) {
+        const base: usize = try offset_as_usize(array_value.offset);
+        var i: usize = 0;
+        while i < size {
+            total = total * array_value.storage.data[base + i];
+            i = i + 1;
+        }
+    } else {
+        var indices: [usize: NUMUYA_MAX_DIMS] = [0: NUMUYA_MAX_DIMS];
+        var linear: usize = 0;
+        while linear < size {
+            try linear_to_indices(&array_value.shape, linear, indices[0:array_value.shape.rank]);
+            const idx: usize = try physical_index_ref(&array_value.shape, &array_value.strides, array_value.offset, indices[0:array_value.shape.rank]);
+            total = total * array_value.storage.data[idx];
+            linear = linear + 1;
+        }
+    }
+
+    return total;
+}
+
+export fn min_all_f64(array_value: &Array<f64>) !f64 {
+    try validate_array<f64>(array_value);
+    const size: usize = try array_size_safe<f64>(array_value);
+
+    if size == 0 {
+        return error.NumuyaInvalidArgument;
+    }
+
+    var value: f64 = 0.0;
+    var first: bool = true;
+
+    if array_is_c_contiguous<f64>(array_value) {
+        const base: usize = try offset_as_usize(array_value.offset);
+        var i: usize = 0;
+        while i < size {
+            const element: f64 = array_value.storage.data[base + i];
+            if first || element < value {
+                value = element;
+                first = false;
+            }
+            i = i + 1;
+        }
+    } else {
+        var indices: [usize: NUMUYA_MAX_DIMS] = [0: NUMUYA_MAX_DIMS];
+        var linear: usize = 0;
+        while linear < size {
+            try linear_to_indices(&array_value.shape, linear, indices[0:array_value.shape.rank]);
+            const idx: usize = try physical_index_ref(&array_value.shape, &array_value.strides, array_value.offset, indices[0:array_value.shape.rank]);
+            const element: f64 = array_value.storage.data[idx];
+            if first || element < value {
+                value = element;
+                first = false;
+            }
+            linear = linear + 1;
+        }
+    }
+
+    return value;
+}
+
+export fn max_all_f64(array_value: &Array<f64>) !f64 {
+    try validate_array<f64>(array_value);
+    const size: usize = try array_size_safe<f64>(array_value);
+
+    if size == 0 {
+        return error.NumuyaInvalidArgument;
+    }
+
+    var value: f64 = 0.0;
+    var first: bool = true;
+
+    if array_is_c_contiguous<f64>(array_value) {
+        const base: usize = try offset_as_usize(array_value.offset);
+        var i: usize = 0;
+        while i < size {
+            const element: f64 = array_value.storage.data[base + i];
+            if first || element > value {
+                value = element;
+                first = false;
+            }
+            i = i + 1;
+        }
+    } else {
+        var indices: [usize: NUMUYA_MAX_DIMS] = [0: NUMUYA_MAX_DIMS];
+        var linear: usize = 0;
+        while linear < size {
+            try linear_to_indices(&array_value.shape, linear, indices[0:array_value.shape.rank]);
+            const idx: usize = try physical_index_ref(&array_value.shape, &array_value.strides, array_value.offset, indices[0:array_value.shape.rank]);
+            const element: f64 = array_value.storage.data[idx];
+            if first || element > value {
+                value = element;
+                first = false;
+            }
+            linear = linear + 1;
+        }
+    }
+
+    return value;
+}
+
+export fn mean_all_f64(array_value: &Array<f64>) !f64 {
+    try validate_array<f64>(array_value);
+    const size: usize = try array_size_safe<f64>(array_value);
+
+    if size == 0 {
+        return error.NumuyaInvalidArgument;
+    }
+
+    const total: f64 = try sum_all_f64(array_value);
+    return total / (size as! f64).value;
+}
+
+fn compute_axis_shape(input_shape: &Shape, axis: usize, keepdims: bool) !Shape {
+    if input_shape.rank == 0 {
+        return error.NumuyaAxisOutOfBounds;
+    }
+
+    var output_shape: Shape = shape_scalar();
+    if keepdims {
+        output_shape.rank = input_shape.rank;
+    } else {
+        if input_shape.rank == 1 {
+            output_shape.rank = 0;
+        } else {
+            output_shape.rank = input_shape.rank - 1;
+        }
+    }
+
+    var out_axis: usize = 0;
+    var in_axis: usize = 0;
+    while in_axis < input_shape.rank {
+        if in_axis == axis {
+            if keepdims {
+                output_shape.dims[out_axis] = 1;
+                out_axis = out_axis + 1;
+            }
+        } else {
+            if out_axis >= NUMUYA_MAX_DIMS {
+                return error.NumuyaRankTooLarge;
+            }
+            output_shape.dims[out_axis] = input_shape.dims[in_axis];
+            out_axis = out_axis + 1;
+        }
+        in_axis = in_axis + 1;
+    }
+
+    return output_shape;
+}
+
+fn map_output_indices_to_input(output_indices: &[usize], input_indices: &[usize], axis: usize, keepdims: bool) !void {
+    var out_axis: usize = 0;
+    var in_axis: usize = 0;
+    while in_axis < input_indices.len {
+        if in_axis == axis {
+            // Reduction axis index is filled by caller; skip the corresponding
+            // output axis only when keepdims preserved it.
+            if keepdims {
+                if out_axis >= output_indices.len {
+                    return error.NumuyaShapeMismatch;
+                }
+                out_axis = out_axis + 1;
+            }
+        } else {
+            if out_axis >= output_indices.len {
+                return error.NumuyaShapeMismatch;
+            }
+            input_indices[in_axis] = output_indices[out_axis];
+            out_axis = out_axis + 1;
+        }
+        in_axis = in_axis + 1;
+    }
+    return;
+}
+
+export fn sum_axis_f64(array_value: &Array<f64>, axis: i32, keepdims: bool) !Array<f64> {
+    try validate_array<f64>(array_value);
+    const rank: usize = array_value.shape.rank;
+    if rank == 0 {
+        return error.NumuyaAxisOutOfBounds;
+    }
+    const normalized_axis: usize = try normalize_axis(axis, rank);
+    if normalized_axis >= NUMUYA_MAX_DIMS {
+        return error.NumuyaAxisOutOfBounds;
+    }
+
+    const output_shape: Shape = try compute_axis_shape(&array_value.shape, normalized_axis, keepdims);
+    var result: Array<f64> = try empty<f64>(array_value.storage.allocator, clone_shape(&output_shape));
+
+    const output_size: usize = array_size<f64>(&result);
+    const axis_dim: usize = array_value.shape.dims[normalized_axis];
+
+    var output_indices: [usize: NUMUYA_MAX_DIMS] = [0: NUMUYA_MAX_DIMS];
+    var input_indices: [usize: NUMUYA_MAX_DIMS] = [0: NUMUYA_MAX_DIMS];
+
+    var linear: usize = 0;
+    while linear < output_size {
+        try linear_to_indices(&result.shape, linear, output_indices[0:result.shape.rank]);
+        try map_output_indices_to_input(output_indices[0:result.shape.rank], input_indices[0:rank], normalized_axis, keepdims);
+
+        var total: f64 = 0.0;
+        var reduction_index: usize = 0;
+        while reduction_index < axis_dim {
+            input_indices[normalized_axis] = reduction_index;
+            const idx: usize = try physical_index_ref(&array_value.shape, &array_value.strides, array_value.offset, input_indices[0:rank]);
+            total = total + array_value.storage.data[idx];
+            reduction_index = reduction_index + 1;
+        }
+
+        const result_idx: usize = try physical_index_ref(&result.shape, &result.strides, result.offset, output_indices[0:result.shape.rank]);
+        result.storage.data[result_idx] = total;
+
+        linear = linear + 1;
+    }
+
+    storage_retain<f64>(result.storage);
+    return Array<f64>{
+        storage: result.storage,
+        offset: result.offset,
+        shape: result.shape,
+        strides: result.strides,
+        flags: result.flags,
+    };
+}
+
+export fn mean_axis_f64(array_value: &Array<f64>, axis: i32, keepdims: bool) !Array<f64> {
+    try validate_array<f64>(array_value);
+    const rank: usize = array_value.shape.rank;
+    if rank == 0 {
+        return error.NumuyaAxisOutOfBounds;
+    }
+    const normalized_axis: usize = try normalize_axis(axis, rank);
+    if normalized_axis >= NUMUYA_MAX_DIMS {
+        return error.NumuyaAxisOutOfBounds;
+    }
+    const axis_dim: usize = array_value.shape.dims[normalized_axis];
+    if axis_dim == 0 {
+        return error.NumuyaInvalidArgument;
+    }
+
+    var result: Array<f64> = try sum_axis_f64(array_value, axis, keepdims);
+
+    const output_size: usize = array_size<f64>(&result);
+    var linear: usize = 0;
+    while linear < output_size {
+        const base: usize = try offset_as_usize(result.offset);
+        result.storage.data[base + linear] = result.storage.data[base + linear] / (axis_dim as! f64).value;
+        linear = linear + 1;
+    }
+
+    storage_retain<f64>(result.storage);
+    return Array<f64>{
+        storage: result.storage,
+        offset: result.offset,
+        shape: result.shape,
+        strides: result.strides,
+        flags: result.flags,
+    };
+}
+
+export fn argmax_axis_f64(array_value: &Array<f64>, axis: i32, keepdims: bool) !Array<usize> {
+    try validate_array<f64>(array_value);
+    const rank: usize = array_value.shape.rank;
+    if rank == 0 {
+        return error.NumuyaAxisOutOfBounds;
+    }
+    const normalized_axis: usize = try normalize_axis(axis, rank);
+    if normalized_axis >= NUMUYA_MAX_DIMS {
+        return error.NumuyaAxisOutOfBounds;
+    }
+
+    const output_shape: Shape = try compute_axis_shape(&array_value.shape, normalized_axis, keepdims);
+    var result: Array<usize> = try empty<usize>(array_value.storage.allocator, clone_shape(&output_shape));
+
+    const output_size: usize = array_size<usize>(&result);
+    const axis_dim: usize = array_value.shape.dims[normalized_axis];
+
+    var output_indices: [usize: NUMUYA_MAX_DIMS] = [0: NUMUYA_MAX_DIMS];
+    var input_indices: [usize: NUMUYA_MAX_DIMS] = [0: NUMUYA_MAX_DIMS];
+
+    var linear: usize = 0;
+    while linear < output_size {
+        try linear_to_indices(&result.shape, linear, output_indices[0:result.shape.rank]);
+        try map_output_indices_to_input(output_indices[0:result.shape.rank], input_indices[0:rank], normalized_axis, keepdims);
+
+        var best_index: usize = 0;
+        var best_value: f64 = 0.0;
+        var first: bool = true;
+
+        var reduction_index: usize = 0;
+        while reduction_index < axis_dim {
+            input_indices[normalized_axis] = reduction_index;
+            const idx: usize = try physical_index_ref(&array_value.shape, &array_value.strides, array_value.offset, input_indices[0:rank]);
+            const element: f64 = array_value.storage.data[idx];
+            if first || element > best_value {
+                best_value = element;
+                best_index = reduction_index;
+                first = false;
+            }
+            reduction_index = reduction_index + 1;
+        }
+
+        const result_idx: usize = try physical_index_ref(&result.shape, &result.strides, result.offset, output_indices[0:result.shape.rank]);
+        result.storage.data[result_idx] = best_index;
+
+        linear = linear + 1;
+    }
+
+    storage_retain<usize>(result.storage);
+    return Array<usize>{
+        storage: result.storage,
+        offset: result.offset,
+        shape: result.shape,
+        strides: result.strides,
+        flags: result.flags,
+    };
+}

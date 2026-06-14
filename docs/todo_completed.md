@@ -621,3 +621,10 @@
     - `../uya/bin/uya test src/numuya/_tests/test_ufunc.uya --manifest-path uya.toml` → 17/17 通过
     - `../uya/bin/uya test src/numuya/_tests/test_stride_views.uya --manifest-path uya.toml` → 13/13 通过
     - `../uya/bin/uya test src/numuya/_tests/test_array_creation.uya --manifest-path uya.toml` → 6/6 通过
+
+## NumUya TDD Todo / Phase 8: Reductions
+
+- [x] 实现 `src/numuya/reductions.uya`。
+  - 验证命令：
+    - `../uya/bin/uya test src/numuya/_tests/test_reductions.uya --manifest-path uya.toml`（20/20 通过）
+    - `make test`（所有既有测试文件通过）
