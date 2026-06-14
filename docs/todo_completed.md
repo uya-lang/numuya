@@ -208,3 +208,11 @@
 - [x] 验收：`src/numuya/_tests/test_io_npy.uya` 绿。
   - 验证命令：`make test-one TEST=src/numuya/_tests/test_io_npy.uya` — 9/9 通过。
   - 回归验证：`make test` — 全量测试通过。
+
+# NumUya TDD Todo
+## Phase 17: Advanced indexing
+
+- [x] 写 `src/numuya/_tests/test_advanced_indexing.uya`。
+  验证：
+  `../uya/bin/uya check src/numuya/_tests/test_advanced_indexing.uya --manifest-path uya.toml` -> 通过
+  `../uya/bin/uya test src/numuya/_tests/test_advanced_indexing.uya --manifest-path uya.toml` -> 1 passed, 0 failed

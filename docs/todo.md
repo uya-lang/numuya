@@ -33,7 +33,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 17: Advanced indexing
 
-- [ ] 写 `src/numuya/_tests/test_advanced_indexing.uya`。
 - [ ] TDD: `take` 1-D。
 - [ ] TDD: `take` axis 0/1。
 - [ ] TDD: boolean mask 1-D。

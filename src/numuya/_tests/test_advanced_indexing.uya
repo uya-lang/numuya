@@ -1,0 +1,71 @@
+use array;
+use creation;
+use indexing;
+use shape;
+use testing.expect_close_f64;
+use testing.expect_eq_usize;
+use testing.expect_shape_eq;
+
+use std.mem.allocator.IAllocator;
+use std.mem.allocator.MallocAllocator;
+
+fn expect_eq_bool(actual: bool, expected: bool) !void {
+    if actual != expected {
+        return error.NumuyaExpectationFailed;
+    }
+}
+
+fn make_source_vector(allocator: IAllocator) !Array<f64> {
+    var data: [f64: 6] = [10.0, 20.0, 30.0, 40.0, 50.0, 60.0];
+    const array_value: Array<f64> = try from_slice<f64>(allocator, data[0:6], shape1(6));
+    return array_value;
+}
+
+fn make_source_matrix(allocator: IAllocator) !Array<f64> {
+    var data: [f64: 12] = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0];
+    const array_value: Array<f64> = try from_slice<f64>(allocator, data[0:12], shape2(3, 4));
+    return array_value;
+}
+
+fn make_mask_vector(allocator: IAllocator) !Array<bool> {
+    var flags: [bool: 6] = [true, false, true, false, true, false];
+    const array_value: Array<bool> = try from_slice<bool>(allocator, flags[0:6], shape1(6));
+    return array_value;
+}
+
+fn make_mask_matrix(allocator: IAllocator) !Array<bool> {
+    var flags: [bool: 12] = [true, false, false, true, false, true, true, false, true, false, false, true];
+    const array_value: Array<bool> = try from_slice<bool>(allocator, flags[0:12], shape2(3, 4));
+    return array_value;
+}
+
+test "advanced indexing fixtures build reusable source arrays and masks" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var vector: Array<f64> = try make_source_vector(allocator);
+    var matrix: Array<f64> = try make_source_matrix(allocator);
+    var mask_vector: Array<bool> = try make_mask_vector(allocator);
+    var mask_matrix: Array<bool> = try make_mask_matrix(allocator);
+    var expected_vector_shape: [usize: 1] = [6];
+    var expected_matrix_shape: [usize: 2] = [3, 4];
+
+    try expect_shape_eq(vector.shape.dims[0:vector.shape.rank], expected_vector_shape[0:1]);
+    try expect_shape_eq(matrix.shape.dims[0:matrix.shape.rank], expected_matrix_shape[0:2]);
+    try expect_shape_eq(mask_vector.shape.dims[0:mask_vector.shape.rank], expected_vector_shape[0:1]);
+    try expect_shape_eq(mask_matrix.shape.dims[0:mask_matrix.shape.rank], expected_matrix_shape[0:2]);
+
+    try expect_eq_usize(array_size<f64>(&vector), 6);
+    try expect_eq_usize(array_size<f64>(&matrix), 12);
+    try expect_eq_usize(array_size<bool>(&mask_vector), 6);
+    try expect_eq_usize(array_size<bool>(&mask_matrix), 12);
+
+    try expect_close_f64(try get1<f64>(&vector, 0), 10.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&vector, 5), 60.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&matrix, 1, 2), 7.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&matrix, 2, 3), 12.0, 1e-12);
+
+    try expect_eq_bool(try get1<bool>(&mask_vector, 0), true);
+    try expect_eq_bool(try get1<bool>(&mask_vector, 1), false);
+    try expect_eq_bool(try get2<bool>(&mask_matrix, 0, 1), false);
+    try expect_eq_bool(try get2<bool>(&mask_matrix, 1, 2), true);
+}
