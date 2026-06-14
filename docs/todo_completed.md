@@ -593,3 +593,15 @@
     - `../uya/bin/uya test src/numuya/_tests/test_shape.uya --manifest-path uya.toml` — 8/8 通过
     - `../uya/bin/uya test src/numuya/_tests/test_storage.uya --manifest-path uya.toml` — 7/7 通过
     - `../uya/bin/uya test src/numuya/_tests/test_array_creation.uya --manifest-path uya.toml` — 6/6 通过
+
+## Phase 21: CUDA DeviceArray 与拷贝
+
+- [x] TDD: device view 语义。
+  - `device_array_view` retain 同一 storage。
+  - view drop 不释放 owner 的 buffer。
+  - owner 和 view 全部 drop 后只释放一次。
+  - 验证：
+    - `make test-one TEST=src/numuya/_tests/test_cuda_device_array.uya`
+    - 8 tests passed, 0 failed（含新增 `device_array owner and view drop releases buffer exactly once`）。
+    - `make test-one TEST=src/numuya/_tests/test_cuda_driver.uya`
+    - 21 tests passed, 0 failed。

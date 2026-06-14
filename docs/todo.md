@@ -35,13 +35,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 21: CUDA DeviceArray 与拷贝
 
-
-
-
-- [ ] TDD: device view 语义。
-  - `device_array_view` retain 同一 storage。
-  - view drop 不释放 owner 的 buffer。
-  - owner 和 view 全部 drop 后只释放一次。
 - [ ] TDD: H2D/D2H copy。
   - host `Array<f64>` -> `DeviceArray<f64>` -> host。
   - 数据逐元素一致。
