@@ -754,3 +754,11 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 结果：`src/numuya/_tests/test_math.uya` 10 tests passed, 0 failed（含 `sqrt_f64 computes element-wise square root`、`math_f64 handles rank-2 contiguous arrays`、`math_f64 handles non-contiguous transpose input`）；`src/numuya/_tests/test_ufunc.uya` 17 tests passed, 0 failed。
 
 生产改动：无新增改动；`src/numuya/math.uya` 中 `sqrt_f64` 已实现并随 `test_math.uya` 绿。
+
+## Phase 9: Math functions
+
+- [x] TDD: `exp_f64/log_f64`。
+  - 验证命令：`../uya/bin/uya test src/numuya/_tests/test_math.uya --manifest-path uya.toml`
+  - 验证结果：`src/numuya/_tests/test_math.uya` 10 tests passed, 0 failed；其中 `exp_f64 computes element-wise natural exponential` 与 `log_f64 computes element-wise natural logarithm` 均通过。
+  - 生产改动：无新增改动；`src/numuya/math.uya` 中 `exp_f64` 与 `log_f64` 已实现并随 `test_math.uya` 全绿。
+
