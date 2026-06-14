@@ -35,7 +35,7 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 20: CUDA backend 基础
 
-- [ ] 写 `src/numuya/_tests/test_cuda_driver.uya`。
+- [x] 写 `src/numuya/_tests/test_cuda_driver.uya`。
 - [ ] 创建 `src/numuya/backend.uya`。
 - [ ] 创建 `src/numuya/cuda/driver.uya`。
 - [ ] 创建 CUDA 测试命令约定。

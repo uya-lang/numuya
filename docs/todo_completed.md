@@ -406,3 +406,9 @@
   - 验证结果：
     - `make bench` 成功输出（示例）：add_f64 speedup≈1.73x，mul_f64 speedup≈1.75x，sum_all_f64 speedup≈2.19x。
     - `make test` 全部通过，无失败。
+
+## Phase 20: CUDA backend 基础
+
+- [x] 写 `src/numuya/_tests/test_cuda_driver.uya`。
+  - 验证命令：`../uya/bin/uya check src/numuya/_tests/test_cuda_driver.uya --manifest-path uya.toml`
+  - 结果：文件已创建；`uya check` 因依赖模块 `backend` 与 `cuda/driver` 尚未实现而失败，属于预期失败，文件本身词法/语法解析通过。

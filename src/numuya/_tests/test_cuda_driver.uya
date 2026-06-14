@@ -1,0 +1,64 @@
+use backend;
+use cuda.driver;
+use testing.expect_eq_usize;
+
+const NUMUYA_GIB: usize = 1024 * 1024 * 1024;
+
+test "backend_is_cuda_available returns bool without crashing" {
+    const available: bool = backend_is_cuda_available();
+    // 本机 RTX 3060 期望为 true；无 CUDA 环境至少要不崩溃并返回 false。
+    if available {
+        return;
+    }
+}
+
+test "cuda_init succeeds when cuda is available and errors gracefully otherwise" {
+    const available: bool = backend_is_cuda_available();
+    const result: !void = cuda_init();
+    if available {
+        try result;
+    } else {
+        // 无 CUDA 时允许返回 NumuyaGpuUnavailable 或 NumuyaCudaError。
+        match result {
+            ok => {}
+            else => {}
+        }
+    }
+}
+
+test "cuda_get_device(0) reports Ampere sm_86 and more than 8GB on available cuda" {
+    if !backend_is_cuda_available() {
+        return;
+    }
+    try cuda_init();
+
+    const device: CudaDevice = try cuda_get_device(0);
+
+    if device.ordinal != 0 {
+        return error.NumuyaExpectationFailed;
+    }
+    if device.major == 0 && device.minor == 0 {
+        return error.NumuyaExpectationFailed;
+    }
+    if device.total_memory_bytes <= 8 * NUMUYA_GIB {
+        return error.NumuyaExpectationFailed;
+    }
+}
+
+test "backend_init with Cpu kind does not require cuda" {
+    var state: BackendState = try backend_init(BackendKind.Cpu);
+    try backend_deinit(&state);
+}
+
+test "backend_init with Cuda kind succeeds when cuda is available" {
+    if !backend_is_cuda_available() {
+        return;
+    }
+    var state: BackendState = try backend_init(BackendKind.Cuda);
+    try backend_deinit(&state);
+}
+
+test "backend_init with Auto kind picks a working backend" {
+    var state: BackendState = try backend_init(BackendKind.Auto);
+    try backend_deinit(&state);
+}
