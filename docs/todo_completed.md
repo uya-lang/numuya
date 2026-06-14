@@ -585,3 +585,11 @@
   - 验证：
     - `../uya/bin/uya test src/numuya/_tests/test_ufunc.uya --manifest-path uya.toml` 通过 16 个测试，包括 add_f64/sub_f64/mul_f64/div_f64/neg_f64/add_i32 的 output owner 独立性与修改隔离测试。
     - 回跑 `test_broadcast.uya`（7 测）、`test_stride_views.uya`（13 测）、`test_slicing.uya`（10 测）、`test_indexing.uya`（6 测）、`test_array_creation.uya`（6 测）均通过。
+
+## Phase 7: UFunc 基础
+
+- [x] TDD: output 是新 owner。
+  - 修改 output 不影响 input。
+  - 验证：
+    - `../uya/bin/uya test src/numuya/_tests/test_ufunc.uya --manifest-path uya.toml` 通过 16 个测试，包括 add_f64/sub_f64/mul_f64/div_f64/neg_f64/add_i32 的 output owner 独立性与修改隔离测试。
+    - 回跑 `test_broadcast.uya`（7 测）、`test_stride_views.uya`（13 测）、`test_slicing.uya`（10 测）、`test_indexing.uya`（6 测）、`test_array_creation.uya`（6 测）均通过。
