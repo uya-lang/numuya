@@ -624,3 +624,22 @@
     make test
     ```
   - 结果：聚焦测试 8/8 通过；CUDA 测试套件 29/29 通过；非 CUDA 测试套件全部通过。
+
+## Phase 21: CUDA DeviceArray 与拷贝
+
+- [x] TDD: `device_empty_f64/device_zeros_f64`。
+  - 新增测试：`src/numuya/_tests/test_cuda_device_array.uya`
+    - `device_empty_f64 creates f64 device array with requested shape`
+    - `device_zeros_f64 creates f64 device array filled with zeros`
+  - 实现：`src/numuya/cuda/device_array.uya`
+    - `device_empty_f64`：分配未初始化的 f64 设备数组。
+    - `device_zeros_f64`：通过主机侧 `zeros_f64` + H2D 拷贝生成全零设备数组。
+  - 验证命令：
+    - `NUMUYA_CUDA_REQUIRED=1 LDFLAGS="-lcuda" ../uya/bin/uya test src/numuya/_tests/test_cuda_device_array.uya --manifest-path uya.toml`
+    - `make test-cuda`
+    - `make test`
+  - 验证结果：
+    - `test_cuda_device_array.uya`：10/10 通过（含新增 2 个测试）。
+    - `make test-cuda`：31/31 通过（device_array 10 + driver 21）。
+    - `make test`：所有非 CUDA 测试通过，无回归。
+

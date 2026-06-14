@@ -130,6 +130,54 @@ test "device_array owner and view drop releases buffer exactly once" {
     try expect_eq_usize(memory_pool_used_bytes(&pool), 0);
 }
 
+test "device_empty_f64 creates f64 device array with requested shape" {
+    if !backend_is_cuda_available() {
+        return;
+    }
+    var state: BackendState = try backend_init(BackendKind.Cuda);
+    defer backend_deinit(&state) catch {};
+
+    var pool: MemoryPool = memory_pool_new(4 * NUMUYA_MIB);
+    var device: DeviceArray<f64> = try device_empty_f64(&pool, shape2(2, 3), state.context, state.stream);
+
+    if device.storage == null {
+        return error.NumuyaExpectationFailed;
+    }
+    try expect_eq_usize(device.storage.ref_count, 1);
+    if !shape_eq(device.shape, shape2(2, 3)) {
+        return error.NumuyaExpectationFailed;
+    }
+    try expect_eq_usize(memory_pool_used_bytes(&pool), 2 * 3 * 8);
+}
+
+test "device_zeros_f64 creates f64 device array filled with zeros" {
+    if !backend_is_cuda_available() {
+        return;
+    }
+    var state: BackendState = try backend_init(BackendKind.Cuda);
+    defer backend_deinit(&state) catch {};
+
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var pool: MemoryPool = memory_pool_new(4 * NUMUYA_MIB);
+
+    var device: DeviceArray<f64> = try device_zeros_f64(&pool, shape2(2, 3), state.context, state.stream);
+    try expect_eq_usize(device.storage.ref_count, 1);
+
+    var host: Array<f64> = try device_array_to_host<f64>(allocator, &device);
+    try expect_eq_usize(array_size<f64>(&host), 6);
+
+    var i: usize = 0;
+    while i < 6 {
+        var idx: [usize: 2] = [i / 3, i % 3];
+        const actual: f64 = try getn<f64>(&host, idx[0:2]);
+        if actual != 0.0 {
+            return error.NumuyaExpectationFailed;
+        }
+        i = i + 1;
+    }
+}
+
 test "H2D and D2H copy preserves element values after stream synchronize" {
     if !backend_is_cuda_available() {
         return;

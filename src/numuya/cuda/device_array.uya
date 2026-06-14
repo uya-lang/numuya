@@ -119,6 +119,38 @@ export fn device_array_from_host<T>(pool: &MemoryPool, host_array: &Array<T>, co
     return device;
 }
 
+export fn device_empty_f64(pool: &MemoryPool, shape_value: Shape, context: usize, stream: usize) !DeviceArray<f64> {
+    const len: usize = try shape_size(shape_value);
+    const storage_value: &DeviceStorage<f64> = try device_storage_new<f64>(pool, len);
+    return DeviceArray<f64>{
+        storage: storage_value,
+        offset: 0,
+        shape: shape_value,
+        context: context,
+        stream: stream,
+    };
+}
+
+export fn device_zeros_f64(pool: &MemoryPool, shape_value: Shape, context: usize, stream: usize) !DeviceArray<f64> {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var host_zeros: Array<f64> = try zeros_f64(allocator, shape_value);
+    var device: DeviceArray<f64> = try device_array_from_host<f64>(pool, &host_zeros, context, stream);
+    const storage: &DeviceStorage<f64> = device.storage;
+    const offset: usize = device.offset;
+    const device_shape: Shape = device.shape;
+    const device_context: usize = device.context;
+    const device_stream: usize = device.stream;
+    device.storage = null;
+    return DeviceArray<f64>{
+        storage: storage,
+        offset: offset,
+        shape: device_shape,
+        context: device_context,
+        stream: device_stream,
+    };
+}
+
 export fn device_array_to_host<T>(allocator: IAllocator, device_array_value: &DeviceArray<T>) !Array<T> {
     var host_array: Array<T> = try empty<T>(allocator, device_array_value.shape);
     const bytes: usize = element_size_of<T>() * device_array_value.storage.len;

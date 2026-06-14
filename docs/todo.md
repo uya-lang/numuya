@@ -35,7 +35,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 21: CUDA DeviceArray 与拷贝
 
-- [ ] TDD: `device_empty_f64/device_zeros_f64`。
 - [ ] TDD: shape/stride/flags 在 device array 上保持一致。
 - [ ] TDD: memory pool 统计。
   - alloc 后 used 增加。
