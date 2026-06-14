@@ -291,3 +291,10 @@
     make test
     ```
   - 结果：`test_dtype.uya` 9/9 通过；`make test` 全绿。
+
+## Phase 18: DType 与 type-erased ArrayAny
+
+- [x] 实现 `src/numuya/types.uya`。
+  - 实现：`src/numuya/types.uya` 新增 `DTypeKind`、`Endian`、`DType` 枚举，导出 `dtype_f64/f32/i64/i32/u8`、`dtype_size`、`dtype_name`、`dtype_kind`、`dtype_endian`，以及 `ArrayAny` 结构与 `array_any_from_f64`、`array_any_shape`、`array_any_try_as_f64/f32/i32`。
+  - 验证命令：
+    - `../uya/bin/uya check src/numuya/types.uya --manifest-path uya.toml` — 类型检查通过
