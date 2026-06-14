@@ -337,3 +337,12 @@
       - 结果：通过，6 tests passed。
     - `make test`
       - 结果：通过，`test_array_creation` 6 tests、`test_indexing` 6 tests、`test_shape` 8 tests、`test_storage` 7 tests、`test_testing_helpers` 2 tests。
+## Phase 3: 创建数组与基础 get/set
+
+- [x] 验收：`test_array_creation`、`test_indexing` 绿。
+  - 验证命令：`make test-one TEST=src/numuya/_tests/test_array_creation.uya`
+  - 结果：通过，6/6 tests passed。
+  - 验证命令：`make test-one TEST=src/numuya/_tests/test_indexing.uya`
+  - 结果：通过，6/6 tests passed。
+  - 回归命令：`make test`
+  - 结果：通过，`test_array_creation`、`test_indexing`、`test_shape`、`test_storage`、`test_testing_helpers` 全绿。
