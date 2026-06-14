@@ -12,7 +12,7 @@ use std.mem.allocator.IAllocator;
 use std.mem.allocator.MallocAllocator;
 
 test "c_order_strides produces row-major strides for rank-3 shape" {
-    const strides_value: Strides = try stride.c_order_strides(shape3(2, 3, 4));
+    const strides_value: Strides = try c_order_strides(shape3(2, 3, 4));
 
     try expect_eq_usize(strides_value.rank, 3);
     try expect_eq_usize(strides_value.strides[0], 12);
@@ -21,17 +21,17 @@ test "c_order_strides produces row-major strides for rank-3 shape" {
 }
 
 test "c_order_strides produces rank-zero strides for scalar" {
-    const strides_value: Strides = try stride.c_order_strides(shape_scalar());
+    const strides_value: Strides = try c_order_strides(shape_scalar());
 
     try expect_eq_usize(strides_value.rank, 0);
 }
 
 test "physical_index computes row-major offset for rank-2 shape" {
     const shape_value: Shape = shape2(2, 3);
-    const strides_value: Strides = try stride.c_order_strides(shape_value);
+    const strides_value: Strides = try c_order_strides(shape2(2, 3));
     var indices: [usize: 2] = [1, 2];
 
-    const index: usize = try stride.physical_index(shape_value, strides_value, 0, indices[0:2]);
+    const index: usize = try physical_index(shape_value, strides_value, 0, indices[0:2]);
     try expect_eq_usize(index, 5);
 }
 
@@ -39,10 +39,10 @@ test "reshape returns a view sharing storage when total size matches" {
     var malloc_allocator: MallocAllocator = MallocAllocator{};
     var allocator: IAllocator = malloc_allocator;
     var source: [f64: 6] = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
-    var original: Array<f64> = try creation.from_slice<f64>(allocator, source[0:6], shape2(2, 3));
+    var original: Array<f64> = try from_slice<f64>(allocator, source[0:6], shape2(2, 3));
 
     const before_ref_count: usize = original.storage.ref_count;
-    var reshaped: Array<f64> = try stride.reshape<f64>(&original, shape2(3, 2));
+    var reshaped: Array<f64> = try reshape<f64>(&original, shape2(3, 2));
 
     try expect_eq_usize(reshaped.storage.ref_count, before_ref_count + 1);
     try expect_eq_usize(reshaped.shape.rank, 2);
@@ -55,9 +55,9 @@ test "reshape rejects mismatched total size" {
     var malloc_allocator: MallocAllocator = MallocAllocator{};
     var allocator: IAllocator = malloc_allocator;
     var source: [f64: 6] = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
-    var original: Array<f64> = try creation.from_slice<f64>(allocator, source[0:6], shape2(2, 3));
+    var original: Array<f64> = try from_slice<f64>(allocator, source[0:6], shape2(2, 3));
 
-    const result: !Array<f64> = stride.reshape<f64>(&original, shape2(4, 2));
+    const result: !Array<f64> = reshape<f64>(&original, shape2(4, 2));
     match result {
         error.NumuyaShapeMismatch => {}
         else => { return error.NumuyaExpectationFailed; }
@@ -68,25 +68,25 @@ test "ravel returns a rank-1 view of a contiguous array" {
     var malloc_allocator: MallocAllocator = MallocAllocator{};
     var allocator: IAllocator = malloc_allocator;
     var source: [f64: 6] = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
-    var original: Array<f64> = try creation.from_slice<f64>(allocator, source[0:6], shape2(2, 3));
+    var original: Array<f64> = try from_slice<f64>(allocator, source[0:6], shape2(2, 3));
 
     const before_ref_count: usize = original.storage.ref_count;
-    var raveled: Array<f64> = try stride.ravel<f64>(&original);
+    var raveled: Array<f64> = try ravel<f64>(&original);
 
     try expect_eq_usize(raveled.shape.rank, 1);
     try expect_eq_usize(raveled.shape.dims[0], 6);
     try expect_eq_usize(raveled.storage.ref_count, before_ref_count + 1);
-    try expect_close_f64(try indexing.get1<f64>(&raveled, 5), 6.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&raveled, 5), 6.0, 1e-12);
 }
 
 test "transpose reverses dimensions and maps indices" {
     var malloc_allocator: MallocAllocator = MallocAllocator{};
     var allocator: IAllocator = malloc_allocator;
     var source: [f64: 6] = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
-    var original: Array<f64> = try creation.from_slice<f64>(allocator, source[0:6], shape2(2, 3));
+    var original: Array<f64> = try from_slice<f64>(allocator, source[0:6], shape2(2, 3));
 
     const before_ref_count: usize = original.storage.ref_count;
-    var transposed: Array<f64> = try stride.transpose<f64>(&original);
+    var transposed: Array<f64> = try transpose<f64>(&original);
 
     try expect_eq_usize(transposed.shape.rank, 2);
     try expect_eq_usize(transposed.shape.dims[0], 3);
@@ -94,8 +94,8 @@ test "transpose reverses dimensions and maps indices" {
     try expect_eq_usize(transposed.storage.ref_count, before_ref_count + 1);
 
     // original(1, 2) == 6.0, transposed(2, 1) must equal the same element.
-    try expect_close_f64(try indexing.get2<f64>(&original, 1, 2), 6.0, 1e-12);
-    try expect_close_f64(try indexing.get2<f64>(&transposed, 2, 1), 6.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&original, 1, 2), 6.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&transposed, 2, 1), 6.0, 1e-12);
 }
 
 test "swapaxes exchanges two axes" {
@@ -104,10 +104,10 @@ test "swapaxes exchanges two axes" {
     var source: [f64: 24] = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0,
                               9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0,
                               17.0, 18.0, 19.0, 20.0, 21.0, 22.0, 23.0, 24.0];
-    var original: Array<f64> = try creation.from_slice<f64>(allocator, source[0:24], shape3(2, 3, 4));
+    var original: Array<f64> = try from_slice<f64>(allocator, source[0:24], shape3(2, 3, 4));
 
     const before_ref_count: usize = original.storage.ref_count;
-    var swapped: Array<f64> = try stride.swapaxes<f64>(&original, 0, 2);
+    var swapped: Array<f64> = try swapaxes<f64>(&original, 0, 2);
 
     try expect_eq_usize(swapped.shape.rank, 3);
     try expect_eq_usize(swapped.shape.dims[0], 4);
@@ -116,30 +116,30 @@ test "swapaxes exchanges two axes" {
     try expect_eq_usize(swapped.storage.ref_count, before_ref_count + 1);
 
     // original(1, 2, 3) == 24.0, swapped(3, 2, 1) must equal the same element.
-    try expect_close_f64(try indexing.get3<f64>(&original, 1, 2, 3), 24.0, 1e-12);
-    try expect_close_f64(try indexing.get3<f64>(&swapped, 3, 2, 1), 24.0, 1e-12);
+    try expect_close_f64(try get3<f64>(&original, 1, 2, 3), 24.0, 1e-12);
+    try expect_close_f64(try get3<f64>(&swapped, 3, 2, 1), 24.0, 1e-12);
 }
 
 test "writing through a transpose view updates the owner" {
     var malloc_allocator: MallocAllocator = MallocAllocator{};
     var allocator: IAllocator = malloc_allocator;
     var source: [f64: 6] = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
-    var original: Array<f64> = try creation.from_slice<f64>(allocator, source[0:6], shape2(2, 3));
-    var transposed: Array<f64> = try stride.transpose<f64>(&original);
+    var original: Array<f64> = try from_slice<f64>(allocator, source[0:6], shape2(2, 3));
+    var transposed: Array<f64> = try transpose<f64>(&original);
 
-    try indexing.set2<f64>(&transposed, 2, 1, 9.5);
+    try set2<f64>(&transposed, 2, 1, 9.5);
 
-    try expect_close_f64(try indexing.get2<f64>(&original, 1, 2), 9.5, 1e-12);
-    try expect_close_f64(try indexing.get2<f64>(&transposed, 2, 1), 9.5, 1e-12);
+    try expect_close_f64(try get2<f64>(&original, 1, 2), 9.5, 1e-12);
+    try expect_close_f64(try get2<f64>(&transposed, 2, 1), 9.5, 1e-12);
 }
 
 test "swapaxes rejects out-of-bounds axes" {
     var malloc_allocator: MallocAllocator = MallocAllocator{};
     var allocator: IAllocator = malloc_allocator;
     var source: [f64: 6] = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
-    var original: Array<f64> = try creation.from_slice<f64>(allocator, source[0:6], shape2(2, 3));
+    var original: Array<f64> = try from_slice<f64>(allocator, source[0:6], shape2(2, 3));
 
-    const result: !Array<f64> = stride.swapaxes<f64>(&original, 0, 5);
+    const result: !Array<f64> = swapaxes<f64>(&original, 0, 5);
     match result {
         error.NumuyaAxisOutOfBounds => {}
         else => { return error.NumuyaExpectationFailed; }

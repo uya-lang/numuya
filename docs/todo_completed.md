@@ -352,3 +352,15 @@
 - [x] 写 `src/numuya/_tests/test_stride_views.uya`。
   - 验证命令：`../uya/bin/uya check src/numuya/_tests/test_stride_views.uya --manifest-path uya.toml`
   - 验证结果：测试文件已创建；checker 失败原因为 `模块不存在`（`use stride;` 引用的 `src/numuya/stride.uya` 尚未实现），属于预期的 TDD 先失败状态，待下一任务实现 `stride.uya` 后解决。
+
+## Phase 4: Stride、reshape、transpose、view
+
+- [x] 实现 `src/numuya/stride.uya`。
+  - 验证命令：
+    ```bash
+    ../uya/bin/uya test src/numuya/_tests/test_stride_views.uya --manifest-path uya.toml
+    make test
+    ```
+  - 结果：`test_stride_views.uya` 10/10 通过；`make test` 全部 6 个测试文件均通过（39 个测试）。
+  - 实现内容：`c_order_strides`、`physical_index`、`reshape`、`ravel`、`transpose`、`swapaxes`。
+  - 附加改动：修复 `test_stride_views.uya` 的模块调用语法；重命名 `indexing.uya` 内部私有 `physical_index` 为 `compute_physical_index` 以避免与 `stride.physical_index` 命名冲突。

@@ -1,0 +1,295 @@
+use array;
+use shape;
+use storage;
+
+const STRIDE_MAX_USIZE: usize = 18446744073709551615;
+
+fn materialize_storage_release<T>(array_value: &Array<T>) void {
+    // Work around current generic codegen missing cross-module drop instantiation.
+    if array_value.storage == null {
+        storage_release<T>(array_value.storage);
+    }
+}
+
+fn validate_shape_strides(shape_value: &Shape, strides_value: &Strides) !void {
+    if shape_value.rank > NUMUYA_MAX_DIMS {
+        return error.NumuyaInvalidArgument;
+    }
+    if strides_value.rank != shape_value.rank {
+        return error.NumuyaInvalidArgument;
+    }
+}
+
+fn is_c_contiguous_ref(shape_value: &Shape, strides_value: &Strides) bool {
+    if shape_value.rank != strides_value.rank {
+        return false;
+    }
+    if shape_value.rank == 0 {
+        return true;
+    }
+
+    var expected_stride: usize = 1;
+    var axis: usize = shape_value.rank;
+    while axis > 0 {
+        const index: usize = axis - 1;
+        if index >= NUMUYA_MAX_DIMS {
+            return false;
+        }
+        const dim: usize = shape_value.dims[index];
+        if dim == 0 {
+            return true;
+        }
+        if strides_value.strides[index] != expected_stride {
+            return false;
+        }
+        expected_stride = expected_stride * dim;
+        axis = index;
+    }
+    return true;
+}
+
+fn is_f_contiguous_ref(shape_value: &Shape, strides_value: &Strides) bool {
+    if shape_value.rank != strides_value.rank {
+        return false;
+    }
+    if shape_value.rank == 0 {
+        return true;
+    }
+
+    var expected_stride: usize = 1;
+    var axis: usize = 0;
+    while axis < shape_value.rank {
+        if axis >= NUMUYA_MAX_DIMS {
+            return false;
+        }
+        const dim: usize = shape_value.dims[axis];
+        if dim == 0 {
+            return true;
+        }
+        if strides_value.strides[axis] != expected_stride {
+            return false;
+        }
+        expected_stride = expected_stride * dim;
+        axis = axis + 1;
+    }
+    return true;
+}
+
+fn make_flags_ref(shape_value: &Shape, strides_value: &Strides, writeable: bool, owns_data: bool) ArrayFlags {
+    return ArrayFlags{
+        c_contiguous: is_c_contiguous_ref(shape_value, strides_value),
+        f_contiguous: is_f_contiguous_ref(shape_value, strides_value),
+        writeable: writeable,
+        owns_data: owns_data,
+    };
+}
+
+fn c_order_strides_ref(shape_value: &Shape) !Strides {
+    if shape_value.rank > NUMUYA_MAX_DIMS {
+        return error.NumuyaRankTooLarge;
+    }
+
+    var stride_values: [usize: NUMUYA_MAX_DIMS] = [0: NUMUYA_MAX_DIMS];
+    if shape_value.rank == 0 {
+        return Strides{ rank: 0, strides: stride_values };
+    }
+
+    var next_stride: usize = 1;
+    var axis: usize = shape_value.rank;
+    while axis > 0 {
+        const index: usize = axis - 1;
+        if index >= NUMUYA_MAX_DIMS {
+            return error.NumuyaRankTooLarge;
+        }
+        stride_values[index] = next_stride;
+        next_stride = next_stride * shape_value.dims[index];
+        axis = index;
+    }
+
+    return Strides{ rank: shape_value.rank, strides: stride_values };
+}
+
+export fn c_order_strides(shape_value: Shape) !Strides {
+    return c_order_strides_ref(&shape_value);
+}
+
+export fn physical_index(shape_value: Shape, strides_value: Strides, offset: isize, indices: &[usize]) !usize {
+    try validate_shape_strides(&shape_value, &strides_value);
+    if indices.len != shape_value.rank {
+        return error.NumuyaShapeMismatch;
+    }
+
+    var linear_index: usize = offset as! usize catch {
+        return error.NumuyaInvalidArgument;
+    };
+
+    var axis: usize = 0;
+    while axis < indices.len {
+        if axis >= NUMUYA_MAX_DIMS {
+            return error.NumuyaIndexOutOfBounds;
+        }
+        const index_value: usize = indices[axis];
+        const dim: usize = shape_value.dims[axis];
+        if index_value >= dim {
+            return error.NumuyaIndexOutOfBounds;
+        }
+
+        const stride: usize = strides_value.strides[axis];
+        if index_value != 0 && stride > STRIDE_MAX_USIZE / index_value {
+            return error.NumuyaIndexOutOfBounds;
+        }
+        const contribution: usize = index_value * stride;
+        if linear_index > STRIDE_MAX_USIZE - contribution {
+            return error.NumuyaIndexOutOfBounds;
+        }
+        linear_index = linear_index + contribution;
+        axis = axis + 1;
+    }
+
+    return linear_index;
+}
+
+fn shape_size_ref_local(shape_value: &Shape) !usize {
+    var size: usize = 1;
+    var i: usize = 0;
+    while i < shape_value.rank {
+        if i >= NUMUYA_MAX_DIMS {
+            return error.NumuyaRankTooLarge;
+        }
+        const dim: usize = shape_value.dims[i];
+        if dim != 0 && size > STRIDE_MAX_USIZE / dim {
+            return error.NumuyaShapeOverflow;
+        }
+        size = size * dim;
+        i = i + 1;
+    }
+    return size;
+}
+
+export fn reshape<T>(array_value: &Array<T>, new_shape: Shape) !Array<T> {
+    materialize_storage_release<T>(array_value);
+    if new_shape.rank > NUMUYA_MAX_DIMS {
+        return error.NumuyaRankTooLarge;
+    }
+
+    const new_size: usize = try shape_size_ref_local(&new_shape);
+    const current_size: usize = array_size<T>(array_value);
+    if new_size != current_size {
+        return error.NumuyaShapeMismatch;
+    }
+
+    // For now, reshape only supports views over contiguous arrays so that the
+    // new layout is uniquely determined by the new shape.
+    if array_is_c_contiguous<T>(array_value) != true {
+        return error.NumuyaInvalidArgument;
+    }
+
+    const new_strides: Strides = try c_order_strides_ref(&new_shape);
+    storage_retain<T>(array_value.storage);
+
+    return Array<T>{
+        storage: array_value.storage,
+        offset: array_value.offset,
+        shape: new_shape,
+        strides: new_strides,
+        flags: make_flags_ref(&new_shape, &new_strides, array_value.flags.writeable, false),
+    };
+}
+
+export fn ravel<T>(array_value: &Array<T>) !Array<T> {
+    materialize_storage_release<T>(array_value);
+    if array_is_c_contiguous<T>(array_value) != true {
+        return error.NumuyaInvalidArgument;
+    }
+
+    const size: usize = array_size<T>(array_value);
+    const new_shape: Shape = shape1(size);
+    return reshape<T>(array_value, new_shape);
+}
+
+export fn transpose<T>(array_value: &Array<T>) !Array<T> {
+    materialize_storage_release<T>(array_value);
+    const rank: usize = array_value.shape.rank;
+    if rank > NUMUYA_MAX_DIMS {
+        return error.NumuyaRankTooLarge;
+    }
+
+    var new_shape: Shape = shape_scalar();
+    new_shape.rank = rank;
+
+    var new_strides: Strides = Strides{ rank: rank, strides: [0: NUMUYA_MAX_DIMS] };
+
+    var axis: usize = 0;
+    while axis < rank {
+        if axis >= NUMUYA_MAX_DIMS {
+            return error.NumuyaRankTooLarge;
+        }
+        const reverse_index: usize = rank - axis - 1;
+        if reverse_index >= NUMUYA_MAX_DIMS {
+            return error.NumuyaRankTooLarge;
+        }
+        new_shape.dims[axis] = array_value.shape.dims[reverse_index];
+        new_strides.strides[axis] = array_value.strides.strides[reverse_index];
+        axis = axis + 1;
+    }
+
+    storage_retain<T>(array_value.storage);
+
+    return Array<T>{
+        storage: array_value.storage,
+        offset: array_value.offset,
+        shape: new_shape,
+        strides: new_strides,
+        flags: make_flags_ref(&new_shape, &new_strides, array_value.flags.writeable, false),
+    };
+}
+
+export fn swapaxes<T>(array_value: &Array<T>, axis1: i32, axis2: i32) !Array<T> {
+    materialize_storage_release<T>(array_value);
+    const rank: usize = array_value.shape.rank;
+    if rank > NUMUYA_MAX_DIMS {
+        return error.NumuyaRankTooLarge;
+    }
+
+    const normalized_axis1: usize = try normalize_axis(axis1, rank);
+    const normalized_axis2: usize = try normalize_axis(axis2, rank);
+    if normalized_axis1 >= NUMUYA_MAX_DIMS {
+        return error.NumuyaAxisOutOfBounds;
+    }
+    if normalized_axis2 >= NUMUYA_MAX_DIMS {
+        return error.NumuyaAxisOutOfBounds;
+    }
+
+    var new_shape: Shape = shape_scalar();
+    new_shape.rank = rank;
+
+    var new_strides: Strides = Strides{ rank: rank, strides: [0: NUMUYA_MAX_DIMS] };
+
+    var axis: usize = 0;
+    while axis < rank {
+        if axis >= NUMUYA_MAX_DIMS {
+            return error.NumuyaRankTooLarge;
+        }
+        new_shape.dims[axis] = array_value.shape.dims[axis];
+        new_strides.strides[axis] = array_value.strides.strides[axis];
+        axis = axis + 1;
+    }
+
+    const temp_dim: usize = new_shape.dims[normalized_axis1];
+    new_shape.dims[normalized_axis1] = new_shape.dims[normalized_axis2];
+    new_shape.dims[normalized_axis2] = temp_dim;
+
+    const temp_stride: usize = new_strides.strides[normalized_axis1];
+    new_strides.strides[normalized_axis1] = new_strides.strides[normalized_axis2];
+    new_strides.strides[normalized_axis2] = temp_stride;
+
+    storage_retain<T>(array_value.storage);
+
+    return Array<T>{
+        storage: array_value.storage,
+        offset: array_value.offset,
+        shape: new_shape,
+        strides: new_strides,
+        flags: make_flags_ref(&new_shape, &new_strides, array_value.flags.writeable, false),
+    };
+}

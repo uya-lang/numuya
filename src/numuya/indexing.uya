@@ -30,7 +30,7 @@ fn validate_fixed_rank<T>(array_value: &Array<T>, expected_rank: usize) !void {
     return;
 }
 
-fn physical_index<T>(array_value: &Array<T>, indices: &[usize]) !usize {
+fn compute_physical_index<T>(array_value: &Array<T>, indices: &[usize]) !usize {
     try validate_array_metadata<T>(array_value);
     if indices.len != array_value.shape.rank {
         return error.NumuyaShapeMismatch;
@@ -76,21 +76,21 @@ fn ensure_writeable<T>(array_value: &Array<T>) !void {
 export fn get1<T>(array_value: &Array<T>, i0: usize) !T {
     try validate_fixed_rank<T>(array_value, 1);
     var indices: [usize: 1] = [i0];
-    const index: usize = try physical_index<T>(array_value, indices[0:1]);
+    const index: usize = try compute_physical_index<T>(array_value, indices[0:1]);
     return array_value.storage.data[index];
 }
 
 export fn get2<T>(array_value: &Array<T>, i0: usize, i1: usize) !T {
     try validate_fixed_rank<T>(array_value, 2);
     var indices: [usize: 2] = [i0, i1];
-    const index: usize = try physical_index<T>(array_value, indices[0:2]);
+    const index: usize = try compute_physical_index<T>(array_value, indices[0:2]);
     return array_value.storage.data[index];
 }
 
 export fn get3<T>(array_value: &Array<T>, i0: usize, i1: usize, i2: usize) !T {
     try validate_fixed_rank<T>(array_value, 3);
     var indices: [usize: 3] = [i0, i1, i2];
-    const index: usize = try physical_index<T>(array_value, indices[0:3]);
+    const index: usize = try compute_physical_index<T>(array_value, indices[0:3]);
     return array_value.storage.data[index];
 }
 
@@ -99,7 +99,7 @@ export fn getn<T>(array_value: &Array<T>, indices: &[usize]) !T {
     if indices.len != array_value.shape.rank {
         return error.NumuyaInvalidArgument;
     }
-    const index: usize = try physical_index<T>(array_value, indices);
+    const index: usize = try compute_physical_index<T>(array_value, indices);
     return array_value.storage.data[index];
 }
 
@@ -107,7 +107,7 @@ export fn set1<T>(array_value: &Array<T>, i0: usize, value: T) !void {
     try validate_fixed_rank<T>(array_value, 1);
     try ensure_writeable<T>(array_value);
     var indices: [usize: 1] = [i0];
-    const index: usize = try physical_index<T>(array_value, indices[0:1]);
+    const index: usize = try compute_physical_index<T>(array_value, indices[0:1]);
     array_value.storage.data[index] = value;
     return;
 }
@@ -116,14 +116,14 @@ export fn set2<T>(array_value: &Array<T>, i0: usize, i1: usize, value: T) !void 
     try validate_fixed_rank<T>(array_value, 2);
     try ensure_writeable<T>(array_value);
     var indices: [usize: 2] = [i0, i1];
-    const index: usize = try physical_index<T>(array_value, indices[0:2]);
+    const index: usize = try compute_physical_index<T>(array_value, indices[0:2]);
     array_value.storage.data[index] = value;
     return;
 }
 
 export fn setn<T>(array_value: &Array<T>, indices: &[usize], value: T) !void {
     try ensure_writeable<T>(array_value);
-    const index: usize = try physical_index<T>(array_value, indices);
+    const index: usize = try compute_physical_index<T>(array_value, indices);
     array_value.storage.data[index] = value;
     return;
 }
