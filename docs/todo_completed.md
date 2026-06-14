@@ -698,3 +698,9 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
   - 验证命令：
     - `../uya/bin/uya test src/numuya/_tests/test_reductions.uya --manifest-path uya.toml`（23/23 通过）
     - `make test`（10/10 测试文件通过）
+
+## Phase 9: Math functions
+
+- [x] 写 `src/numuya/_tests/test_math.uya`。
+  - 验证命令: `../uya/bin/uya test src/numuya/_tests/test_math.uya --manifest-path uya.toml`
+  - 结果: 预期失败（TDD 第一步），因为 `src/numuya/math.uya` 尚未实现。类型检查报错 `try 的操作数必须是错误联合类型 !T`，所有 math 函数（abs_f64/sqrt_f64/exp_f64/log_f64/sin_f64/cos_f64）因缺少模块实现而无法解析为 `!Array<f64>` 返回类型。
