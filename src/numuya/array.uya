@@ -19,3 +19,22 @@ export struct Array<T> {
         storage_release<T>(self.storage);
     }
 }
+
+export fn array_rank<T>(array_value: &Array<T>) usize {
+    return array_value.shape.rank;
+}
+
+export fn array_shape<T>(array_value: &Array<T>) Shape {
+    return array_value.shape;
+}
+
+export fn array_size<T>(array_value: &Array<T>) usize {
+    // Logical element count follows array shape, not backing storage capacity.
+    var size: usize = 1;
+    var i: usize = 0;
+    while i < array_value.shape.rank {
+        size = size * array_value.shape.dims[i];
+        i = i + 1;
+    }
+    return size;
+}

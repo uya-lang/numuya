@@ -208,3 +208,10 @@
   - 结果：通过，package-mode checker 通过。
   - 验证命令：`make test`
   - 结果：通过，`test_shape`、`test_storage`、`test_testing_helpers` 全部通过；`test_shape` 仍有既存 const qualifier warning，但无新增失败。
+
+## Phase 2: Storage 与 Array handle
+
+- [x] TDD: `array_rank/array_size/array_shape`。
+  - 验证：
+    - `make test-one TEST=src/numuya/_tests/test_storage.uya`：先失败，宿主工具链链接阶段报缺失 `array_rank_f64`、`array_size_f64`、`array_shape_f64`；实现后通过，`test_storage` 5 个测试通过。
+    - `make test`：通过；`test_shape` 8 个测试通过，`test_storage` 5 个测试通过，`test_testing_helpers` 2 个测试通过。`test_shape` 仍有既存 `const` qualifier warning，无新增失败。

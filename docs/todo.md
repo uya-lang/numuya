@@ -27,7 +27,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 2: Storage 与 Array handle
 
-- [ ] TDD: `array_rank/array_size/array_shape`。
 - [ ] TDD: `array_is_c_contiguous`。
   - contiguous owner 为 true。
   - 手动构造 stride 不连续时为 false。
