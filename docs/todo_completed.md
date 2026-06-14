@@ -193,3 +193,12 @@
   - 保存后再加载 roundtrip。
   - 验证：`make test-one TEST=src/numuya/_tests/test_io_npy.uya` — 8/8 通过。
   - 回归验证：`make test` — 全量测试通过。
+
+## Phase 16: `.npy` I/O
+
+- [x] TDD: unsupported dtype 返回 `NumuyaUnsupportedDType`。
+  - 说明：新增 unsupported dtype 回归测试直接通过，当前实现无需生产代码改动。
+  - 验证：`python3 tests/fixtures/npy/generate.py` -> exit 0。
+  - 验证：`python3 tests/fixtures/npy/verify.py` -> `verified 4 npy fixtures`。
+  - 验证：`make test-one TEST=src/numuya/_tests/test_io_npy.uya` -> 9/9 通过，新增 unsupported dtype 用例通过。
+  - 验证：`../uya/bin/uya check src/numuya/io_npy.uya --manifest-path uya.toml` -> checker 通过。

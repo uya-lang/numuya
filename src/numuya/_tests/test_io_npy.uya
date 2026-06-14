@@ -15,6 +15,7 @@ const NPY_F64_TOLERANCE: f64 = 1e-12;
 const NPY_FIXTURE_F64_1D: &const byte = "tests/fixtures/npy/f64_1d.npy";
 const NPY_FIXTURE_F64_2D: &const byte = "tests/fixtures/npy/f64_2d.npy";
 const NPY_FIXTURE_F64_EMPTY: &const byte = "tests/fixtures/npy/f64_empty.npy";
+const NPY_FIXTURE_I32_1D: &const byte = "tests/fixtures/npy/i32_1d.npy";
 const NPY_ROUNDTRIP_F64_2D: &const byte = "/tmp/numuya_save_npy_f64_roundtrip.npy";
 
 test "io_npy test file imports io_npy module" {
@@ -111,6 +112,17 @@ test "load_npy_f64 loads empty fixture shape" {
     var actual: Array<f64> = try load_npy_f64(allocator, NPY_FIXTURE_F64_EMPTY);
 
     try expect_empty_array_f64(&actual, expected_shape[0:1]);
+}
+
+test "load_npy_f64 rejects unsupported dtype fixture" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+
+    const result: !Array<f64> = load_npy_f64(allocator, NPY_FIXTURE_I32_1D);
+    match result {
+        error.NumuyaUnsupportedDType => {}
+        else => { return error.NumuyaExpectationFailed; }
+    }
 }
 
 test "save_npy_f64 roundtrips 2d array through load_npy_f64" {

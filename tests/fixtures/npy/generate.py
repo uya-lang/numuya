@@ -19,6 +19,10 @@ def main() -> None:
         fixture_dir / "f64_empty.npy",
         np.array([], dtype=np.float64),
     )
+    np.save(
+        fixture_dir / "i32_1d.npy",
+        np.array([1, -2, 7, 42], dtype=np.int32),
+    )
 
 
 if __name__ == "__main__":
