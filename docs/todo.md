@@ -31,10 +31,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 7: UFunc 基础
 
-- [ ] TDD: `add_f64/sub_f64/mul_f64/div_f64`。
-  - 同 shape。
-  - broadcast shape。
-  - scalar array 与 vector。
 - [ ] TDD: `neg_f64`。
 - [ ] TDD: `add_i32`。
 - [ ] TDD: non-contiguous input。

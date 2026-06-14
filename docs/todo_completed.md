@@ -542,3 +542,14 @@
     - `test_broadcast.uya`：7/7 tests passed。
     - `test_stride_views.uya`：13/13 tests passed。
   - 备注：编译 `test_ufunc.uya` 时 storage 模块有一个既有的 C 指针类型警告（`assignment to 'int32_t *' from incompatible pointer type 'double *'`），不影响测试通过。
+
+## Phase 7: UFunc 基础
+
+- [x] TDD: `add_f64/sub_f64/mul_f64/div_f64`。
+  - 同 shape。
+  - broadcast shape。
+  - scalar array 与 vector。
+  - 验证命令：
+    - `../uya/bin/uya test src/numuya/_tests/test_ufunc.uya --manifest-path uya.toml` → 11/11 passed
+    - `../uya/bin/uya test src/numuya/_tests/test_broadcast.uya --manifest-path uya.toml` → 7/7 passed
+    - `../uya/bin/uya test src/numuya/_tests/test_stride_views.uya --manifest-path uya.toml` → 13/13 passed
