@@ -1,5 +1,6 @@
 export const NUMUYA_MAX_DIMS: usize = 16;
 const NUMUYA_MAX_USIZE: usize = 18446744073709551615;
+export const NUMUYA_ISIZE_MAX: isize = 9223372036854775807;
 
 export struct Shape {
     rank: usize,
@@ -8,7 +9,7 @@ export struct Shape {
 
 export struct Strides {
     rank: usize,
-    strides: [usize: NUMUYA_MAX_DIMS],
+    steps: [isize: NUMUYA_MAX_DIMS],
 }
 
 export fn shape_scalar() Shape {

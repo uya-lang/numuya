@@ -39,7 +39,14 @@ fn is_c_contiguous_ref(shape_value: &Shape, strides_value: &Strides) bool {
         if dim == 0 {
             return true;
         }
-        if strides_value.strides[index] != expected_stride {
+        const step: isize = strides_value.steps[index];
+        if step <= 0 {
+            return false;
+        }
+        const step_usize: usize = step as! usize catch {
+            return false;
+        };
+        if step_usize != expected_stride {
             return false;
         }
         expected_stride = expected_stride * dim;
@@ -66,7 +73,14 @@ fn is_f_contiguous_ref(shape_value: &Shape, strides_value: &Strides) bool {
         if dim == 0 {
             return true;
         }
-        if strides_value.strides[axis] != expected_stride {
+        const step: isize = strides_value.steps[axis];
+        if step <= 0 {
+            return false;
+        }
+        const step_usize: usize = step as! usize catch {
+            return false;
+        };
+        if step_usize != expected_stride {
             return false;
         }
         expected_stride = expected_stride * dim;
@@ -89,12 +103,12 @@ fn c_order_strides_ref(shape_value: &Shape) !Strides {
         return error.NumuyaRankTooLarge;
     }
 
-    var stride_values: [usize: NUMUYA_MAX_DIMS] = [0: NUMUYA_MAX_DIMS];
+    var stride_values: [isize: NUMUYA_MAX_DIMS] = [0: NUMUYA_MAX_DIMS];
     if shape_value.rank == 0 {
-        return Strides{ rank: 0, strides: stride_values };
+        return Strides{ rank: 0, steps: stride_values };
     }
 
-    var next_stride: usize = 1;
+    var next_stride: isize = 1;
     var axis: usize = shape_value.rank;
     while axis > 0 {
         const index: usize = axis - 1;
@@ -102,15 +116,35 @@ fn c_order_strides_ref(shape_value: &Shape) !Strides {
             return error.NumuyaRankTooLarge;
         }
         stride_values[index] = next_stride;
-        next_stride = next_stride * shape_value.dims[index];
+        const dim: isize = shape_value.dims[index] as! isize catch {
+            return error.NumuyaShapeOverflow;
+        };
+        next_stride = next_stride * dim;
         axis = index;
     }
 
-    return Strides{ rank: shape_value.rank, strides: stride_values };
+    return Strides{ rank: shape_value.rank, steps: stride_values };
 }
 
 export fn c_order_strides(shape_value: Shape) !Strides {
     return c_order_strides_ref(&shape_value);
+}
+
+fn multiply_usize_isize(index_value: usize, step: isize) !isize {
+    if step == 0 {
+        return (0 as! isize).value;
+    }
+    const signed_index: isize = index_value as! isize catch {
+        return error.NumuyaIndexOutOfBounds;
+    };
+    if signed_index == 0 {
+        return (0 as! isize).value;
+    }
+    const abs_step: isize = if step < 0 { -step } else { step };
+    if abs_step > NUMUYA_ISIZE_MAX / signed_index {
+        return error.NumuyaIndexOutOfBounds;
+    }
+    return signed_index * step;
 }
 
 export fn physical_index(shape_value: Shape, strides_value: Strides, offset: isize, indices: &[usize]) !usize {
@@ -119,9 +153,7 @@ export fn physical_index(shape_value: Shape, strides_value: Strides, offset: isi
         return error.NumuyaShapeMismatch;
     }
 
-    var linear_index: usize = offset as! usize catch {
-        return error.NumuyaInvalidArgument;
-    };
+    var linear_index: isize = offset;
 
     var axis: usize = 0;
     while axis < indices.len {
@@ -134,19 +166,17 @@ export fn physical_index(shape_value: Shape, strides_value: Strides, offset: isi
             return error.NumuyaIndexOutOfBounds;
         }
 
-        const stride: usize = strides_value.strides[axis];
-        if index_value != 0 && stride > STRIDE_MAX_USIZE / index_value {
-            return error.NumuyaIndexOutOfBounds;
-        }
-        const contribution: usize = index_value * stride;
-        if linear_index > STRIDE_MAX_USIZE - contribution {
-            return error.NumuyaIndexOutOfBounds;
-        }
+        const step: isize = strides_value.steps[axis];
+        const contribution: isize = try multiply_usize_isize(index_value, step);
         linear_index = linear_index + contribution;
         axis = axis + 1;
     }
 
-    return linear_index;
+    if linear_index < 0 {
+        return error.NumuyaIndexOutOfBounds;
+    }
+
+    return (linear_index as! usize).value;
 }
 
 fn shape_size_ref_local(shape_value: &Shape) !usize {
@@ -217,7 +247,7 @@ export fn transpose<T>(array_value: &Array<T>) !Array<T> {
     var new_shape: Shape = shape_scalar();
     new_shape.rank = rank;
 
-    var new_strides: Strides = Strides{ rank: rank, strides: [0: NUMUYA_MAX_DIMS] };
+    var new_strides: Strides = Strides{ rank: rank, steps: [0: NUMUYA_MAX_DIMS] };
 
     var axis: usize = 0;
     while axis < rank {
@@ -229,7 +259,7 @@ export fn transpose<T>(array_value: &Array<T>) !Array<T> {
             return error.NumuyaRankTooLarge;
         }
         new_shape.dims[axis] = array_value.shape.dims[reverse_index];
-        new_strides.strides[axis] = array_value.strides.strides[reverse_index];
+        new_strides.steps[axis] = array_value.strides.steps[reverse_index];
         axis = axis + 1;
     }
 
@@ -263,7 +293,7 @@ export fn swapaxes<T>(array_value: &Array<T>, axis1: i32, axis2: i32) !Array<T> 
     var new_shape: Shape = shape_scalar();
     new_shape.rank = rank;
 
-    var new_strides: Strides = Strides{ rank: rank, strides: [0: NUMUYA_MAX_DIMS] };
+    var new_strides: Strides = Strides{ rank: rank, steps: [0: NUMUYA_MAX_DIMS] };
 
     var axis: usize = 0;
     while axis < rank {
@@ -271,7 +301,7 @@ export fn swapaxes<T>(array_value: &Array<T>, axis1: i32, axis2: i32) !Array<T> 
             return error.NumuyaRankTooLarge;
         }
         new_shape.dims[axis] = array_value.shape.dims[axis];
-        new_strides.strides[axis] = array_value.strides.strides[axis];
+        new_strides.steps[axis] = array_value.strides.steps[axis];
         axis = axis + 1;
     }
 
@@ -279,9 +309,9 @@ export fn swapaxes<T>(array_value: &Array<T>, axis1: i32, axis2: i32) !Array<T> 
     new_shape.dims[normalized_axis1] = new_shape.dims[normalized_axis2];
     new_shape.dims[normalized_axis2] = temp_dim;
 
-    const temp_stride: usize = new_strides.strides[normalized_axis1];
-    new_strides.strides[normalized_axis1] = new_strides.strides[normalized_axis2];
-    new_strides.strides[normalized_axis2] = temp_stride;
+    const temp_stride: isize = new_strides.steps[normalized_axis1];
+    new_strides.steps[normalized_axis1] = new_strides.steps[normalized_axis2];
+    new_strides.steps[normalized_axis2] = temp_stride;
 
     storage_retain<T>(array_value.storage);
 

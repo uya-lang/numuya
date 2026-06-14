@@ -27,12 +27,12 @@ fn shape_size_ref(shape_value: &Shape) !usize {
 }
 
 fn make_c_strides(shape_value: &Shape) !Strides {
-    var stride_values: [usize: NUMUYA_MAX_DIMS] = [0: NUMUYA_MAX_DIMS];
+    var stride_values: [isize: NUMUYA_MAX_DIMS] = [0: NUMUYA_MAX_DIMS];
     if shape_value.rank == 0 {
-        return Strides{ rank: 0, strides: stride_values };
+        return Strides{ rank: 0, steps: stride_values };
     }
 
-    var next_stride: usize = 1;
+    var next_stride: isize = 1;
     var axis: usize = shape_value.rank;
     while axis > 0 {
         const index: usize = axis - 1;
@@ -40,11 +40,14 @@ fn make_c_strides(shape_value: &Shape) !Strides {
             return error.NumuyaRankTooLarge;
         }
         stride_values[index] = next_stride;
-        next_stride = next_stride * shape_value.dims[index];
+        const dim: isize = shape_value.dims[index] as! isize catch {
+            return error.NumuyaShapeOverflow;
+        };
+        next_stride = next_stride * dim;
         axis = index;
     }
 
-    return Strides{ rank: shape_value.rank, strides: stride_values };
+    return Strides{ rank: shape_value.rank, steps: stride_values };
 }
 
 fn is_f_contiguous_owner_shape(shape_value: &Shape) bool {

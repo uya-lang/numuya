@@ -17,24 +17,24 @@ fn make_flags() ArrayFlags {
 }
 
 fn make_strides1() Strides {
-    var stride_values: [usize: NUMUYA_MAX_DIMS] = [0: NUMUYA_MAX_DIMS];
+    var stride_values: [isize: NUMUYA_MAX_DIMS] = [0: NUMUYA_MAX_DIMS];
     stride_values[0] = 1;
-    return Strides{ rank: 1, strides: stride_values };
+    return Strides{ rank: 1, steps: stride_values };
 }
 
 fn make_strides2(dim1: usize) Strides {
-    var stride_values: [usize: NUMUYA_MAX_DIMS] = [0: NUMUYA_MAX_DIMS];
-    stride_values[0] = dim1;
+    var stride_values: [isize: NUMUYA_MAX_DIMS] = [0: NUMUYA_MAX_DIMS];
+    stride_values[0] = (dim1 as! isize).value;
     stride_values[1] = 1;
-    return Strides{ rank: 2, strides: stride_values };
+    return Strides{ rank: 2, steps: stride_values };
 }
 
 fn make_strides3(dim1: usize, dim2: usize) Strides {
-    var stride_values: [usize: NUMUYA_MAX_DIMS] = [0: NUMUYA_MAX_DIMS];
-    stride_values[0] = dim1 * dim2;
-    stride_values[1] = dim2;
+    var stride_values: [isize: NUMUYA_MAX_DIMS] = [0: NUMUYA_MAX_DIMS];
+    stride_values[0] = ((dim1 * dim2) as! isize).value;
+    stride_values[1] = (dim2 as! isize).value;
     stride_values[2] = 1;
-    return Strides{ rank: 3, strides: stride_values };
+    return Strides{ rank: 3, steps: stride_values };
 }
 
 fn make_array1(allocator: IAllocator, dim0: usize) !Array<f64> {

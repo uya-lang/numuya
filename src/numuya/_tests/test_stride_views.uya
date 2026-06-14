@@ -15,9 +15,9 @@ test "c_order_strides produces row-major strides for rank-3 shape" {
     const strides_value: Strides = try c_order_strides(shape3(2, 3, 4));
 
     try expect_eq_usize(strides_value.rank, 3);
-    try expect_eq_usize(strides_value.strides[0], 12);
-    try expect_eq_usize(strides_value.strides[1], 4);
-    try expect_eq_usize(strides_value.strides[2], 1);
+    try expect_eq_usize((strides_value.steps[0] as! usize).value, 12);
+    try expect_eq_usize((strides_value.steps[1] as! usize).value, 4);
+    try expect_eq_usize((strides_value.steps[2] as! usize).value, 1);
 }
 
 test "c_order_strides produces rank-zero strides for scalar" {

@@ -6,7 +6,7 @@ test "Shape test file imports Shape" {
 
 test "Shape exports fixed-rank shape metadata types" {
     var shape_value: Shape = Shape{ rank: 0, dims: [0:NUMUYA_MAX_DIMS] };
-    var strides_value: Strides = Strides{ rank: 0, strides: [0:NUMUYA_MAX_DIMS] };
+    var strides_value: Strides = Strides{ rank: 0, steps: [0:NUMUYA_MAX_DIMS] };
 
     shape_value.rank = shape_value.rank + 0;
     strides_value.rank = strides_value.rank + 0;

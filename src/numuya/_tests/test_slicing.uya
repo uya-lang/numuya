@@ -2,6 +2,7 @@ use array;
 use creation;
 use indexing;
 use shape;
+use slicing;
 use storage;
 use testing.expect_close_f64;
 use testing.expect_eq_usize;

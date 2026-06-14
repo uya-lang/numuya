@@ -442,3 +442,32 @@
   - 新测试文件编译失败，原因是 `indexing.uya` 尚未导出 `SliceSpec` 与 `slice_axis`，符合 TDD 先写失败测试的预期。
   - 失败信息（摘要）：`try 的操作数必须是错误联合类型 !T`（调用 `slice_axis` 处）。
   - 回归测试全部通过：`test_shape.uya`、`test_storage.uya`、`test_array_creation.uya`、`test_indexing.uya`、`test_stride_views.uya`、`test_testing_helpers.uya`。
+
+## Phase 5: Slicing
+
+- [x] 实现 `SliceSpec`。
+  - [x] 重构 `Strides` 以支持负 stride（与设计文档 `steps: [isize]` 对齐）。
+    - 修改 `src/numuya/shape.uya`：`Strides.steps` 从 `[usize]` 改为 `[isize]`。
+    - 同步更新 `src/numuya/array.uya`、`src/numuya/creation.uya`、`src/numuya/stride.uya`、`src/numuya/indexing.uya` 及所有相关测试中的 `.strides` 引用为 `.steps`，并使用带符号算术计算物理索引。
+  - [x] 创建 `src/numuya/slicing.uya`，实现 `SliceSpec` 与 `slice_axis`。  
+    - `SliceSpec { start: isize, stop: isize, step: isize }`。
+    - `slice_axis<T>(a: &Array<T>, axis: isize, spec: SliceSpec) !Array<T>`：按 Python/NumPy 语义对指定轴切片，返回共享 storage 的 view；支持正/负 step、负 start/stop、空切片、step 为 0 错误、axis 越界错误。
+  - [x] TDD: `slice_axis`。
+    - `0:3:1`。
+    - `1:5:2`。
+    - 负 start/stop。
+    - 负 step reverse。
+    - 空 slice。
+- [x] TDD: slice 返回 view。
+  - storage ref_count 增加。
+  - view 写入反映到 owner。
+- [x] TDD: invalid slice。
+  - step 为 0 返回 `NumuyaInvalidArgument`。
+  - axis 越界返回 `NumuyaAxisOutOfBounds`。
+- [x] 验收：`src/numuya/_tests/test_slicing.uya` 绿。
+  验证命令：
+  - `../uya/bin/uya test src/numuya/_tests/test_slicing.uya --manifest-path uya.toml`
+  - `for f in src/numuya/_tests/test_*.uya; do ../uya/bin/uya test "$f" --manifest-path uya.toml; done`
+  结果：
+  - `test_slicing.uya` 通过，10 个测试全部 OK。
+  - 回归测试全部通过：`test_array_creation.uya`（6 个）、`test_indexing.uya`（6 个）、`test_shape.uya`（8 个）、`test_storage.uya`（7 个）、`test_stride_views.uya`（13 个）、`test_testing_helpers.uya`（2 个）。

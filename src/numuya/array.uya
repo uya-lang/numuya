@@ -61,7 +61,14 @@ export fn array_is_c_contiguous<T>(array_value: &Array<T>) bool {
         if dim == 0 {
             return true;
         }
-        if array_value.strides.strides[index] != expected_stride {
+        const step: isize = array_value.strides.steps[index];
+        if step <= 0 {
+            return false;
+        }
+        const step_usize: usize = step as! usize catch {
+            return false;
+        };
+        if step_usize != expected_stride {
             return false;
         }
         expected_stride = expected_stride * dim;

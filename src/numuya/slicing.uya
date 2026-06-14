@@ -1,0 +1,176 @@
+use array;
+use shape;
+use storage;
+
+export struct SliceSpec {
+    start: isize,
+    stop: isize,
+    step: isize,
+}
+
+struct SliceBounds {
+    start: isize,
+    stop: isize,
+}
+
+fn multiply_isize_isize(a: isize, b: isize) !isize {
+    if a == 0 || b == 0 {
+        return (0 as! isize).value;
+    }
+    const abs_a: isize = if a < 0 { -a } else { a };
+    const abs_b: isize = if b < 0 { -b } else { b };
+    if abs_a > NUMUYA_ISIZE_MAX / abs_b {
+        return error.NumuyaIndexOutOfBounds;
+    }
+    return a * b;
+}
+
+fn normalize_start_stop_positive(start: isize, stop: isize, dim: usize) !SliceBounds {
+    const dim_signed: isize = dim as! isize catch {
+        return error.NumuyaShapeOverflow;
+    };
+
+    var norm_start: isize = start;
+    if norm_start < 0 {
+        norm_start = norm_start + dim_signed;
+    }
+    if norm_start < 0 {
+        norm_start = 0;
+    }
+    if norm_start > dim_signed {
+        norm_start = dim_signed;
+    }
+
+    var norm_stop: isize = stop;
+    if norm_stop < 0 {
+        norm_stop = norm_stop + dim_signed;
+    }
+    if norm_stop < 0 {
+        norm_stop = 0;
+    }
+    if norm_stop > dim_signed {
+        norm_stop = dim_signed;
+    }
+
+    return SliceBounds{ start: norm_start, stop: norm_stop };
+}
+
+fn normalize_start_stop_negative(start: isize, stop: isize, dim: usize) !SliceBounds {
+    const dim_signed: isize = dim as! isize catch {
+        return error.NumuyaShapeOverflow;
+    };
+    const dim_minus_one: isize = dim_signed - 1;
+
+    var norm_start: isize = start;
+    if norm_start < 0 {
+        norm_start = norm_start + dim_signed;
+    }
+    if norm_start < -1 {
+        norm_start = -1;
+    }
+    if norm_start > dim_minus_one {
+        norm_start = dim_minus_one;
+    }
+
+    var norm_stop: isize = stop;
+    if norm_stop < 0 {
+        norm_stop = norm_stop + dim_signed;
+    }
+    if norm_stop < -1 {
+        norm_stop = -1;
+    }
+    if norm_stop > dim_minus_one {
+        norm_stop = dim_minus_one;
+    }
+
+    return SliceBounds{ start: norm_start, stop: norm_stop };
+}
+
+fn compute_slice_length(start: isize, stop: isize, step: isize) !usize {
+    if step > 0 {
+        if stop <= start {
+            return (0 as! usize).value;
+        }
+        const diff: isize = stop - start;
+        const len: isize = (diff + step - 1) / step;
+        return len as! usize catch {
+            return error.NumuyaShapeOverflow;
+        };
+    } else {
+        if stop >= start {
+            return (0 as! usize).value;
+        }
+        const diff: isize = start - stop;
+        const step_abs: isize = -step;
+        const len: isize = (diff + step_abs - 1) / step_abs;
+        return len as! usize catch {
+            return error.NumuyaShapeOverflow;
+        };
+    }
+}
+
+export fn slice_axis<T>(array_value: &Array<T>, axis: isize, spec: SliceSpec) !Array<T> {
+    const rank: usize = array_value.shape.rank;
+    if rank > NUMUYA_MAX_DIMS {
+        return error.NumuyaRankTooLarge;
+    }
+
+    const normalized_axis: usize = try normalize_axis(axis, rank);
+    if normalized_axis >= NUMUYA_MAX_DIMS {
+        return error.NumuyaAxisOutOfBounds;
+    }
+
+    if spec.step == 0 {
+        return error.NumuyaInvalidArgument;
+    }
+
+    const dim: usize = array_value.shape.dims[normalized_axis];
+    const old_step: isize = array_value.strides.steps[normalized_axis];
+
+    var bounds: SliceBounds = SliceBounds{ start: 0, stop: 0 };
+    if spec.step > 0 {
+        bounds = try normalize_start_stop_positive(spec.start, spec.stop, dim);
+    } else {
+        bounds = try normalize_start_stop_negative(spec.start, spec.stop, dim);
+    }
+
+    const new_dim: usize = try compute_slice_length(bounds.start, bounds.stop, spec.step);
+
+    var new_shape: Shape = shape_scalar();
+    new_shape.rank = rank;
+
+    var new_strides: Strides = Strides{ rank: rank, steps: [0: NUMUYA_MAX_DIMS] };
+
+    var i: usize = 0;
+    while i < rank {
+        if i >= NUMUYA_MAX_DIMS {
+            return error.NumuyaRankTooLarge;
+        }
+        if i == normalized_axis {
+            new_shape.dims[i] = new_dim;
+            new_strides.steps[i] = try multiply_isize_isize(spec.step, old_step);
+        } else {
+            new_shape.dims[i] = array_value.shape.dims[i];
+            new_strides.steps[i] = array_value.strides.steps[i];
+        }
+        i = i + 1;
+    }
+
+    const offset_adjustment: isize = try multiply_isize_isize(bounds.start, old_step);
+    const new_offset: isize = array_value.offset + offset_adjustment;
+
+    storage_retain<T>(array_value.storage);
+
+    return Array<T>{
+        storage: array_value.storage,
+        offset: new_offset,
+        shape: new_shape,
+        strides: new_strides,
+        flags: ArrayFlags{
+            c_contiguous: false,
+            f_contiguous: false,
+            writeable: array_value.flags.writeable,
+            owns_data: false,
+        },
+    };
+}

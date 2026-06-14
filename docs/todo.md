@@ -29,23 +29,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 - 注：当前 Uya codegen 对导出泛型 `!Array<T>` 路径仍有实例化限制；后续 `empty<T>/full<T>/from_slice<T>` 先用失败测试锁定可行写法，必要时抽最小复现。
 
-## Phase 5: Slicing
-
-- [ ] 实现 `SliceSpec`。
-- [ ] TDD: `slice_axis`.
-  - `0:3:1`。
-  - `1:5:2`。
-  - 负 start/stop。
-  - 负 step reverse。
-  - 空 slice。
-- [ ] TDD: slice 返回 view。
-  - storage ref_count 增加。
-  - view 写入反映到 owner。
-- [ ] TDD: invalid slice。
-  - step 为 0 返回 `NumuyaInvalidArgument`。
-  - axis 越界返回 `NumuyaAxisOutOfBounds`。
-- [ ] 验收：`src/numuya/_tests/test_slicing.uya` 绿。
-
 ## Phase 6: Broadcasting
 
 - [ ] 写 `src/numuya/_tests/test_broadcast.uya`。
