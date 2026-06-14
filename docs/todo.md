@@ -31,10 +31,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 10: Statistics
 
-## Phase 16: `.npy` I/O
-
-- [ ] 验收：`src/numuya/_tests/test_io_npy.uya` 绿。
-
 ## Phase 17: Advanced indexing
 
 - [ ] 写 `src/numuya/_tests/test_advanced_indexing.uya`。
