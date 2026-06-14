@@ -95,3 +95,8 @@
     - `../uya/bin/uya test src/numuya/_tests/test_fft.uya --manifest-path uya.toml`：7 个测试中 3 个通过、4 个因 `fft_f64`/`ifft` 尚未实现而预期失败
     - 代表性回归测试（`test_shape.uya`、`test_array_creation.uya`、`test_math.uya`、`test_linalg.uya`、`test_stats.uya`）全部通过
   - 说明：为避免 `Array<Complex>` 的 codegen 限制，FFT 输出采用 `ComplexArray`（并行的 `re`/`im` 两个 `Array<f64>`）；为让测试可编译运行，同时创建了最小 `src/numuya/fft.uya` stub（仅导出类型与函数签名，`fft_f64`/`ifft` 暂返回 `NumuyaInvalidArgument`）。
+
+## Phase 15: FFT
+
+- [x] 实现 `src/numuya/fft.uya`。
+  - 验证：`../uya/bin/uya test src/numuya/_tests/test_fft.uya --manifest-path uya.toml` 7/7 通过；`make test` 全量测试通过。

@@ -33,7 +33,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 15: FFT
 
-- [ ] 实现 `src/numuya/fft.uya`。
 - [ ] TDD: complex add/mul/conj helper。
 - [ ] TDD: `fft_f64` 长度 1。
 - [ ] TDD: `fft_f64` 长度 2。

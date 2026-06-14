@@ -1,5 +1,10 @@
 use array;
+use creation;
 use errors;
+use indexing;
+use shape;
+
+use libc.math;
 
 use std.mem.allocator.IAllocator;
 
@@ -34,10 +39,163 @@ export struct ComplexArray {
     im: Array<f64>,
 }
 
+const FFT_MAX_BITS: usize = 63;
+
+fn is_power_of_two(n: usize) bool {
+    if n == 0 {
+        return false;
+    }
+    const one: usize = 1;
+    return (n & (n - one)) == 0;
+}
+
+fn bit_reverse(i: usize, bits: usize) usize {
+    var x: usize = i;
+    var r: usize = 0;
+    var b: usize = 0;
+    const one: usize = 1;
+    const shift: i32 = 1 as i32;
+    while b < bits {
+        r = (r << shift) | (x & one);
+        x = x >> shift;
+        b = b + one;
+    }
+    return r;
+}
+
+fn log2_usize(n: usize) usize {
+    var bits: usize = 0;
+    var t: usize = n;
+    const one: usize = 1;
+    const shift: i32 = 1 as i32;
+    while t > one {
+        t = t >> shift;
+        bits = bits + one;
+    }
+    return bits;
+}
+
+fn fft_inplace(n: usize, re: &f64, im: &f64, sign: f64) void {
+    if n <= 1 {
+        return;
+    }
+
+    const bits: usize = log2_usize(n);
+
+    var i: usize = 0;
+    while i < n {
+        const j: usize = bit_reverse(i, bits);
+        if i < j {
+            const tmp_re: f64 = re[i];
+            re[i] = re[j];
+            re[j] = tmp_re;
+
+            const tmp_im: f64 = im[i];
+            im[i] = im[j];
+            im[j] = tmp_im;
+        }
+        i = i + 1;
+    }
+
+    var len: usize = 2;
+    while len <= n {
+        const half: usize = len >> (1 as i32);
+        const angle_step: f64 = sign * 2.0 * PI / ((len as! f64).value);
+
+        var k: usize = 0;
+        while k < half {
+            const angle: f64 = angle_step * ((k as! f64).value);
+            const w_re: f64 = cos(angle);
+            const w_im: f64 = sin(angle);
+
+            var group: usize = 0;
+            while group < n {
+                const a_idx: usize = group + k;
+                const b_idx: usize = group + k + half;
+
+                const a_re: f64 = re[a_idx];
+                const a_im: f64 = im[a_idx];
+                const b_re: f64 = re[b_idx];
+                const b_im: f64 = im[b_idx];
+
+                const v_re: f64 = b_re * w_re - b_im * w_im;
+                const v_im: f64 = b_re * w_im + b_im * w_re;
+
+                re[a_idx] = a_re + v_re;
+                im[a_idx] = a_im + v_im;
+                re[b_idx] = a_re - v_re;
+                im[b_idx] = a_im - v_im;
+
+                group = group + len;
+            }
+            k = k + 1;
+        }
+        len = len << (1 as i32);
+    }
+}
+
 export fn fft_f64(allocator: IAllocator, input: &Array<f64>) !ComplexArray {
-    return error.NumuyaInvalidArgument;
+    if input.shape.rank != 1 {
+        return error.NumuyaInvalidArgument;
+    }
+
+    const n: usize = input.shape.dims[0];
+    if !is_power_of_two(n) {
+        return error.NumuyaInvalidArgument;
+    }
+
+    var re: Array<f64> = try zeros_f64(allocator, shape1(n));
+    var im: Array<f64> = try zeros_f64(allocator, shape1(n));
+
+    var i: usize = 0;
+    while i < n {
+        re.storage.data[i] = input.storage.data[i];
+        i = i + 1;
+    }
+
+    fft_inplace(n, re.storage.data, im.storage.data, -1.0);
+
+    return ComplexArray{
+        re: re,
+        im: im,
+    };
 }
 
 export fn ifft(allocator: IAllocator, input: &ComplexArray) !ComplexArray {
-    return error.NumuyaInvalidArgument;
+    if input.re.shape.rank != 1 || input.im.shape.rank != 1 {
+        return error.NumuyaInvalidArgument;
+    }
+
+    const n: usize = input.re.shape.dims[0];
+    if n != input.im.shape.dims[0] {
+        return error.NumuyaInvalidArgument;
+    }
+    if !is_power_of_two(n) {
+        return error.NumuyaInvalidArgument;
+    }
+
+    var re: Array<f64> = try zeros_f64(allocator, shape1(n));
+    var im: Array<f64> = try zeros_f64(allocator, shape1(n));
+
+    var i: usize = 0;
+    while i < n {
+        re.storage.data[i] = input.re.storage.data[i];
+        im.storage.data[i] = input.im.storage.data[i];
+        i = i + 1;
+    }
+
+    fft_inplace(n, re.storage.data, im.storage.data, 1.0);
+
+    const scale: f64 = 1.0 / ((n as! f64).value);
+    i = 0;
+    while i < n {
+        re.storage.data[i] = re.storage.data[i] * scale;
+        im.storage.data[i] = im.storage.data[i] * scale;
+        i = i + 1;
+    }
+
+    return ComplexArray{
+        re: re,
+        im: im,
+    };
 }
