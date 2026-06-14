@@ -1,0 +1,102 @@
+use array;
+use creation;
+use shape;
+use storage;
+
+use std.mem.allocator.IAllocator;
+
+@c_import("math_stub.c", "", "-lm");
+
+extern "libc" fn sqrt(x: f64) f64;
+extern "libc" fn log(x: f64) f64;
+extern "libc" fn sin(x: f64) f64;
+extern "libc" fn cos(x: f64) f64;
+
+const PCG64_MULTIPLIER: u64 = 6364136223846793005;
+const PCG64_DENOMINATOR: f64 = 18446744073709551616.0;
+const TWO_PI: f64 = 6.283185307179586476925286766559;
+
+export struct PCG64 {
+    state: u64,
+    inc: u64,
+}
+
+// Work around current generic codegen missing cross-module drop instantiation.
+fn materialize_storage_release<T>(array_value: &Array<T>) void {
+    if array_value.storage == null {
+        storage_release<T>(array_value.storage);
+    }
+}
+
+export fn pcg64_seed(init_state: u64, init_seq: u64) PCG64 {
+    const inc: u64 = (init_seq << 1) | (1 as u64);
+    return PCG64{
+        state: init_state + inc,
+        inc: inc,
+    };
+}
+
+export fn random_u64(rng: &PCG64) u64 {
+    rng.state = rng.state * PCG64_MULTIPLIER + rng.inc;
+    return rng.state ^ (rng.state >> 17);
+}
+
+export fn random_f64(rng: &PCG64) f64 {
+    const value: u64 = random_u64(rng);
+    return (value as f64) / PCG64_DENOMINATOR;
+}
+
+export fn random_array_f64(allocator: IAllocator, rng: &PCG64, shape_value: Shape) !Array<f64> {
+    var result: Array<f64> = try empty<f64>(allocator, shape_value);
+    materialize_storage_release<f64>(&result);
+
+    var i: usize = 0;
+    while i < result.storage.len {
+        result.storage.data[i] = random_f64(rng);
+        i = i + 1;
+    }
+
+    storage_retain<f64>(result.storage);
+    return Array<f64>{
+        storage: result.storage,
+        offset: result.offset,
+        shape: result.shape,
+        strides: result.strides,
+        flags: result.flags,
+    };
+}
+
+export fn normal_array_f64(allocator: IAllocator, rng: &PCG64, shape_value: Shape, mean: f64, stddev: f64) !Array<f64> {
+    var result: Array<f64> = try empty<f64>(allocator, shape_value);
+    materialize_storage_release<f64>(&result);
+
+    var i: usize = 0;
+    while i < result.storage.len {
+        var u1: f64 = random_f64(rng);
+        while u1 == 0.0 {
+            u1 = random_f64(rng);
+        }
+        const u2: f64 = random_f64(rng);
+
+        const radius: f64 = sqrt(-2.0 * log(u1));
+        const theta: f64 = TWO_PI * u2;
+        const z0: f64 = radius * cos(theta);
+        const z1: f64 = radius * sin(theta);
+
+        result.storage.data[i] = mean + stddev * z0;
+        i = i + 1;
+        if i < result.storage.len {
+            result.storage.data[i] = mean + stddev * z1;
+            i = i + 1;
+        }
+    }
+
+    storage_retain<f64>(result.storage);
+    return Array<f64>{
+        storage: result.storage,
+        offset: result.offset,
+        shape: result.shape,
+        strides: result.strides,
+        flags: result.flags,
+    };
+}

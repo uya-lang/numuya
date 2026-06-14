@@ -31,16 +31,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 10: Statistics
 
-## Phase 14: Random
-
-- [ ] 实现 `src/numuya/random.uya`。
-- [ ] TDD: `pcg64_seed` deterministic。
-  - 固定 seed 的前 5 个 `random_u64` 用硬编码 golden。
-- [ ] TDD: `random_f64` 范围 `[0, 1)`。
-- [ ] TDD: `random_array_f64` shape 和范围。
-- [ ] TDD: `normal_array_f64` 固定 seed golden。
-- [ ] 验收：`src/numuya/_tests/test_random.uya` 绿。
-
 ## Phase 15: FFT
 
 - [ ] 写 `src/numuya/_tests/test_fft.uya`。

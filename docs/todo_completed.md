@@ -58,3 +58,30 @@
 - [x] 写 `src/numuya/_tests/test_random.uya`。
   - 验证：`../uya/bin/uya test src/numuya/_tests/test_random.uya --manifest-path uya.toml`
   - 结果：按预期失败；`random.uya` 尚未实现，类型检查报 `random_array_f64` / `normal_array_f64` 的 `try` 操作数不是错误联合类型。
+
+## Phase 14: Random
+
+- [x] 实现 `src/numuya/random.uya`。
+  - 新增 `src/numuya/random.uya`：导出 `PCG64`、`pcg64_seed`、`random_u64`、`random_f64`、`random_array_f64`、`normal_array_f64`。
+  - PCG64 使用 64 位 LCG，乘数 `6364136223846793005`，增量 `inc = (init_seq << 1) | 1`，输出置换为 `state ^ (state >> 17)`。
+  - `random_f64` 将 `u64` 映射到 `[0, 1)`：`value / 2^64`。
+  - `random_array_f64` 用 `empty<f64>` 分配数组并填充均匀随机数。
+  - `normal_array_f64` 使用 Box-Muller 变换生成正态分布；调用 `sqrt`/`log`/`sin`/`cos` 需要 `@c_import("math_stub.c", "", "-lm")`。
+  - 包含 `materialize_storage_release<T>`  workaround，规避当前 Uya codegen 对跨模块 `Array<f64>` drop 的实例化缺失。
+- [x] TDD: `pcg64_seed` deterministic。
+  - 测试：`pcg64_seed produces deterministic u64 sequence`。
+  - 验证命令：`../uya/bin/uya test src/numuya/_tests/test_random.uya --manifest-path uya.toml`
+- [x] TDD: `random_u64` golden values。
+  - 测试：`random_u64 golden values for fixed seed`。
+  - 固定 seed `(42, 0)` 前 5 个值：15403552597630628382、16168177009217139338、11128129689875903247、121274658106355247、8960200607924515427。
+- [x] TDD: `random_f64` 范围 `[0, 1)`。
+  - 测试：`random_f64 returns values in half open interval zero one`。
+- [x] TDD: `random_array_f64` shape 和范围。
+  - 测试：`random_array_f64 produces array with requested shape and values in range`。
+- [x] TDD: `normal_array_f64` 固定 seed golden。
+  - 测试：`normal_array_f64 produces deterministic golden values for fixed seed`。
+  - 固定 seed `(12345, 1)`、shape `(2, 3)`、mean 0、stddev 1 的 golden 与 Python 参考实现一致。
+- [x] 验收：`src/numuya/_tests/test_random.uya` 绿。
+  - 验证命令：`../uya/bin/uya test src/numuya/_tests/test_random.uya --manifest-path uya.toml` — 6/6 通过
+  - 验证命令：`make test` — 全部测试文件通过（test_array_creation/test_broadcast/test_indexing/test_linalg/test_math/test_random/test_reductions/test_shape/test_slicing/test_sorting/test_stats/test_storage/test_stride_views/test_testing_helpers/test_ufunc）
+
