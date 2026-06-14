@@ -19,10 +19,7 @@ test "cuda_init succeeds when cuda is available and errors gracefully otherwise"
         try result;
     } else {
         // 无 CUDA 时允许返回 NumuyaGpuUnavailable 或 NumuyaCudaError。
-        match result {
-            ok => {}
-            else => {}
-        }
+        _ = result catch {};
     }
 }
 

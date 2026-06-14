@@ -427,3 +427,17 @@
   - 实现：新增 `src/numuya/backend.uya`，导出 `BackendKind` 枚举（`Auto`、`Cpu`、`Cuda`）、`BackendState` 结构体，以及 `backend_is_cuda_available`、`backend_init`、`backend_deinit` 占位实现，供后续 TDD 任务填充 CUDA 相关逻辑。
   - 验证命令：
     - `../uya/bin/uya check src/numuya/backend.uya --manifest-path uya.toml` — 类型检查通过
+
+## Phase 20: CUDA backend 基础
+
+- [x] 创建 `src/numuya/cuda/driver.uya`。
+  - 实现：
+    - 新增 `src/numuya/cuda/driver.uya`，导出 `CudaDevice` 结构体、`cuda_init()`、`cuda_get_device(ordinal)`，以及错误 `NumuyaGpuUnavailable` / `NumuyaCudaError`。
+    - 新增 `src/numuya/cuda/driver_stub.c`，通过 `dlopen`/`dlsym` 运行时动态加载 `libcuda.so.1`，避免 `make test` 默认路径产生硬链接依赖；CUDA 不可用时返回 `NUMUYA_CUDA_UNAVAILABLE`，Driver API 调用失败返回 `NUMUYA_CUDA_ERROR`。
+    - `src/numuya/errors.uya` 新增 `NumuyaGpuUnavailable`、`NumuyaCudaError` 两个共享错误。
+    - 修复 `src/numuya/_tests/test_cuda_driver.uya` 中不支持的 `match result { ok => {} else => {} }` 语法，改为 Uya 支持的 `_ = result catch {};`。
+  - 验证命令：
+    - `../uya/bin/uya test src/numuya/_tests/test_cuda_driver.uya --manifest-path uya.toml` — 6/6 通过
+    - `../uya/bin/uya test src/numuya/_tests/test_linalg.uya --manifest-path uya.toml` — 30/30 通过
+    - `../uya/bin/uya test src/numuya/_tests/test_array_creation.uya --manifest-path uya.toml` — 6/6 通过
+    - `LDFLAGS="-lcuda" NUMUYA_CUDA_REQUIRED=1 ../uya/bin/uya test src/numuya/_tests/test_cuda_driver.uya --manifest-path uya.toml` — 6/6 通过

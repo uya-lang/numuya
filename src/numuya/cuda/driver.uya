@@ -1,0 +1,48 @@
+export error NumuyaGpuUnavailable;
+export error NumuyaCudaError;
+
+export struct CudaDevice {
+    ordinal: usize,
+    major: usize,
+    minor: usize,
+    total_memory_bytes: usize,
+}
+
+@c_import("driver_stub.c", "", "-ldl");
+
+extern fn numuya_cuda_init() i32;
+extern fn numuya_cuda_get_device(ordinal: i32, major: &i32, minor: &i32, total_memory_bytes: &usize) i32;
+
+const NUMUYA_CUDA_OK: i32 = 0;
+const NUMUYA_CUDA_UNAVAILABLE: i32 = 1;
+const NUMUYA_CUDA_ERROR: i32 = 2;
+
+export fn cuda_init() !void {
+    const status: i32 = numuya_cuda_init();
+    if status == NUMUYA_CUDA_OK {
+        return;
+    } else if status == NUMUYA_CUDA_UNAVAILABLE {
+        return error.NumuyaGpuUnavailable;
+    } else {
+        return error.NumuyaCudaError;
+    }
+}
+
+export fn cuda_get_device(ordinal: usize) !CudaDevice {
+    var major: i32 = 0;
+    var minor: i32 = 0;
+    var total_memory_bytes: usize = 0;
+    const status: i32 = numuya_cuda_get_device(ordinal as i32, &major, &minor, &total_memory_bytes);
+    if status == NUMUYA_CUDA_OK {
+        return CudaDevice{
+            ordinal: ordinal,
+            major: major as usize,
+            minor: minor as usize,
+            total_memory_bytes: total_memory_bytes,
+        };
+    } else if status == NUMUYA_CUDA_UNAVAILABLE {
+        return error.NumuyaGpuUnavailable;
+    } else {
+        return error.NumuyaCudaError;
+    }
+}
