@@ -404,3 +404,15 @@
   - 结果：通过，10/10 tests passed；其中 `transpose reverses dimensions and maps indices` 覆盖 shape 反转与索引映射，`writing through a transpose view updates the owner` 覆盖 view 写入回写 owner。
   - 说明：实现已存在于 `src/numuya/stride.uya` 的 `transpose<T>`，测试已存在于 `src/numuya/_tests/test_stride_views.uya`；本回合主要完成验证与状态归档。
   - 回归验证：`../uya/bin/uya test src/numuya/_tests/test_array_creation.uya --manifest-path uya.toml`、`test_indexing.uya`、`test_shape.uya`、`test_storage.uya`、`test_stride_views.uya` 均通过。
+
+## Phase 4: Stride、reshape、transpose、view
+
+- [x] TDD: `swapaxes`.
+  - 验证命令：`../uya/bin/uya test src/numuya/_tests/test_stride_views.uya --manifest-path uya.toml`
+  - 结果：`test_stride_views.uya` 13 个测试全部通过，其中 swapaxes 相关测试包括：
+    - `swapaxes exchanges two axes`
+    - `swapaxes rejects out-of-bounds axes`
+    - `swapaxes supports negative axes`
+    - `writing through a swapaxes view updates the owner`
+    - `swapaxes with identical axes is a no-op view`
+  - 更广泛验证：`make test` 通过全部 5 个测试文件（test_array_creation、test_indexing、test_shape、test_storage、test_stride_views、test_testing_helpers），共 42 个测试。

@@ -145,3 +145,44 @@ test "swapaxes rejects out-of-bounds axes" {
         else => { return error.NumuyaExpectationFailed; }
     }
 }
+
+test "swapaxes supports negative axes" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var source: [f64: 6] = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
+    var original: Array<f64> = try from_slice<f64>(allocator, source[0:6], shape2(2, 3));
+
+    var swapped: Array<f64> = try swapaxes<f64>(&original, -1, -2);
+
+    try expect_eq_usize(swapped.shape.dims[0], 3);
+    try expect_eq_usize(swapped.shape.dims[1], 2);
+    try expect_close_f64(try get2<f64>(&original, 1, 2), 6.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&swapped, 2, 1), 6.0, 1e-12);
+}
+
+test "writing through a swapaxes view updates the owner" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var source: [f64: 6] = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
+    var original: Array<f64> = try from_slice<f64>(allocator, source[0:6], shape2(2, 3));
+    var swapped: Array<f64> = try swapaxes<f64>(&original, 0, 1);
+
+    try set2<f64>(&swapped, 2, 1, 9.5);
+
+    try expect_close_f64(try get2<f64>(&original, 1, 2), 9.5, 1e-12);
+    try expect_close_f64(try get2<f64>(&swapped, 2, 1), 9.5, 1e-12);
+}
+
+test "swapaxes with identical axes is a no-op view" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var source: [f64: 6] = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
+    var original: Array<f64> = try from_slice<f64>(allocator, source[0:6], shape2(2, 3));
+
+    const before_ref_count: usize = original.storage.ref_count;
+    var swapped: Array<f64> = try swapaxes<f64>(&original, 0, 0);
+
+    try expect_eq_usize(swapped.storage.ref_count, before_ref_count + 1);
+    try expect_shape_eq(swapped.shape.dims[0:swapped.shape.rank], original.shape.dims[0:original.shape.rank]);
+    try expect_close_f64(try get2<f64>(&swapped, 1, 2), 6.0, 1e-12);
+}

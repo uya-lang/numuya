@@ -31,7 +31,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 4: Stride、reshape、transpose、view
 
-- [ ] TDD: `swapaxes`.
 - [ ] TDD: view 写入。
   - 通过 transpose view set 后，owner 对应元素变化。
 - [ ] 验收：`src/numuya/_tests/test_stride_views.uya` 绿。
