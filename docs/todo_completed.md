@@ -890,3 +890,10 @@ done
   - 1-D dot 1-D 返回 scalar shape。
   - 验证命令：`../uya/bin/uya test src/numuya/_tests/test_linalg.uya --manifest-path uya.toml`
   - 验证结果：12/12 通过，其中 `dot_f64 computes scalar product of two 1-D arrays`、`dot_f64 rejects mismatched 1-D lengths`、`dot_f64 rejects non-1-D inputs` 均 OK。
+
+## Phase 12: Linear algebra MVP
+
+- [x] TDD: `matmul_f64`。
+  - 2-D x 2-D。
+  - incompatible shape 返回 `NumuyaShapeMismatch`。
+  - 验证命令：`../uya/bin/uya test src/numuya/_tests/test_linalg.uya --manifest-path uya.toml`（12/12 通过）

@@ -33,9 +33,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 12: Linear algebra MVP
 
-- [ ] TDD: `matmul_f64`。
-  - 2-D x 2-D。
-  - incompatible shape 返回 `NumuyaShapeMismatch`。
 - [ ] TDD: non-contiguous matrix input。
 - [ ] 验收：`src/numuya/_tests/test_linalg.uya` 绿。
 
