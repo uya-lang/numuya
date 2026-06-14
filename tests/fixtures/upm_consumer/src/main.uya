@@ -1,0 +1,6 @@
+use numuya.shape.Shape;
+use numuya.creation.zeros_f64;
+
+export fn main() i32 {
+    return 0;
+}

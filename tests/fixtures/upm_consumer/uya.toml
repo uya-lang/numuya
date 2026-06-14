@@ -1,0 +1,7 @@
+[package]
+name = "numuya_upm_consumer"
+version = "0.1.0"
+source-dir = "src"
+
+[dependencies]
+numuya = { path = "../../.." }
