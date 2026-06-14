@@ -191,3 +191,13 @@
   - 验证：
     - `make test-one TEST=src/numuya/_tests/test_storage.uya`：先失败，链接错误 `undefined reference to 'storage_retain_f64'`；实现后通过，3 个 storage 测试通过。
     - `make test`：通过（`test_shape` 8 tests passed；`test_storage` 3 tests passed；`test_testing_helpers` 2 tests passed）。
+
+## Phase 2: Storage 与 Array handle
+
+- [x] TDD: `storage_release<T>`。
+  - release 非最后引用只减计数。
+  - 最后引用释放 data/header。
+  - 测试不要读取已释放内存，只检查计数路径和无崩溃。
+  - 验证：
+    - `make test-one TEST=src/numuya/_tests/test_storage.uya`：先失败，链接错误 `undefined reference to 'storage_release_f64'`；实现后通过，`test_storage` 4 tests passed。
+    - `make test`：通过（`test_shape` 8 tests passed；`test_storage` 4 tests passed；`test_testing_helpers` 2 tests passed）。

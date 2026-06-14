@@ -36,3 +36,18 @@ export fn storage_new<T>(allocator: IAllocator, len: usize) !&Storage<T> {
 export fn storage_retain<T>(storage_value: &Storage<T>) void {
     storage_value.ref_count = storage_value.ref_count + 1;
 }
+
+export fn storage_release<T>(storage_value: &Storage<T>) void {
+    if storage_value == null {
+        return;
+    }
+    if storage_value.ref_count > 1 {
+        storage_value.ref_count = storage_value.ref_count - 1;
+        return;
+    }
+
+    if storage_value.data != null {
+        storage_value.allocator.dealloc(storage_value.data as &byte);
+    }
+    storage_value.allocator.dealloc(storage_value as &byte);
+}

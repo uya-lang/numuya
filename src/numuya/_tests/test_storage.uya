@@ -3,13 +3,34 @@ use testing.expect_eq_usize;
 
 use std.mem.allocator.IAllocator;
 use std.mem.allocator.MallocAllocator;
+use std.mem.allocator.get_allocator;
+
+var g_storage_dealloc_count: usize = 0;
+
+struct CountingMallocWrapper : IAllocator {
+    inner: &MallocAllocator,
+
+    fn alloc(self: &Self, size: usize) !&byte {
+        return self.inner.alloc(size);
+    },
+
+    fn dealloc(self: &Self, ptr: &byte) void {
+        if ptr != null {
+            g_storage_dealloc_count = g_storage_dealloc_count + 1;
+        }
+        self.inner.dealloc(ptr);
+    },
+
+    fn realloc(self: &Self, ptr: &byte, new_size: usize) !&byte {
+        return self.inner.realloc(ptr, new_size);
+    },
+}
 
 fn free_test_storage<T>(storage_value: &Storage<T>) void {
     if storage_value == null {
         return;
     }
-    storage_value.allocator.dealloc(storage_value.data as &byte);
-    storage_value.allocator.dealloc(storage_value as &byte);
+    storage_release<T>(storage_value);
 }
 
 test "storage_new allows zero len and starts with single ref" {
@@ -46,4 +67,20 @@ test "storage_retain increments ref_count" {
     try expect_eq_usize(storage_value.ref_count, 2);
 
     free_test_storage<f64>(storage_value);
+}
+
+test "storage_release decrements and frees on final reference" {
+    g_storage_dealloc_count = 0;
+    var allocator_wrapper: CountingMallocWrapper = CountingMallocWrapper{ inner: get_allocator() };
+    var allocator: IAllocator = allocator_wrapper;
+    const storage_value: &Storage<f64> = try storage_new<f64>(allocator, 2);
+
+    storage_retain<f64>(storage_value);
+    storage_release<f64>(storage_value);
+
+    try expect_eq_usize(storage_value.ref_count, 1);
+    try expect_eq_usize(g_storage_dealloc_count, 0);
+
+    storage_release<f64>(storage_value);
+    try expect_eq_usize(g_storage_dealloc_count, 2);
 }

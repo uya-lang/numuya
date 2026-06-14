@@ -27,10 +27,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 2: Storage 与 Array handle
 
-- [ ] TDD: `storage_release<T>`。
-  - release 非最后引用只减计数。
-  - 最后引用释放 data/header。
-  - 测试不要读取已释放内存，只检查计数路径和无崩溃。
 - [ ] 实现 `src/numuya/array.uya` 的 `Array<T>` 与 `ArrayFlags`。
 - [ ] TDD: `array_rank/array_size/array_shape`。
 - [ ] TDD: `array_is_c_contiguous`。
