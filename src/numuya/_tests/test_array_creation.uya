@@ -7,6 +7,35 @@ use testing.expect_eq_usize;
 use std.mem.allocator.IAllocator;
 use std.mem.allocator.MallocAllocator;
 
+test "creation exports generic empty owner array constructor" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    const array_value: Array<f64> = try empty<f64>(allocator, shape2(2, 3));
+
+    storage_retain<f64>(array_value.storage);
+    storage_release<f64>(array_value.storage);
+
+    try expect_eq_usize(array_rank<f64>(&array_value), 2);
+    try expect_eq_usize(array_size<f64>(&array_value), 6);
+    try expect_eq_usize(array_value.storage.len, 6);
+
+    if shape_eq(array_value.shape, shape2(2, 3)) != true {
+        return error.NumuyaExpectationFailed;
+    }
+    if array_is_c_contiguous<f64>(&array_value) != true {
+        return error.NumuyaExpectationFailed;
+    }
+    if array_value.flags.c_contiguous != true {
+        return error.NumuyaExpectationFailed;
+    }
+    if array_value.flags.writeable != true {
+        return error.NumuyaExpectationFailed;
+    }
+    if array_value.flags.owns_data != true {
+        return error.NumuyaExpectationFailed;
+    }
+}
+
 test "creation exports f64 owner array constructors" {
     var malloc_allocator: MallocAllocator = MallocAllocator{};
     var allocator: IAllocator = malloc_allocator;

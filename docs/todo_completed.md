@@ -260,3 +260,16 @@
     - `make test-one TEST=src/numuya/_tests/test_shape.uya`：通过
     - `make test-one TEST=src/numuya/_tests/test_storage.uya`：通过
     - `make test-one TEST=src/numuya/_tests/test_array_creation.uya`：通过
+
+## Phase 3: 创建数组与基础 get/set
+
+- [x] 抽最小复现并修复 Uya C99 codegen：导出泛型 `!Array<T>` 时缺失 `Array<T>` / `Storage<T>` 完整特化定义。
+  - 以 `empty<f64>(allocator, shape2(2, 3))` 为最小入口。
+  - 验证命令：`make test-one TEST=src/numuya/_tests/test_array_creation.uya`。
+  - 完成条件：`empty<T>` 的新增测试能编译运行，且不破坏现有 `full_f64` 行为。
+  - 实际验证：
+    - `make -C ../uya uya`：通过。
+    - `make test-one TEST=src/numuya/_tests/test_array_creation.uya`：通过，3 个测试全部通过，覆盖 `empty<f64>` 与现有 `full_f64` 行为。
+    - `make test-one TEST=src/numuya/_tests/test_shape.uya`：通过。
+    - `make test-one TEST=src/numuya/_tests/test_storage.uya`：通过。
+    - `make test-one TEST=src/numuya/_tests/test_testing_helpers.uya`：通过。

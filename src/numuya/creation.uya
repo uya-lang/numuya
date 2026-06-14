@@ -71,8 +71,8 @@ fn make_owned_flags(shape_value: &Shape) ArrayFlags {
     };
 }
 
-fn make_owned_array_f64(storage_value: &Storage<f64>, shape_value: Shape) !Array<f64> {
-    return Array<f64>{
+fn make_owned_array<T>(storage_value: &Storage<T>, shape_value: Shape) !Array<T> {
+    return Array<T>{
         storage: storage_value,
         offset: 0,
         shape: shape_value,
@@ -81,12 +81,12 @@ fn make_owned_array_f64(storage_value: &Storage<f64>, shape_value: Shape) !Array
     };
 }
 
-fn empty_owned_f64(allocator: IAllocator, shape_value: Shape) !Array<f64> {
+export fn empty<T>(allocator: IAllocator, shape_value: Shape) !Array<T> {
     try validate_shape(&shape_value);
 
     const size: usize = try shape_size_ref(&shape_value);
-    const storage_value: &Storage<f64> = try storage_new<f64>(allocator, size);
-    return make_owned_array_f64(storage_value, shape_value);
+    const storage_value: &Storage<T> = try storage_new<T>(allocator, size);
+    return make_owned_array<T>(storage_value, shape_value);
 }
 
 fn fill_all_f64(array_value: &Array<f64>, value: f64) void {
@@ -108,7 +108,7 @@ export fn ones_f64(allocator: IAllocator, shape_value: Shape) !Array<f64> {
 }
 
 export fn full_f64(allocator: IAllocator, shape_value: Shape, value: f64) !Array<f64> {
-    var array_value: Array<f64> = try empty_owned_f64(allocator, shape_value);
+    var array_value: Array<f64> = try empty<f64>(allocator, shape_value);
     fill_all_f64(&array_value, value);
     return array_value;
 }
