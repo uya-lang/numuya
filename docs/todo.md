@@ -31,7 +31,7 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 9: Math functions
 
-- [ ] TDD: `abs_f64`。
+- [x] TDD: `abs_f64`。
 - [ ] TDD: `sqrt_f64`。
 - [ ] TDD: `exp_f64/log_f64`。
 - [ ] TDD: `sin_f64/cos_f64`。

@@ -3,6 +3,8 @@ use creation;
 use shape;
 use storage;
 
+@c_import("math_stub.c", "", "-lm");
+
 const MATH_MAX_USIZE: usize = 18446744073709551615;
 const MATH_ISIZE_MAX: isize = 9223372036854775807;
 

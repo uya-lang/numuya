@@ -723,3 +723,17 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
     LDFLAGS=-lm make test
     ```
   - 验证结果：`src/numuya/_tests/test_math.uya` 10/10 通过；`make test` 全部 NumUya 测试通过。
+
+## Phase 9: Math functions
+
+- [x] TDD: `abs_f64`。
+
+验证命令：
+```bash
+../uya/bin/uya test src/numuya/_tests/test_math.uya --manifest-path uya.toml
+```
+结果：`src/numuya/_tests/test_math.uya` 10 tests passed, 0 failed，其中 `abs_f64 computes element-wise absolute value` 与 `math_f64 output is a new owner independent of input` 均通过。
+
+生产改动：
+- `src/numuya/math.uya` 顶部添加 `@c_import("math_stub.c", "", "-lm");`，为 `extern "libc"` 数学函数链接 libm。
+- 新增 `src/numuya/math_stub.c` 作为 `@c_import` 占位文件以传递 `-lm` 链接标志。
