@@ -1,0 +1,22 @@
+export enum BackendKind {
+    Auto,
+    Cpu,
+    Cuda,
+}
+
+export struct BackendState {
+    kind: BackendKind,
+}
+
+export fn backend_is_cuda_available() bool {
+    return false;
+}
+
+export fn backend_init(kind: BackendKind) !BackendState {
+    var state: BackendState = BackendState{ kind: kind };
+    return state;
+}
+
+export fn backend_deinit(state: &BackendState) !void {
+    state.kind = BackendKind.Auto;
+}

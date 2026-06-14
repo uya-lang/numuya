@@ -419,3 +419,11 @@
 - [x] 写 `src/numuya/_tests/test_cuda_driver.uya`。
   - 验证命令：`../uya/bin/uya check src/numuya/_tests/test_cuda_driver.uya --manifest-path uya.toml`
   - 结果：文件已创建；`uya check` 因依赖模块 `backend` 与 `cuda/driver` 尚未实现而失败，属于预期失败，文件本身词法/语法解析通过。
+
+
+## Phase 20: CUDA backend 基础
+
+- [x] 创建 `src/numuya/backend.uya`。
+  - 实现：新增 `src/numuya/backend.uya`，导出 `BackendKind` 枚举（`Auto`、`Cpu`、`Cuda`）、`BackendState` 结构体，以及 `backend_is_cuda_available`、`backend_init`、`backend_deinit` 占位实现，供后续 TDD 任务填充 CUDA 相关逻辑。
+  - 验证命令：
+    - `../uya/bin/uya check src/numuya/backend.uya --manifest-path uya.toml` — 类型检查通过

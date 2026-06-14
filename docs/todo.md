@@ -35,7 +35,7 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 20: CUDA backend 基础
 
-- [ ] 创建 `src/numuya/backend.uya`。
+
 - [ ] 创建 `src/numuya/cuda/driver.uya`。
 - [ ] 创建 CUDA 测试命令约定。
   - `make test` 默认不要求 GPU，且依赖 `make bootstrap-upm`。
