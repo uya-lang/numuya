@@ -482,3 +482,34 @@
     - `../uya/bin/uya check src/numuya/_tests/test_broadcast.uya --manifest-path uya.toml`（临时 stub `src/numuya/broadcast.uya`）
   - 结果：checker 通过，测试文件类型与语义正确。
   - 当前 TDD 状态：移除 stub 后同一命令失败，因 `src/numuya/broadcast.uya` 尚未实现；符合预期，等待下一轮实现。
+
+## Phase 6: Broadcasting
+
+- [x] 实现 `src/numuya/broadcast.uya`。
+  - 新增 `src/numuya/errors.uya` 导出 `NumuyaBroadcastError`。
+  - 实现 `broadcast_shapes(left, right) !Shape`：从右侧对齐维度，相等或 size-1 可广播，否则返回 `NumuyaBroadcastError`。
+  - 实现 `broadcast_to<T>(array, target_shape) !Array<T>`：按 NumPy 语义在左侧补 size-1 轴，对应 stride 置 0；返回 view 的 `flags.writeable` 为 false。
+  - 验证命令：`../uya/bin/uya test src/numuya/_tests/test_broadcast.uya --manifest-path uya.toml`
+  - 验证结果：通过，7/7 tests passed。
+- [x] TDD: `broadcast_shapes`.
+  - `(3,)` 与 `(2, 3)` -> `(2, 3)`。
+  - `(4, 1, 3)` 与 `(1, 5, 3)` -> `(4, 5, 3)`。
+  - `(2,)` 与 `(3,)` 返回 `NumuyaBroadcastError`。
+  - 验证命令：`../uya/bin/uya test src/numuya/_tests/test_broadcast.uya --manifest-path uya.toml`
+  - 验证结果：通过，覆盖上述 3 个用例。
+- [x] TDD: `broadcast_to`.
+  - `(3,)` broadcast 到 `(2, 3)`，新 axis stride 为 0。
+  - `(1, 3)` 到 `(2, 3)`，第一轴 stride 为 0。
+  - 不兼容返回 `NumuyaBroadcastError`。
+  - 验证命令：`../uya/bin/uya test src/numuya/_tests/test_broadcast.uya --manifest-path uya.toml`
+  - 验证结果：通过，覆盖上述 3 个用例。
+- [x] TDD: broadcast view 默认只读或写保护。
+  - 如果设置只读，`set` 返回 `NumuyaReadOnly`。
+  - 如果允许写入，必须证明 stride 0 写入语义清楚；第一版推荐只读。
+  - 验证命令：`../uya/bin/uya test src/numuya/_tests/test_broadcast.uya --manifest-path uya.toml`
+  - 验证结果：通过，`broadcast view is read-only by default` OK。
+- [x] 验收：`src/numuya/_tests/test_broadcast.uya` 绿。
+  - 验证命令：`../uya/bin/uya test src/numuya/_tests/test_broadcast.uya --manifest-path uya.toml`
+  - 验证结果：通过，7/7 tests passed。
+  - 回归命令：`make test`
+  - 回归结果：通过，当前所有 7 个测试文件（test_array_creation.uya、test_broadcast.uya、test_indexing.uya、test_shape.uya、test_slicing.uya、test_storage.uya、test_stride_views.uya、test_testing_helpers.uya）全部通过。

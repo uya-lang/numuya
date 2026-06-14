@@ -29,22 +29,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 - 注：当前 Uya codegen 对导出泛型 `!Array<T>` 路径仍有实例化限制；后续 `empty<T>/full<T>/from_slice<T>` 先用失败测试锁定可行写法，必要时抽最小复现。
 
-## Phase 6: Broadcasting
-
-- [ ] 实现 `src/numuya/broadcast.uya`。
-- [ ] TDD: `broadcast_shapes`.
-  - `(3,)` 与 `(2, 3)` -> `(2, 3)`。
-  - `(4, 1, 3)` 与 `(1, 5, 3)` -> `(4, 5, 3)`。
-  - `(2,)` 与 `(3,)` 返回 `NumuyaBroadcastError`。
-- [ ] TDD: `broadcast_to`.
-  - `(3,)` broadcast 到 `(2, 3)`，新 axis stride 为 0。
-  - `(1, 3)` 到 `(2, 3)`，第一轴 stride 为 0。
-  - 不兼容返回 `NumuyaBroadcastError`。
-- [ ] TDD: broadcast view 默认只读或写保护。
-  - 如果设置只读，`set` 返回 `NumuyaReadOnly`。
-  - 如果允许写入，必须证明 stride 0 写入语义清楚；第一版推荐只读。
-- [ ] 验收：`src/numuya/_tests/test_broadcast.uya` 绿。
-
 ## Phase 7: UFunc 基础
 
 - [ ] 写 `src/numuya/_tests/test_ufunc.uya`。

@@ -1,0 +1,130 @@
+use array;
+use shape;
+use storage;
+
+export fn broadcast_shapes(left: Shape, right: Shape) !Shape {
+    if left.rank > NUMUYA_MAX_DIMS || right.rank > NUMUYA_MAX_DIMS {
+        return error.NumuyaRankTooLarge;
+    }
+
+    const max_rank: usize = if left.rank > right.rank { left.rank } else { right.rank };
+    if max_rank > NUMUYA_MAX_DIMS {
+        return error.NumuyaRankTooLarge;
+    }
+
+    var out_shape: Shape = shape_scalar();
+    out_shape.rank = max_rank;
+
+    var offset_from_right: usize = 0;
+    while offset_from_right < max_rank {
+        var left_dim: usize = 1;
+        if offset_from_right < left.rank {
+            const left_index: usize = left.rank - offset_from_right - 1;
+            if left_index >= NUMUYA_MAX_DIMS {
+                return error.NumuyaRankTooLarge;
+            }
+            left_dim = left.dims[left_index];
+        }
+
+        var right_dim: usize = 1;
+        if offset_from_right < right.rank {
+            const right_index: usize = right.rank - offset_from_right - 1;
+            if right_index >= NUMUYA_MAX_DIMS {
+                return error.NumuyaRankTooLarge;
+            }
+            right_dim = right.dims[right_index];
+        }
+
+        var result_dim: usize = left_dim;
+        if left_dim == right_dim {
+            result_dim = left_dim;
+        } else if left_dim == 1 {
+            result_dim = right_dim;
+        } else if right_dim == 1 {
+            result_dim = left_dim;
+        } else {
+            return error.NumuyaBroadcastError;
+        }
+
+        const result_index: usize = max_rank - offset_from_right - 1;
+        if result_index >= NUMUYA_MAX_DIMS {
+            return error.NumuyaRankTooLarge;
+        }
+        out_shape.dims[result_index] = result_dim;
+
+        offset_from_right = offset_from_right + 1;
+    }
+
+    return out_shape;
+}
+
+export fn broadcast_to<T>(array_value: &Array<T>, target_shape: Shape) !Array<T> {
+    if target_shape.rank > NUMUYA_MAX_DIMS {
+        return error.NumuyaRankTooLarge;
+    }
+    if array_value.shape.rank > target_shape.rank {
+        return error.NumuyaBroadcastError;
+    }
+
+    var new_strides: Strides = Strides{ rank: target_shape.rank, steps: [0: NUMUYA_MAX_DIMS] };
+
+    const rank_diff: usize = target_shape.rank - array_value.shape.rank;
+    var offset_from_right: usize = 0;
+    while offset_from_right < target_shape.rank {
+        const result_axis: usize = target_shape.rank - offset_from_right - 1;
+        if result_axis >= NUMUYA_MAX_DIMS {
+            return error.NumuyaRankTooLarge;
+        }
+
+        const target_dim: usize = target_shape.dims[result_axis];
+
+        var source_dim: usize = 1;
+        var source_step: isize = 0;
+        if result_axis >= rank_diff {
+            const source_axis: usize = result_axis - rank_diff;
+            if source_axis >= NUMUYA_MAX_DIMS {
+                return error.NumuyaRankTooLarge;
+            }
+            source_dim = array_value.shape.dims[source_axis];
+            source_step = array_value.strides.steps[source_axis];
+        }
+
+        if source_dim != target_dim && source_dim != 1 {
+            return error.NumuyaBroadcastError;
+        }
+
+        if source_dim == 1 {
+            new_strides.steps[result_axis] = 0;
+        } else {
+            new_strides.steps[result_axis] = source_step;
+        }
+
+        offset_from_right = offset_from_right + 1;
+    }
+
+    var result_shape: Shape = shape_scalar();
+    result_shape.rank = target_shape.rank;
+    var i: usize = 0;
+    while i < target_shape.rank {
+        if i >= NUMUYA_MAX_DIMS {
+            return error.NumuyaRankTooLarge;
+        }
+        result_shape.dims[i] = target_shape.dims[i];
+        i = i + 1;
+    }
+
+    storage_retain<T>(array_value.storage);
+
+    return Array<T>{
+        storage: array_value.storage,
+        offset: array_value.offset,
+        shape: result_shape,
+        strides: new_strides,
+        flags: ArrayFlags{
+            c_contiguous: false,
+            f_contiguous: false,
+            writeable: false,
+            owns_data: false,
+        },
+    };
+}

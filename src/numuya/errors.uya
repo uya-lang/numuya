@@ -6,3 +6,4 @@ export error NumuyaAxisOutOfBounds;
 export error NumuyaIndexOutOfBounds;
 export error NumuyaReadOnly;
 export error NumuyaUnsupportedDType;
+export error NumuyaBroadcastError;
