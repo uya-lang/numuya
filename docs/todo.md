@@ -33,7 +33,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 14: Random
 
-- [ ] 写 `src/numuya/_tests/test_random.uya`。
 - [ ] 实现 `src/numuya/random.uya`。
 - [ ] TDD: `pcg64_seed` deterministic。
   - 固定 seed 的前 5 个 `random_u64` 用硬编码 golden。

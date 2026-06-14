@@ -1,0 +1,96 @@
+use array;
+use creation;
+use random;
+use shape;
+use testing.expect_close_f64;
+use testing.expect_eq_usize;
+
+use std.mem.allocator.IAllocator;
+use std.mem.allocator.MallocAllocator;
+
+fn expect_eq_u64(actual: u64, expected: u64) !void {
+    if actual != expected {
+        return error.NumuyaExpectationFailed;
+    }
+}
+
+test "random test file imports random module" {
+}
+
+test "pcg64_seed produces deterministic u64 sequence" {
+    var rng_a: PCG64 = pcg64_seed(42, 0);
+    var rng_b: PCG64 = pcg64_seed(42, 0);
+
+    try expect_eq_u64(random_u64(&rng_a), random_u64(&rng_b));
+    try expect_eq_u64(random_u64(&rng_a), random_u64(&rng_b));
+    try expect_eq_u64(random_u64(&rng_a), random_u64(&rng_b));
+    try expect_eq_u64(random_u64(&rng_a), random_u64(&rng_b));
+    try expect_eq_u64(random_u64(&rng_a), random_u64(&rng_b));
+}
+
+test "random_u64 golden values for fixed seed" {
+    var rng: PCG64 = pcg64_seed(42, 0);
+
+    // Golden values produced by the PCG64 implementation using
+    // multiplier 6364136223846793005 and xorshift output permutation.
+    try expect_eq_u64(random_u64(&rng), 15403552597630628382);
+    try expect_eq_u64(random_u64(&rng), 16168177009217139338);
+    try expect_eq_u64(random_u64(&rng), 11128129689875903247);
+    try expect_eq_u64(random_u64(&rng), 121274658106355247);
+    try expect_eq_u64(random_u64(&rng), 8960200607924515427);
+}
+
+test "random_f64 returns values in half open interval zero one" {
+    var rng: PCG64 = pcg64_seed(12345, 1);
+
+    var i: usize = 0;
+    while i < 100 {
+        const value: f64 = random_f64(&rng);
+        if value < 0.0 {
+            return error.NumuyaExpectationFailed;
+        }
+        if value >= 1.0 {
+            return error.NumuyaExpectationFailed;
+        }
+        i = i + 1;
+    }
+}
+
+test "random_array_f64 produces array with requested shape and values in range" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var rng: PCG64 = pcg64_seed(42, 0);
+
+    const array_value: Array<f64> = try random_array_f64(allocator, &rng, shape2(2, 3));
+
+    try expect_eq_usize(array_rank<f64>(&array_value), 2);
+    try expect_eq_usize(array_size<f64>(&array_value), 6);
+    if shape_eq(array_value.shape, shape2(2, 3)) != true {
+        return error.NumuyaExpectationFailed;
+    }
+
+    var i: usize = 0;
+    while i < 6 {
+        const value: f64 = array_value.storage.data[i];
+        if value < 0.0 || value >= 1.0 {
+            return error.NumuyaExpectationFailed;
+        }
+        i = i + 1;
+    }
+}
+
+test "normal_array_f64 produces deterministic golden values for fixed seed" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var rng: PCG64 = pcg64_seed(12345, 1);
+
+    const array_value: Array<f64> = try normal_array_f64(allocator, &rng, shape2(2, 3), 0.0, 1.0);
+
+    try expect_eq_usize(array_size<f64>(&array_value), 6);
+    try expect_close_f64(array_value.storage.data[0], -2.053737985610235, 1e-12);
+    try expect_close_f64(array_value.storage.data[1], 1.098704032627948, 1e-12);
+    try expect_close_f64(array_value.storage.data[2], 0.094145210034954, 1e-12);
+    try expect_close_f64(array_value.storage.data[3], -0.894116505017842, 1e-12);
+    try expect_close_f64(array_value.storage.data[4], -0.876733371800764, 1e-12);
+    try expect_close_f64(array_value.storage.data[5], 0.761197319909224, 1e-12);
+}

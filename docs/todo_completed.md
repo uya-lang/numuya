@@ -52,3 +52,9 @@
     - `make test` — 全部测试文件通过（test_array_creation/test_broadcast/test_indexing/test_linalg/test_math/test_reductions/test_shape/test_slicing/test_sorting/test_stats/test_storage/test_stride_views/test_testing_helpers/test_ufunc）
   - 验证结果：advanced linalg 测试全部通过，无失败。
 
+
+## Phase 14: Random
+
+- [x] 写 `src/numuya/_tests/test_random.uya`。
+  - 验证：`../uya/bin/uya test src/numuya/_tests/test_random.uya --manifest-path uya.toml`
+  - 结果：按预期失败；`random.uya` 尚未实现，类型检查报 `random_array_f64` / `normal_array_f64` 的 `try` 操作数不是错误联合类型。
