@@ -570,3 +570,10 @@
 
 - [x] TDD: `add_i32`。
   - 验证：`../uya/bin/uya test src/numuya/_tests/test_ufunc.uya --manifest-path uya.toml` 通过；`make test` 全部通过。
+
+## Phase 7: UFunc 基础
+
+- [x] TDD: non-contiguous input。
+  - transpose view 输入仍能正确运算。
+  - 验证：`../uya/bin/uya test src/numuya/_tests/test_ufunc.uya --manifest-path uya.toml`
+    - 11 tests passed, `add_f64 handles non-contiguous transpose input` OK。

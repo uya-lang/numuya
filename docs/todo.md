@@ -31,8 +31,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 7: UFunc 基础
 
-- [ ] TDD: non-contiguous input。
-  - transpose view 输入仍能正确运算。
 - [ ] TDD: output 是新 owner。
   - 修改 output 不影响 input。
 - [ ] 内部重构：提取 contiguous fast path 与 generic stride path。
