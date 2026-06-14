@@ -27,7 +27,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 2: Storage 与 Array handle
 
-- [ ] 写 `src/numuya/_tests/test_storage.uya`。
 - [ ] 实现 `src/numuya/storage.uya`。
 - [ ] TDD: `storage_new<T>(allocator, len) !&Storage<T>`。
   - len 为 0 时允许成功。

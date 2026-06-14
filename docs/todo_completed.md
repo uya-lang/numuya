@@ -157,3 +157,9 @@
 - [x] 验收：`src/numuya/_tests/test_shape.uya` 绿。
   - 验证：`../uya/bin/uya test src/numuya/_tests/test_shape.uya --manifest-path uya.toml` 通过（8 tests passed）。
   - 验证：`../uya/bin/uya test src/numuya/_tests/test_testing_helpers.uya --manifest-path uya.toml` 通过（2 tests passed）。
+
+## Phase 2: Storage 与 Array handle
+
+- [x] 写 `src/numuya/_tests/test_storage.uya`。
+  - 验证：`make test-one TEST=src/numuya/_tests/test_storage.uya` 通过（1 test passed）。
+  - 验证：`make test` 通过（`test_shape` 8 tests passed；`test_storage` 1 test passed；`test_testing_helpers` 2 tests passed）。

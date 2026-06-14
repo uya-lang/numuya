@@ -1,0 +1,6 @@
+use storage;
+
+test "Storage test file imports Storage API" {
+    var storage_value: &Storage<f64> = undefined;
+    storage_value = storage_value;
+}
