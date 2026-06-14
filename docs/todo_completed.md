@@ -668,3 +668,13 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 ```
 
 验证结果：20/20 测试通过；其中 `mean_all_f64 computes the arithmetic mean` 与 `mean_all_f64 rejects an empty array` 均通过。
+
+## NumUya TDD Todo / Phase 8: Reductions
+
+- [x] TDD: `sum_axis_f64`。
+  - axis 0、axis 1。
+  - negative axis。
+  - keepdims true/false。
+  - 验证：
+    - `../uya/bin/uya test src/numuya/_tests/test_reductions.uya --manifest-path uya.toml`
+    - 结果：20/20 测试通过，其中 `sum_axis_f64 reduces along axis 0`、`sum_axis_f64 reduces along axis 1`、`sum_axis_f64 supports negative axis`、`sum_axis_f64 keepdims preserves reduced axes` 均通过。

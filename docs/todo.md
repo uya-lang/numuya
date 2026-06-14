@@ -31,10 +31,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 8: Reductions
 
-- [ ] TDD: `sum_axis_f64`.
-  - axis 0、axis 1。
-  - negative axis。
-  - keepdims true/false。
 - [ ] TDD: `mean_axis_f64`。
 - [ ] TDD: `argmax_axis_f64`。
 - [ ] 验收：`src/numuya/_tests/test_reductions.uya` 绿。
