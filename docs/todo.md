@@ -33,7 +33,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 15: FFT
 
-- [ ] TDD: `ifft(fft(x)) ~= x`。
 - [ ] TDD: 非 power-of-two 返回 `NumuyaInvalidArgument`，直到 fallback 实现完成。
 - [ ] 验收：`src/numuya/_tests/test_fft.uya` 绿。
 

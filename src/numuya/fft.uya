@@ -161,6 +161,37 @@ export fn fft_f64(allocator: IAllocator, input: &Array<f64>) !ComplexArray {
     };
 }
 
+export fn fft(allocator: IAllocator, input: &ComplexArray) !ComplexArray {
+    if input.re.shape.rank != 1 || input.im.shape.rank != 1 {
+        return error.NumuyaInvalidArgument;
+    }
+
+    const n: usize = input.re.shape.dims[0];
+    if n != input.im.shape.dims[0] {
+        return error.NumuyaInvalidArgument;
+    }
+    if !is_power_of_two(n) {
+        return error.NumuyaInvalidArgument;
+    }
+
+    var re: Array<f64> = try zeros_f64(allocator, shape1(n));
+    var im: Array<f64> = try zeros_f64(allocator, shape1(n));
+
+    var i: usize = 0;
+    while i < n {
+        re.storage.data[i] = input.re.storage.data[i];
+        im.storage.data[i] = input.im.storage.data[i];
+        i = i + 1;
+    }
+
+    fft_inplace(n, re.storage.data, im.storage.data, -1.0);
+
+    return ComplexArray{
+        re: re,
+        im: im,
+    };
+}
+
 export fn ifft(allocator: IAllocator, input: &ComplexArray) !ComplexArray {
     if input.re.shape.rank != 1 || input.im.shape.rank != 1 {
         return error.NumuyaInvalidArgument;

@@ -119,6 +119,31 @@ test "ifft inverts fft for real input" {
     try expect_close_f64(try get1<f64>(&recovered.re, 3), 4.0, 1e-12);
 }
 
+test "ifft inverts fft for complex input" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var re_data: [f64: 4] = [1.0, 2.0, 3.0, 4.0];
+    var im_data: [f64: 4] = [0.5, -0.5, 1.0, -1.0];
+    var re_array: Array<f64> = try from_slice<f64>(allocator, re_data[0:4], shape1(4));
+    var im_array: Array<f64> = try from_slice<f64>(allocator, im_data[0:4], shape1(4));
+    var input: ComplexArray = ComplexArray{ re: re_array, im: im_array };
+
+    var spectrum: ComplexArray = try fft(allocator, &input);
+    var recovered: ComplexArray = try ifft(allocator, &spectrum);
+
+    try expect_eq_usize(recovered.re.shape.rank, 1);
+    try expect_eq_usize(recovered.re.shape.dims[0], 4);
+    try expect_eq_usize(recovered.im.shape.dims[0], 4);
+    try expect_close_f64(try get1<f64>(&recovered.re, 0), 1.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&recovered.im, 0), 0.5, 1e-12);
+    try expect_close_f64(try get1<f64>(&recovered.re, 1), 2.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&recovered.im, 1), -0.5, 1e-12);
+    try expect_close_f64(try get1<f64>(&recovered.re, 2), 3.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&recovered.im, 2), 1.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&recovered.re, 3), 4.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&recovered.im, 3), -1.0, 1e-12);
+}
+
 test "fft_f64 rejects non power of two length" {
     var malloc_allocator: MallocAllocator = MallocAllocator{};
     var allocator: IAllocator = malloc_allocator;

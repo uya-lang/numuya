@@ -124,3 +124,10 @@
 - [x] TDD: impulse 输入。
   - 验证：`../uya/bin/uya test src/numuya/_tests/test_fft.uya --manifest-path uya.toml`
   - 结果：8 tests passed，包含新增 `fft_f64 on eight point impulse`。
+
+## Phase 15: FFT
+
+- [x] TDD: `ifft(fft(x)) ~= x`。
+  - 验证命令：`../uya/bin/uya test src/numuya/_tests/test_fft.uya --manifest-path uya.toml`
+  - 结果：9 tests passed, 0 failed（新增 `ifft inverts fft for complex input`）
+  - 回归验证：`make test` 全绿
