@@ -412,3 +412,10 @@
 - [x] 写 `src/numuya/_tests/test_cuda_driver.uya`。
   - 验证命令：`../uya/bin/uya check src/numuya/_tests/test_cuda_driver.uya --manifest-path uya.toml`
   - 结果：文件已创建；`uya check` 因依赖模块 `backend` 与 `cuda/driver` 尚未实现而失败，属于预期失败，文件本身词法/语法解析通过。
+
+
+## Phase 20: CUDA backend 基础
+
+- [x] 写 `src/numuya/_tests/test_cuda_driver.uya`。
+  - 验证命令：`../uya/bin/uya check src/numuya/_tests/test_cuda_driver.uya --manifest-path uya.toml`
+  - 结果：文件已创建；`uya check` 因依赖模块 `backend` 与 `cuda/driver` 尚未实现而失败，属于预期失败，文件本身词法/语法解析通过。
