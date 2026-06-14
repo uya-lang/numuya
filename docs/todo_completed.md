@@ -346,3 +346,9 @@
   - 结果：通过，6/6 tests passed。
   - 回归命令：`make test`
   - 结果：通过，`test_array_creation`、`test_indexing`、`test_shape`、`test_storage`、`test_testing_helpers` 全绿。
+
+## Phase 4: Stride、reshape、transpose、view
+
+- [x] 写 `src/numuya/_tests/test_stride_views.uya`。
+  - 验证命令：`../uya/bin/uya check src/numuya/_tests/test_stride_views.uya --manifest-path uya.toml`
+  - 验证结果：测试文件已创建；checker 失败原因为 `模块不存在`（`use stride;` 引用的 `src/numuya/stride.uya` 尚未实现），属于预期的 TDD 先失败状态，待下一任务实现 `stride.uya` 后解决。

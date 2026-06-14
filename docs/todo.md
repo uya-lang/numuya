@@ -31,7 +31,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 4: Stride、reshape、transpose、view
 
-- [ ] 写 `src/numuya/_tests/test_stride_views.uya`。
 - [ ] 实现 `src/numuya/stride.uya`。
 - [ ] TDD: `c_order_strides(shape)`.
   - `(2, 3, 4)` strides 是 `[12, 4, 1]`。
