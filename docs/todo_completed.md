@@ -226,3 +226,11 @@
     - `make test-one TEST=src/numuya/_tests/test_storage.uya`：首次失败，链接错误 `undefined reference to 'array_is_c_contiguous_f64'`。
     - `make test-one TEST=src/numuya/_tests/test_storage.uya`：通过，7 个测试全绿。
     - `make test`：通过，`test_shape`、`test_storage`、`test_testing_helpers` 全绿。
+
+## Phase 2: Storage 与 Array handle
+
+- [x] 验收：`src/numuya/_tests/test_storage.uya` 绿。
+  - 验证：`make test-one TEST=src/numuya/_tests/test_storage.uya`
+  - 结果：7/7 tests passed。
+  - 验证：`make test`
+  - 结果：`test_shape.uya` 8/8、`test_storage.uya` 7/7、`test_testing_helpers.uya` 2/2 全部通过。
