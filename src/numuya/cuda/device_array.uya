@@ -4,6 +4,7 @@ use cuda.driver;
 use cuda.memory;
 use errors;
 use shape;
+use stride;
 
 use std.mem.allocator.IAllocator;
 use std.mem.allocator.MallocAllocator;
@@ -75,10 +76,36 @@ export fn device_storage_release<T>(storage_value: &DeviceStorage<T>) void {
     allocator.dealloc(storage_value as &byte);
 }
 
+fn is_f_contiguous_owner_shape(shape_value: &Shape) bool {
+    var non_unit_dims: usize = 0;
+    var axis: usize = 0;
+    while axis < shape_value.rank {
+        if shape_value.dims[axis] > 1 {
+            non_unit_dims = non_unit_dims + 1;
+            if non_unit_dims > 1 {
+                return false;
+            }
+        }
+        axis = axis + 1;
+    }
+    return true;
+}
+
+fn make_owned_device_flags(shape_value: Shape) ArrayFlags {
+    return ArrayFlags{
+        c_contiguous: true,
+        f_contiguous: is_f_contiguous_owner_shape(&shape_value),
+        writeable: true,
+        owns_data: true,
+    };
+}
+
 export struct DeviceArray<T> {
     storage: &DeviceStorage<T>,
     offset: usize,
     shape: Shape,
+    strides: Strides,
+    flags: ArrayFlags,
     context: usize,
     stream: usize,
 
@@ -94,6 +121,8 @@ export fn device_array_new<T>(pool: &MemoryPool, shape_value: Shape, context: us
         storage: storage_value,
         offset: 0,
         shape: shape_value,
+        strides: try stride.c_order_strides(shape_value),
+        flags: make_owned_device_flags(shape_value),
         context: context,
         stream: stream,
     };
@@ -101,10 +130,14 @@ export fn device_array_new<T>(pool: &MemoryPool, shape_value: Shape, context: us
 
 export fn device_array_view<T>(array_value: &DeviceArray<T>) DeviceArray<T> {
     device_storage_retain<T>(array_value.storage);
+    var view_flags: ArrayFlags = array_value.flags;
+    view_flags.owns_data = false;
     return DeviceArray<T>{
         storage: array_value.storage,
         offset: array_value.offset,
         shape: array_value.shape,
+        strides: array_value.strides,
+        flags: view_flags,
         context: array_value.context,
         stream: array_value.stream,
     };
@@ -126,6 +159,8 @@ export fn device_empty_f64(pool: &MemoryPool, shape_value: Shape, context: usize
         storage: storage_value,
         offset: 0,
         shape: shape_value,
+        strides: try stride.c_order_strides(shape_value),
+        flags: make_owned_device_flags(shape_value),
         context: context,
         stream: stream,
     };
@@ -139,6 +174,8 @@ export fn device_zeros_f64(pool: &MemoryPool, shape_value: Shape, context: usize
     const storage: &DeviceStorage<f64> = device.storage;
     const offset: usize = device.offset;
     const device_shape: Shape = device.shape;
+    const device_strides: Strides = device.strides;
+    const device_flags: ArrayFlags = device.flags;
     const device_context: usize = device.context;
     const device_stream: usize = device.stream;
     device.storage = null;
@@ -146,6 +183,8 @@ export fn device_zeros_f64(pool: &MemoryPool, shape_value: Shape, context: usize
         storage: storage,
         offset: offset,
         shape: device_shape,
+        strides: device_strides,
+        flags: device_flags,
         context: device_context,
         stream: device_stream,
     };

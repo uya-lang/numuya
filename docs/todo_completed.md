@@ -643,3 +643,17 @@
     - `make test-cuda`：31/31 通过（device_array 10 + driver 21）。
     - `make test`：所有非 CUDA 测试通过，无回归。
 
+
+## Phase 21: CUDA DeviceArray 与拷贝
+
+- [x] TDD: shape/stride/flags 在 device array 上保持一致。
+  - 验证命令：
+    - `../uya/bin/uya test src/numuya/_tests/test_cuda_device_array.uya --manifest-path uya.toml` → 14/14 passed
+    - `make test-cuda` → 全部 CUDA 测试通过
+    - `make test` → 全部非 CUDA 测试通过
+  - 改动摘要：
+    - `DeviceArray<T>` 新增 `strides: Strides` 与 `flags: ArrayFlags` 字段。
+    - 新增 `make_owned_device_flags` 与复用 `stride.c_order_strides`，确保 owner array 的 strides/flags 与 host `Array<T>` 一致。
+    - `device_array_view` 继承 strides/flags 并将 `owns_data` 置为 `false`。
+    - 更新 `device_array_new`、`device_empty_f64`、`device_zeros_f64`、`device_array_from_host`、`device_array_view` 以填充新字段。
+    - 在 `test_cuda_device_array.uya` 新增 4 个测试覆盖 owner/view/zeros/empty 的 strides 与 flags 一致性。
