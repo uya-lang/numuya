@@ -322,3 +322,47 @@ test "add_i32 output is a new owner independent of inputs" {
     if right0 != 4 { return error.NumuyaExpectationFailed; }
     if result0 != 99 { return error.NumuyaExpectationFailed; }
 }
+
+test "unary_op_use_contiguous_path detects contiguous array" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var data: [f64: 6] = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
+    var input: Array<f64> = try from_slice<f64>(allocator, data[0:6], shape2(2, 3));
+    var result: Array<f64> = try empty<f64>(allocator, clone_shape(&input.shape));
+
+    if unary_op_use_contiguous_path<f64>(&input, &result) != true {
+        return error.NumuyaExpectationFailed;
+    }
+}
+
+test "unary_op_use_contiguous_path detects non-contiguous transpose" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var data: [f64: 6] = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
+    var original: Array<f64> = try from_slice<f64>(allocator, data[0:6], shape2(2, 3));
+    var transposed: Array<f64> = try transpose<f64>(&original);
+    var result: Array<f64> = try empty<f64>(allocator, clone_shape(&transposed.shape));
+
+    if unary_op_use_contiguous_path<f64>(&transposed, &result) != false {
+        return error.NumuyaExpectationFailed;
+    }
+}
+
+test "unary_stride_indices maps non-contiguous transpose indices" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var data: [f64: 6] = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
+    var original: Array<f64> = try from_slice<f64>(allocator, data[0:6], shape2(2, 3));
+    var transposed: Array<f64> = try transpose<f64>(&original);
+    var result: Array<f64> = try empty<f64>(allocator, clone_shape(&transposed.shape));
+
+    const idx: UnaryIndices = try unary_stride_indices<f64>(&transposed, &result, 0);
+
+    try expect_eq_usize(idx.input_idx, 0);
+    try expect_eq_usize(idx.result_idx, 0);
+
+    const idx2: UnaryIndices = try unary_stride_indices<f64>(&transposed, &result, 1);
+
+    try expect_eq_usize(idx2.input_idx, 3);
+    try expect_eq_usize(idx2.result_idx, 1);
+}
