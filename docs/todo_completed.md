@@ -534,3 +534,9 @@
     - `make test-cuda TEST=src/numuya/_tests/test_cuda_driver.uya` — 21/21 通过
     - `make test-cuda-vendor TEST=src/numuya/_tests/test_cuda_driver.uya` — 21/21 通过
     - `make test` — 非 CUDA 测试全绿，exit code 0
+## Phase 20: CUDA backend 基础
+
+- [x] 验收：`src/numuya/_tests/test_cuda_driver.uya` 在本机 RTX 3060 上绿；没有 CUDA 时测试可标记 skip 或返回明确错误。
+  - 验证命令：`make test-cuda TEST=src/numuya/_tests/test_cuda_driver.uya`
+  - 验证结果：21/21 tests passed on RTX 3060
+

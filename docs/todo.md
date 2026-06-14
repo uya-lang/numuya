@@ -33,10 +33,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 19: SIMD 与性能
 
-## Phase 20: CUDA backend 基础
-
-- [ ] 验收：`src/numuya/_tests/test_cuda_driver.uya` 在本机 RTX 3060 上绿；没有 CUDA 时测试可标记 skip 或返回明确错误。
-
 ## Phase 21: CUDA DeviceArray 与拷贝
 
 - [ ] 写 `src/numuya/_tests/test_cuda_device_array.uya`。
