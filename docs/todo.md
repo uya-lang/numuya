@@ -31,15 +31,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 10: Statistics
 
-- [ ] 实现 `src/numuya/stats.uya`。
-- [ ] TDD: `var_all_f64(ddof=0)`。
-- [ ] TDD: `var_all_f64(ddof=1)`。
-- [ ] TDD: `std_all_f64`。
-- [ ] TDD: `percentile_f64`。
-  - q=0、50、100。
-  - q 越界返回 `NumuyaInvalidArgument`。
-- [ ] 验收：`src/numuya/_tests/test_stats.uya` 绿。
-
 ## Phase 11: Sorting 与 searching
 
 - [ ] 写 `src/numuya/_tests/test_sorting.uya`。

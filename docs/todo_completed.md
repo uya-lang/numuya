@@ -771,3 +771,34 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
   ../uya/bin/uya test src/numuya/_tests/test_math.uya --manifest-path uya.toml
   ```
   结果：`src/numuya/_tests/test_math.uya` 10/10 测试通过，包括 `sin_f64 computes element-wise sine` 和 `cos_f64 computes element-wise cosine`。
+
+## Phase 9: Math functions
+
+- [x] TDD: broadcast/non-contiguous 输入通过 ufunc 内核复用。
+  - 导出 ufunc 内核 helper：`clone_shape`、`offset_as_usize`、`UnaryIndices`、`unary_op_use_contiguous_path`、`unary_stride_indices`、`BinaryIndices`。
+  - math.uya 删除重复 helper，改为 `use ufunc;` 并复用上述 helper。
+  - 新增非连续输入测试覆盖 `abs_f64`、`exp_f64`、`log_f64`、`sin_f64`、`cos_f64`（已有 `sqrt_f64`）。
+  - 新增 ufunc helper 测试：`unary_op_use_contiguous_path` 检测 contiguous/non-contiguous，`unary_stride_indices` 正确映射 transpose 索引。
+  - 验证命令：
+    - `../uya/bin/uya test src/numuya/_tests/test_ufunc.uya --manifest-path uya.toml`（20/20 通过）
+    - `../uya/bin/uya test src/numuya/_tests/test_math.uya --manifest-path uya.toml`（15/15 通过）
+    - `make test`（全量通过）
+- [x] 验收：`src/numuya/_tests/test_math.uya` 绿。
+  - 验证命令：`../uya/bin/uya test src/numuya/_tests/test_math.uya --manifest-path uya.toml`（15/15 通过）
+
+## Phase 10: Statistics
+
+- [x] 实现 `src/numuya/stats.uya`。
+- [x] TDD: `var_all_f64(ddof=0)`。
+- [x] TDD: `var_all_f64(ddof=1)`。
+- [x] TDD: `std_all_f64`。
+- [x] TDD: `percentile_f64`。
+  - q=0、50、100。
+  - q 越界返回 `NumuyaInvalidArgument`。
+- [x] 验收：`src/numuya/_tests/test_stats.uya` 绿。
+  - 验证命令：
+    - `../uya/bin/uya test src/numuya/_tests/test_stats.uya --manifest-path uya.toml`（16/16 通过）
+    - `make test`（全部测试通过）
+  - 新增文件：
+    - `src/numuya/stats.uya`
+    - `src/numuya/_tests/test_stats.uya`

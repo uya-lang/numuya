@@ -1,0 +1,241 @@
+use array;
+use errors;
+use shape;
+use storage;
+
+use std.mem.allocator.IAllocator;
+
+@c_import("math_stub.c", "", "-lm");
+
+extern "libc" fn sqrt(x: f64) f64;
+
+const STATS_MAX_USIZE: usize = 18446744073709551615;
+
+fn validate_array<T>(array_value: &Array<T>) !void {
+    if array_value.shape.rank > NUMUYA_MAX_DIMS {
+        return error.NumuyaInvalidArgument;
+    }
+    if array_value.strides.rank != array_value.shape.rank {
+        return error.NumuyaInvalidArgument;
+    }
+    return;
+}
+
+fn array_size_safe<T>(array_value: &Array<T>) !usize {
+    try validate_array<T>(array_value);
+    var size: usize = 1;
+    var i: usize = 0;
+    while i < array_value.shape.rank {
+        const dim: usize = array_value.shape.dims[i];
+        if dim != 0 && size > STATS_MAX_USIZE / dim {
+            return error.NumuyaShapeOverflow;
+        }
+        size = size * dim;
+        i = i + 1;
+    }
+    return size;
+}
+
+fn offset_as_usize(offset: isize) !usize {
+    if offset < 0 {
+        return error.NumuyaIndexOutOfBounds;
+    }
+    return (offset as! usize).value;
+}
+
+fn multiply_usize_isize(index_value: usize, step: isize) !isize {
+    if step == 0 {
+        return (0 as! isize).value;
+    }
+    const signed_index: isize = index_value as! isize catch {
+        return error.NumuyaIndexOutOfBounds;
+    };
+    if signed_index == 0 {
+        return (0 as! isize).value;
+    }
+    const abs_step: isize = if step < 0 { -step } else { step };
+    if abs_step > NUMUYA_ISIZE_MAX / signed_index {
+        return error.NumuyaIndexOutOfBounds;
+    }
+    return signed_index * step;
+}
+
+fn physical_index_ref(shape_value: &Shape, strides_value: &Strides, offset: isize, indices: &[usize]) !usize {
+    if indices.len != shape_value.rank {
+        return error.NumuyaShapeMismatch;
+    }
+
+    var linear_index: isize = offset;
+
+    var axis: usize = 0;
+    while axis < indices.len {
+        if axis >= NUMUYA_MAX_DIMS {
+            return error.NumuyaIndexOutOfBounds;
+        }
+        const index_value: usize = indices[axis];
+        const dim: usize = shape_value.dims[axis];
+        if index_value >= dim {
+            return error.NumuyaIndexOutOfBounds;
+        }
+
+        const step: isize = strides_value.steps[axis];
+        const contribution: isize = try multiply_usize_isize(index_value, step);
+        linear_index = linear_index + contribution;
+        axis = axis + 1;
+    }
+
+    if linear_index < 0 {
+        return error.NumuyaIndexOutOfBounds;
+    }
+
+    return (linear_index as! usize).value;
+}
+
+fn linear_to_indices(shape_value: &Shape, linear: usize, indices: &[usize]) !void {
+    var remaining: usize = linear;
+    var axis: usize = shape_value.rank;
+    while axis > 0 {
+        const index: usize = axis - 1;
+        if index >= NUMUYA_MAX_DIMS {
+            return error.NumuyaRankTooLarge;
+        }
+        const dim: usize = shape_value.dims[index];
+        indices[index] = remaining % dim;
+        remaining = remaining / dim;
+        axis = index;
+    }
+    return;
+}
+
+fn sum_all_f64_internal(array_value: &Array<f64>) !f64 {
+    const size: usize = try array_size_safe<f64>(array_value);
+
+    var total: f64 = 0.0;
+    if size == 0 {
+        return total;
+    }
+
+    if array_is_c_contiguous<f64>(array_value) {
+        const base: usize = try offset_as_usize(array_value.offset);
+        var i: usize = 0;
+        while i < size {
+            total = total + array_value.storage.data[base + i];
+            i = i + 1;
+        }
+    } else {
+        var indices: [usize: NUMUYA_MAX_DIMS] = [0: NUMUYA_MAX_DIMS];
+        var linear: usize = 0;
+        while linear < size {
+            try linear_to_indices(&array_value.shape, linear, indices[0:array_value.shape.rank]);
+            const idx: usize = try physical_index_ref(&array_value.shape, &array_value.strides, array_value.offset, indices[0:array_value.shape.rank]);
+            total = total + array_value.storage.data[idx];
+            linear = linear + 1;
+        }
+    }
+
+    return total;
+}
+
+export fn var_all_f64(array_value: &Array<f64>, ddof: usize) !f64 {
+    try validate_array<f64>(array_value);
+    const size: usize = try array_size_safe<f64>(array_value);
+    if size == 0 {
+        return error.NumuyaInvalidArgument;
+    }
+    if size <= ddof {
+        return error.NumuyaInvalidArgument;
+    }
+
+    const total: f64 = try sum_all_f64_internal(array_value);
+    const mean: f64 = total / (size as! f64).value;
+
+    var squared_diff_sum: f64 = 0.0;
+    if array_is_c_contiguous<f64>(array_value) {
+        const base: usize = try offset_as_usize(array_value.offset);
+        var i: usize = 0;
+        while i < size {
+            const diff: f64 = array_value.storage.data[base + i] - mean;
+            squared_diff_sum = squared_diff_sum + diff * diff;
+            i = i + 1;
+        }
+    } else {
+        var indices: [usize: NUMUYA_MAX_DIMS] = [0: NUMUYA_MAX_DIMS];
+        var linear: usize = 0;
+        while linear < size {
+            try linear_to_indices(&array_value.shape, linear, indices[0:array_value.shape.rank]);
+            const idx: usize = try physical_index_ref(&array_value.shape, &array_value.strides, array_value.offset, indices[0:array_value.shape.rank]);
+            const diff: f64 = array_value.storage.data[idx] - mean;
+            squared_diff_sum = squared_diff_sum + diff * diff;
+            linear = linear + 1;
+        }
+    }
+
+    const divisor: f64 = ((size - ddof) as! f64).value;
+    return squared_diff_sum / divisor;
+}
+
+export fn std_all_f64(array_value: &Array<f64>) !f64 {
+    const variance: f64 = try var_all_f64(array_value, 0);
+    return sqrt(variance);
+}
+
+fn insertion_sort_f64(values: &f64, len: usize) void {
+    var i: usize = 1;
+    while i < len {
+        const key: f64 = values[i];
+        var j: usize = i;
+        while j > 0 && values[j - 1] > key {
+            values[j] = values[j - 1];
+            j = j - 1;
+        }
+        values[j] = key;
+        i = i + 1;
+    }
+}
+
+export fn percentile_f64(array_value: &Array<f64>, q: f64) !f64 {
+    try validate_array<f64>(array_value);
+    if q < 0.0 || q > 100.0 {
+        return error.NumuyaInvalidArgument;
+    }
+
+    const size: usize = try array_size_safe<f64>(array_value);
+    if size == 0 {
+        return error.NumuyaInvalidArgument;
+    }
+
+    const allocator: IAllocator = array_value.storage.allocator;
+    const byte_size: usize = size * 8;
+    const temp_bytes: &byte = try allocator.alloc(byte_size);
+    const temp: &f64 = temp_bytes as &f64;
+
+    if array_is_c_contiguous<f64>(array_value) {
+        const base: usize = try offset_as_usize(array_value.offset);
+        var i: usize = 0;
+        while i < size {
+            temp[i] = array_value.storage.data[base + i];
+            i = i + 1;
+        }
+    } else {
+        var indices: [usize: NUMUYA_MAX_DIMS] = [0: NUMUYA_MAX_DIMS];
+        var linear: usize = 0;
+        while linear < size {
+            try linear_to_indices(&array_value.shape, linear, indices[0:array_value.shape.rank]);
+            const idx: usize = try physical_index_ref(&array_value.shape, &array_value.strides, array_value.offset, indices[0:array_value.shape.rank]);
+            temp[linear] = array_value.storage.data[idx];
+            linear = linear + 1;
+        }
+    }
+
+    insertion_sort_f64(temp, size);
+
+    const last_index: usize = size - 1;
+    const position: f64 = (q / 100.0) * (last_index as! f64).value;
+    const lower: usize = (position as! usize).value;
+    const upper: usize = if lower < last_index { lower + 1 } else { lower } as usize;
+    const fraction: f64 = position - (lower as! f64).value;
+
+    const percentile: f64 = temp[lower] + fraction * (temp[upper] - temp[lower]);
+    allocator.dealloc(temp_bytes);
+    return percentile;
+}
