@@ -27,10 +27,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 0: 脚手架与测试基础
 
-- [ ] 新增 `src/numuya/_tests/test_testing_helpers.uya`。
-  - 测试文件使用 `use testing.expect_close_f64;` 等 source-root 相对导入。
-  - 先测试 `expect_close_f64(1.0, 1.0 + 1e-13, 1e-12)` 通过。
-  - 测试明显不相等时返回错误。
 - [ ] 创建外部 UPM consumer fixture。
   - 目录：`tests/fixtures/upm_consumer/`。
   - fixture 自己有 `uya.toml`，`[package].source-dir = "src"`。

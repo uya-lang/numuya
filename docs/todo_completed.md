@@ -43,3 +43,12 @@
 - [x] 创建 `src/numuya/testing.uya`，写 `expect_close_f64`、`expect_eq_usize`、`expect_shape_eq` 的测试占位。
   - 验证：`../uya/bin/uya check src/numuya/testing.uya --manifest-path uya.toml` 通过。
   - 备注：`../uya/bin/uya check src/numuya --manifest-path uya.toml` 不能用于当前库目录验证；编译器要求目录中存在 `main`，返回“未找到包含 main 函数的文件”。
+
+## Phase 0: 脚手架与测试基础
+
+- [x] 新增 `src/numuya/_tests/test_testing_helpers.uya`。
+  - 测试文件使用 `use testing.expect_close_f64;` 等 source-root 相对导入。
+  - 先测试 `expect_close_f64(1.0, 1.0 + 1e-13, 1e-12)` 通过。
+  - 测试明显不相等时返回错误。
+  - 验证：`../uya/bin/uya test src/numuya/_tests/test_testing_helpers.uya --manifest-path uya.toml`，通过，2 个测试 OK。
+  - 验证：`../uya/bin/uya check src/numuya/testing/testing.uya --manifest-path uya.toml`，通过，checker 通过。
