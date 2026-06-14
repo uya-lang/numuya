@@ -33,8 +33,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 19: SIMD 与性能
 
-- [ ] 添加 benchmark，但 benchmark 不代替测试。
-
 ## Phase 20: CUDA backend 基础
 
 - [ ] 写 `src/numuya/_tests/test_cuda_driver.uya`。

@@ -392,3 +392,17 @@
 - `src/numuya/errors.uya` 新增 `NumuyaNotContiguous`；`_simd` 变体对非 contiguous 输入返回该错误。
 - 修复 `src/numuya/_tests/test_simd_equivalence.uya` 中的 Uya 语法问题（模块前缀调用、`array_size` 泛型参数、helper 函数返回 codegen 问题），并补充 `force_storage_release_usize` 以触发 Uya 生成所需 `Storage<usize>` release 函数。
 
+
+## Phase 19: SIMD 与性能
+
+- [x] 添加 benchmark，但 benchmark 不代替测试。
+  - 交付物：
+    - `src/numuya/_benchmarks/bench_simd.uya`：测量 `add_f64`/`mul_f64`/`sum_all_f64` 标量与 SIMD 路径的耗时与加速比。
+    - `Makefile` 新增 `bench` target，遍历 `src/numuya/_benchmarks/bench_*.uya`。
+  - 验证命令：
+    - `make bench`
+    - `../uya/bin/uya run src/numuya/_benchmarks/bench_simd.uya --manifest-path uya.toml`
+    - `make test`
+  - 验证结果：
+    - `make bench` 成功输出（示例）：add_f64 speedup≈1.73x，mul_f64 speedup≈1.75x，sum_all_f64 speedup≈2.19x。
+    - `make test` 全部通过，无失败。

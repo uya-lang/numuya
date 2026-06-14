@@ -5,8 +5,10 @@ CONSUMER_MANIFEST := tests/fixtures/upm_consumer/uya.toml
 CONSUMER_MAIN := tests/fixtures/upm_consumer/src/main.uya
 TEST ?= src/numuya/_tests/test_testing_helpers.uya
 TESTS := $(sort $(wildcard src/numuya/_tests/test_*.uya))
+BENCH ?= src/numuya/_benchmarks/bench_simd.uya
+BENCHES := $(sort $(wildcard src/numuya/_benchmarks/bench_*.uya))
 
-.PHONY: bootstrap-upm upm-install test-one test check-one verify-upm-consumer require-upm
+.PHONY: bootstrap-upm upm-install test-one test check-one verify-upm-consumer require-upm bench
 
 require-upm:
 	@test -x "$(UPM)" || { echo "missing executable $(UPM)"; exit 1; }
@@ -29,6 +31,13 @@ test: require-upm
 
 check-one: require-upm
 	$(UYA) check "$(TEST)" --manifest-path $(MANIFEST)
+
+bench: require-upm
+	@test -n "$(BENCHES)" || { echo "no benchmark files found"; exit 1; }
+	@for bench in $(BENCHES); do \
+		echo "$(UYA) run $$bench --manifest-path $(MANIFEST)"; \
+		$(UYA) run "$$bench" --manifest-path $(MANIFEST) || exit $$?; \
+	done
 
 verify-upm-consumer: require-upm
 	$(UPM) install --manifest-path $(CONSUMER_MANIFEST)
