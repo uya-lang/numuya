@@ -36,3 +36,13 @@
   - 阻塞命令：无保留。
   - 关键错误：无保留。
   - 后续重开条件：重新评估 `test_stats.uya` 的最小测试集合（`var_all_f64`、`std_all_f64`、`percentile_f64` 等）与当前 Uya 编译器/包模式的兼容性，先尝试创建最小复现并记录具体编译/运行错误后再执行。
+
+## Phase 22: CUDA ufunc 与 reduction
+
+- [f] 创建 PTX source-of-truth。
+  - `src/numuya/cuda/ptx/core_sm86.ptx`。
+  - `src/numuya/cuda/kernels_ptx.uya` 由 `src/numuya/_tools/embed_ptx.uya` 生成。
+  - 不创建必需 `.cu` 源，不把 `nvcc` 放进 TDD 主路径。
+  - 失败原因：归档清理时该任务仍处于 `[f]` 状态；PTX source-of-truth 的生成/嵌入流程尚未落地，`src/numuya/_tools/embed_ptx.uya`、`src/numuya/cuda/kernels_ptx.uya` 与 `src/numuya/cuda/ptx/core_sm86.ptx` 均未实现或验证。
+  - 阻塞命令/条件：无可用 `make cuda-ptx-embed` 等价命令，`ptxas -arch=sm_86` 未纳入 TDD 主路径。
+  - 后续重开条件：先实现 `embed_ptx.uya` 生成 `kernels_ptx.uya`，提供稳定可重复的 PTX 文本嵌入，并验证 `sm_86` 加载/JIT fallback 可用。

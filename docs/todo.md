@@ -35,10 +35,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 22: CUDA ufunc 与 reduction
 
-- [ ] 创建 PTX source-of-truth。
-  - `src/numuya/cuda/ptx/core_sm86.ptx`。
-  - `src/numuya/cuda/kernels_ptx.uya` 由 `src/numuya/_tools/embed_ptx.uya` 生成。
-  - 不创建必需 `.cu` 源，不把 `nvcc` 放进 TDD 主路径。
 - [ ] TDD: `make cuda-ptx-embed` 或等价命令。
   - PTX 文本嵌入到 `kernels_ptx.uya`。
   - 生成结果稳定可重复。
