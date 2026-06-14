@@ -33,7 +33,7 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 12: Linear algebra MVP
 
-- [ ] TDD: `dot_f64`。
+- [x] TDD: `dot_f64`。
   - 1-D dot 1-D 返回 scalar shape。
 - [ ] TDD: `matmul_f64`。
   - 2-D x 2-D。

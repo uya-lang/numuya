@@ -124,6 +124,36 @@ test "dot_f64 computes scalar product of two 1-D arrays" {
     try expect_close_f64(try get0<f64>(&result), 32.0, 1e-12);
 }
 
+test "dot_f64 rejects mismatched 1-D lengths" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var a_data: [f64: 3] = [1.0, 2.0, 3.0];
+    var b_data: [f64: 2] = [4.0, 5.0];
+    var a: Array<f64> = try from_slice<f64>(allocator, a_data[0:3], shape1(3));
+    var b: Array<f64> = try from_slice<f64>(allocator, b_data[0:2], shape1(2));
+
+    const result: !Array<f64> = dot_f64(&a, &b);
+    match result {
+        error.NumuyaShapeMismatch => {}
+        else => { return error.NumuyaExpectationFailed; }
+    }
+}
+
+test "dot_f64 rejects non-1-D inputs" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var a_data: [f64: 6] = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
+    var b_data: [f64: 3] = [4.0, 5.0, 6.0];
+    var a: Array<f64> = try from_slice<f64>(allocator, a_data[0:6], shape2(2, 3));
+    var b: Array<f64> = try from_slice<f64>(allocator, b_data[0:3], shape1(3));
+
+    const result: !Array<f64> = dot_f64(&a, &b);
+    match result {
+        error.NumuyaInvalidArgument => {}
+        else => { return error.NumuyaExpectationFailed; }
+    }
+}
+
 test "matmul_f64 multiplies two 2-D matrices" {
     var malloc_allocator: MallocAllocator = MallocAllocator{};
     var allocator: IAllocator = malloc_allocator;
