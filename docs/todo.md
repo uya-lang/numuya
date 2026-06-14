@@ -27,10 +27,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 2: Storage 与 Array handle
 
-- [ ] TDD: `storage_new<T>(allocator, len) !&Storage<T>`。
-  - len 为 0 时允许成功。
-  - len 为 3 时 data 非 null。
-  - 初始 `ref_count == 1`。
 - [ ] TDD: `storage_retain<T>`。
   - retain 后 ref_count 加 1。
 - [ ] TDD: `storage_release<T>`。

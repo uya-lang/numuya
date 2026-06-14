@@ -173,3 +173,13 @@
   - 结果：通过；`test_shape`、`test_storage`、`test_testing_helpers` 全通过。
   - 验证：`make verify-upm-consumer`
   - 结果：通过；consumer fixture 的 `check` 与 `run` 均正常。
+
+## Phase 2: Storage 与 Array handle
+
+- [x] TDD: `storage_new<T>(allocator, len) !&Storage<T>`。
+  - len 为 0 时允许成功。
+  - len 为 3 时 data 非 null。
+  - 初始 `ref_count == 1`。
+  - 验证：
+    - `make test-one TEST=src/numuya/_tests/test_storage.uya`：通过。
+    - `make test`：通过（`test_shape`、`test_storage`、`test_testing_helpers`）。

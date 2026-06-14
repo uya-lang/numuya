@@ -1,21 +1,38 @@
 use storage;
+use testing.expect_eq_usize;
 
 use std.mem.allocator.IAllocator;
 use std.mem.allocator.MallocAllocator;
 
-test "Storage test file imports Storage API" {
+fn free_test_storage<T>(storage_value: &Storage<T>) void {
+    if storage_value == null {
+        return;
+    }
+    storage_value.allocator.dealloc(storage_value.data as &byte);
+    storage_value.allocator.dealloc(storage_value as &byte);
+}
+
+test "storage_new allows zero len and starts with single ref" {
     var malloc_allocator: MallocAllocator = MallocAllocator{};
     var allocator: IAllocator = malloc_allocator;
-    const storage_value: Storage<f64> = Storage<f64>{
-        allocator: allocator,
-        data: null,
-        len: 0,
-        ref_count: 1,
-    };
-    if storage_value.len != 0 {
+    const storage_value: &Storage<f64> = try storage_new<f64>(allocator, 0);
+
+    try expect_eq_usize(storage_value.len, 0);
+    try expect_eq_usize(storage_value.ref_count, 1);
+
+    free_test_storage<f64>(storage_value);
+}
+
+test "storage_new allocates non-null data for non-zero len" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    const storage_value: &Storage<f64> = try storage_new<f64>(allocator, 3);
+
+    try expect_eq_usize(storage_value.len, 3);
+    try expect_eq_usize(storage_value.ref_count, 1);
+    if storage_value.data == null {
         return error.NumuyaExpectationFailed;
     }
-    if storage_value.ref_count != 1 {
-        return error.NumuyaExpectationFailed;
-    }
+
+    free_test_storage<f64>(storage_value);
 }

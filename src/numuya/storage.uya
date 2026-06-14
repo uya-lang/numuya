@@ -6,3 +6,29 @@ export struct Storage<T> {
     len: usize,
     ref_count: usize,
 }
+
+export fn storage_new<T>(allocator: IAllocator, len: usize) !&Storage<T> {
+    var header_sample: [Storage<T>: 1] = [];
+    const header_size: usize = (@size_of(header_sample[0]) as! usize).value;
+    const header_raw: &byte = try allocator.alloc(header_size);
+    const header: &Storage<T> = header_raw as &Storage<T>;
+
+    var data_ptr: &T = null;
+    if len > 0 {
+        var element_sample: [T: 1] = [];
+        const data_size: usize = ((@size_of(element_sample[0]) as! usize).value) * len;
+        const data_raw: &byte = allocator.alloc(data_size) catch |err| {
+            allocator.dealloc(header_raw);
+            return err;
+        };
+        data_ptr = data_raw as &T;
+    }
+
+    header[0] = Storage<T>{
+        allocator: allocator,
+        data: data_ptr,
+        len: len,
+        ref_count: 1,
+    };
+    return header;
+}
