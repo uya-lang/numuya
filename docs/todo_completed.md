@@ -847,3 +847,8 @@ done
 - [x] 写 `src/numuya/_tests/test_linalg.uya`。
   - 验证命令：`../uya/bin/uya check src/numuya/_tests/test_linalg.uya --manifest-path uya.toml`
   - 失败原因（预期）：`linalg.uya` 尚未实现，`eye_f64`/`diag_f64`/`dot_f64`/`matmul_f64` 未定义，导致 `try eye_f64(...)` 等报 "try 的操作数必须是错误联合类型 !T"。
+
+## Phase 12: Linear algebra MVP
+
+- [x] 实现 `src/numuya/linalg.uya`。
+  - 验证命令：`../uya/bin/uya test src/numuya/_tests/test_linalg.uya --manifest-path uya.toml`（10/10 通过）；`make test`（全部通过）。

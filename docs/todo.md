@@ -33,7 +33,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 12: Linear algebra MVP
 
-- [ ] 实现 `src/numuya/linalg.uya`。
 - [ ] TDD: `eye_f64`。
   - `eye(3, 3, 0)`。
   - `k=1`、`k=-1`。

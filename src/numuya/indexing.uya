@@ -88,6 +88,20 @@ fn ensure_writeable<T>(array_value: &Array<T>) !void {
     return;
 }
 
+export fn get0<T>(array_value: &Array<T>) !T {
+    try validate_array_metadata<T>(array_value);
+    if array_value.shape.rank != 0 {
+        return error.NumuyaInvalidArgument;
+    }
+    const offset: usize = array_value.offset as! usize catch {
+        return error.NumuyaIndexOutOfBounds;
+    };
+    if offset >= array_value.storage.len {
+        return error.NumuyaIndexOutOfBounds;
+    }
+    return array_value.storage.data[offset];
+}
+
 export fn get1<T>(array_value: &Array<T>, i0: usize) !T {
     try validate_fixed_rank<T>(array_value, 1);
     var indices: [usize: 1] = [i0];

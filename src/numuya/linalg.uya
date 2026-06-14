@@ -1,0 +1,246 @@
+use array;
+use creation;
+use indexing;
+use shape;
+use storage;
+
+use std.mem.allocator.IAllocator;
+
+fn require_nonzero_rows_cols(rows: usize, cols: usize) !void {
+    if rows == 0 || cols == 0 {
+        return error.NumuyaInvalidArgument;
+    }
+}
+
+fn abs_isize(k: isize) !usize {
+    if k < 0 {
+        const positive: isize = -k;
+        return positive as! usize catch {
+            return error.NumuyaInvalidArgument;
+        };
+    }
+    return k as! usize catch {
+        return error.NumuyaInvalidArgument;
+    };
+}
+
+fn eye_impl<T>(allocator: IAllocator, rows: usize, cols: usize, k: isize, one: T, zero: T) !Array<T> {
+    try require_nonzero_rows_cols(rows, cols);
+    const k_abs: usize = try abs_isize(k);
+
+    const size: usize = rows * cols;
+    var result: Array<T> = try empty<T>(allocator, shape2(rows, cols));
+
+    var idx: usize = 0;
+    while idx < size {
+        result.storage.data[idx] = zero;
+        idx = idx + 1;
+    }
+
+    if k >= 0 {
+        var i: usize = 0;
+        while i < rows {
+            const j: usize = i + k_abs;
+            if j < cols {
+                result.storage.data[i * cols + j] = one;
+            }
+            i = i + 1;
+        }
+    } else {
+        var i: usize = k_abs;
+        while i < rows {
+            const j: usize = i - k_abs;
+            if j < cols {
+                result.storage.data[i * cols + j] = one;
+            }
+            i = i + 1;
+        }
+    }
+
+    const out_storage: &Storage<T> = result.storage;
+    const out_offset: isize = result.offset;
+    const out_shape: Shape = result.shape;
+    const out_strides: Strides = result.strides;
+    const out_flags: ArrayFlags = result.flags;
+    result.storage = null;
+    return Array<T>{ storage: out_storage, offset: out_offset, shape: out_shape, strides: out_strides, flags: out_flags };
+}
+
+export fn eye_f64(allocator: IAllocator, rows: usize, cols: usize, k: isize) !Array<f64> {
+    var result: Array<f64> = try eye_impl<f64>(allocator, rows, cols, k, 1.0, 0.0);
+    const out_storage: &Storage<f64> = result.storage;
+    const out_offset: isize = result.offset;
+    const out_shape: Shape = result.shape;
+    const out_strides: Strides = result.strides;
+    const out_flags: ArrayFlags = result.flags;
+    result.storage = null;
+    return Array<f64>{ storage: out_storage, offset: out_offset, shape: out_shape, strides: out_strides, flags: out_flags };
+}
+
+fn require_diag_rank(rank: usize) !void {
+    if rank != 1 && rank != 2 {
+        return error.NumuyaInvalidArgument;
+    }
+}
+
+fn diag_impl<T>(input: &Array<T>, zero: T) !Array<T> {
+    try require_diag_rank(input.shape.rank);
+    const rank: usize = input.shape.rank;
+
+    if rank == 1 {
+        const n: usize = input.shape.dims[0];
+        var result: Array<T> = try empty<T>(input.storage.allocator, shape2(n, n));
+
+        var idx: usize = 0;
+        while idx < n * n {
+            result.storage.data[idx] = zero;
+            idx = idx + 1;
+        }
+
+        var i: usize = 0;
+        while i < n {
+            result.storage.data[i * n + i] = try get1<T>(input, i);
+            i = i + 1;
+        }
+        const out_storage_1: &Storage<T> = result.storage;
+        const out_offset_1: isize = result.offset;
+        const out_shape_1: Shape = result.shape;
+        const out_strides_1: Strides = result.strides;
+        const out_flags_1: ArrayFlags = result.flags;
+        result.storage = null;
+        return Array<T>{ storage: out_storage_1, offset: out_offset_1, shape: out_shape_1, strides: out_strides_1, flags: out_flags_1 };
+    }
+
+    const rows: usize = input.shape.dims[0];
+    const cols: usize = input.shape.dims[1];
+    var n: usize = rows;
+    if cols < rows {
+        n = cols;
+    }
+    var result: Array<T> = try empty<T>(input.storage.allocator, shape1(n));
+
+    var i: usize = 0;
+    while i < n {
+        result.storage.data[i] = try get2<T>(input, i, i);
+        i = i + 1;
+    }
+    const out_storage_2: &Storage<T> = result.storage;
+    const out_offset_2: isize = result.offset;
+    const out_shape_2: Shape = result.shape;
+    const out_strides_2: Strides = result.strides;
+    const out_flags_2: ArrayFlags = result.flags;
+    result.storage = null;
+    return Array<T>{ storage: out_storage_2, offset: out_offset_2, shape: out_shape_2, strides: out_strides_2, flags: out_flags_2 };
+}
+
+export fn diag_f64(input: &Array<f64>) !Array<f64> {
+    var result: Array<f64> = try diag_impl<f64>(input, 0.0);
+    const out_storage: &Storage<f64> = result.storage;
+    const out_offset: isize = result.offset;
+    const out_shape: Shape = result.shape;
+    const out_strides: Strides = result.strides;
+    const out_flags: ArrayFlags = result.flags;
+    result.storage = null;
+    return Array<f64>{ storage: out_storage, offset: out_offset, shape: out_shape, strides: out_strides, flags: out_flags };
+}
+
+fn require_dot_args(a: &Array<f64>, b: &Array<f64>) !void {
+    if a.shape.rank != 1 || b.shape.rank != 1 {
+        return error.NumuyaInvalidArgument;
+    }
+    if b.shape.dims[0] != a.shape.dims[0] {
+        return error.NumuyaShapeMismatch;
+    }
+}
+
+fn dot_impl<T>(a: &Array<T>, b: &Array<T>, zero: T) !Array<T> {
+    try require_dot_args(a, b);
+    const n: usize = a.shape.dims[0];
+
+    var sum: T = zero;
+    var i: usize = 0;
+    while i < n {
+        sum = sum + (try get1<T>(a, i)) * (try get1<T>(b, i));
+        i = i + 1;
+    }
+
+    var result: Array<T> = try empty<T>(a.storage.allocator, shape_scalar());
+    result.storage.data[0] = sum;
+    const out_storage: &Storage<T> = result.storage;
+    const out_offset: isize = result.offset;
+    const out_shape: Shape = result.shape;
+    const out_strides: Strides = result.strides;
+    const out_flags: ArrayFlags = result.flags;
+    result.storage = null;
+    return Array<T>{ storage: out_storage, offset: out_offset, shape: out_shape, strides: out_strides, flags: out_flags };
+}
+
+export fn dot_f64(a: &Array<f64>, b: &Array<f64>) !Array<f64> {
+    var result: Array<f64> = try dot_impl<f64>(a, b, 0.0);
+    const out_storage: &Storage<f64> = result.storage;
+    const out_offset: isize = result.offset;
+    const out_shape: Shape = result.shape;
+    const out_strides: Strides = result.strides;
+    const out_flags: ArrayFlags = result.flags;
+    result.storage = null;
+    return Array<f64>{ storage: out_storage, offset: out_offset, shape: out_shape, strides: out_strides, flags: out_flags };
+}
+
+fn require_matmul_args(a: &Array<f64>, b: &Array<f64>) !void {
+    if a.shape.rank != 2 || b.shape.rank != 2 {
+        return error.NumuyaInvalidArgument;
+    }
+    if a.shape.dims[1] != b.shape.dims[0] {
+        return error.NumuyaShapeMismatch;
+    }
+}
+
+fn matmul_impl<T>(a: &Array<T>, b: &Array<T>, zero: T) !Array<T> {
+    try require_matmul_args(a, b);
+    const a_rows: usize = a.shape.dims[0];
+    const a_cols: usize = a.shape.dims[1];
+    const b_cols: usize = b.shape.dims[1];
+
+    var result: Array<T> = try empty<T>(a.storage.allocator, shape2(a_rows, b_cols));
+
+    var idx: usize = 0;
+    while idx < a_rows * b_cols {
+        result.storage.data[idx] = zero;
+        idx = idx + 1;
+    }
+
+    var i: usize = 0;
+    while i < a_rows {
+        var j: usize = 0;
+        while j < b_cols {
+            var sum: T = zero;
+            var k: usize = 0;
+            while k < a_cols {
+                sum = sum + (try get2<T>(a, i, k)) * (try get2<T>(b, k, j));
+                k = k + 1;
+            }
+            result.storage.data[i * b_cols + j] = sum;
+            j = j + 1;
+        }
+        i = i + 1;
+    }
+
+    const out_storage: &Storage<T> = result.storage;
+    const out_offset: isize = result.offset;
+    const out_shape: Shape = result.shape;
+    const out_strides: Strides = result.strides;
+    const out_flags: ArrayFlags = result.flags;
+    result.storage = null;
+    return Array<T>{ storage: out_storage, offset: out_offset, shape: out_shape, strides: out_strides, flags: out_flags };
+}
+
+export fn matmul_f64(a: &Array<f64>, b: &Array<f64>) !Array<f64> {
+    var result: Array<f64> = try matmul_impl<f64>(a, b, 0.0);
+    const out_storage: &Storage<f64> = result.storage;
+    const out_offset: isize = result.offset;
+    const out_shape: Shape = result.shape;
+    const out_strides: Strides = result.strides;
+    const out_flags: ArrayFlags = result.flags;
+    result.storage = null;
+    return Array<f64>{ storage: out_storage, offset: out_offset, shape: out_shape, strides: out_strides, flags: out_flags };
+}

@@ -121,7 +121,7 @@ test "dot_f64 computes scalar product of two 1-D arrays" {
     var result: Array<f64> = try dot_f64(&a, &b);
 
     try expect_eq_usize(result.shape.rank, 0);
-    try expect_close_f64(try getn<f64>(&result, [0:0]), 32.0, 1e-12);
+    try expect_close_f64(try get0<f64>(&result), 32.0, 1e-12);
 }
 
 test "matmul_f64 multiplies two 2-D matrices" {
