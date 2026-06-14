@@ -5,6 +5,11 @@ use shape;
 use storage;
 use stride;
 
+@c_import("simd_stub.c", "", "");
+
+extern fn numuya_simd_add_f64(left: &f64, right: &f64, result: &f64, n: usize) void;
+extern fn numuya_simd_mul_f64(left: &f64, right: &f64, result: &f64, n: usize) void;
+
 use std.mem.allocator.IAllocator;
 
 fn force_storage_release_i32(storage_value: &Storage<i32>) void {
@@ -135,6 +140,58 @@ export fn unary_stride_indices<T>(input: &Array<T>, result: &Array<T>, linear: u
     };
 }
 
+export fn add_f64_scalar(left: &Array<f64>, right: &Array<f64>) !Array<f64> {
+    const result_shape: Shape = try broadcast_shapes(left.shape, right.shape);
+    var left_view: Array<f64> = try broadcast_to<f64>(left, clone_shape(&result_shape));
+    var right_view: Array<f64> = try broadcast_to<f64>(right, clone_shape(&result_shape));
+    var result: Array<f64> = try empty<f64>(left.storage.allocator, clone_shape(&result_shape));
+
+    const left_base: usize = try offset_as_usize(left_view.offset);
+    const right_base: usize = try offset_as_usize(right_view.offset);
+    const result_base: usize = try offset_as_usize(result.offset);
+    const size: usize = array_size<f64>(&result);
+    var i: usize = 0;
+    while i < size {
+        result.storage.data[result_base + i] = left_view.storage.data[left_base + i] + right_view.storage.data[right_base + i];
+        i = i + 1;
+    }
+
+    storage_retain<f64>(result.storage);
+    return Array<f64>{
+        storage: result.storage,
+        offset: result.offset,
+        shape: result.shape,
+        strides: result.strides,
+        flags: result.flags,
+    };
+}
+
+export fn add_f64_simd(left: &Array<f64>, right: &Array<f64>) !Array<f64> {
+    const result_shape: Shape = try broadcast_shapes(left.shape, right.shape);
+    var left_view: Array<f64> = try broadcast_to<f64>(left, clone_shape(&result_shape));
+    var right_view: Array<f64> = try broadcast_to<f64>(right, clone_shape(&result_shape));
+    var result: Array<f64> = try empty<f64>(left.storage.allocator, clone_shape(&result_shape));
+
+    if !binary_op_use_contiguous_path<f64>(&left_view, &right_view, &result) {
+        return error.NumuyaNotContiguous;
+    }
+
+    const left_base: usize = try offset_as_usize(left_view.offset);
+    const right_base: usize = try offset_as_usize(right_view.offset);
+    const result_base: usize = try offset_as_usize(result.offset);
+    const size: usize = array_size<f64>(&result);
+    numuya_simd_add_f64(&left_view.storage.data[left_base], &right_view.storage.data[right_base], &result.storage.data[result_base], size);
+
+    storage_retain<f64>(result.storage);
+    return Array<f64>{
+        storage: result.storage,
+        offset: result.offset,
+        shape: result.shape,
+        strides: result.strides,
+        flags: result.flags,
+    };
+}
+
 export fn add_f64(left: &Array<f64>, right: &Array<f64>) !Array<f64> {
     const result_shape: Shape = try broadcast_shapes(left.shape, right.shape);
     var left_view: Array<f64> = try broadcast_to<f64>(left, clone_shape(&result_shape));
@@ -146,11 +203,7 @@ export fn add_f64(left: &Array<f64>, right: &Array<f64>) !Array<f64> {
         const right_base: usize = try offset_as_usize(right_view.offset);
         const result_base: usize = try offset_as_usize(result.offset);
         const size: usize = array_size<f64>(&result);
-        var i: usize = 0;
-        while i < size {
-            result.storage.data[result_base + i] = left_view.storage.data[left_base + i] + right_view.storage.data[right_base + i];
-            i = i + 1;
-        }
+        numuya_simd_add_f64(&left_view.storage.data[left_base], &right_view.storage.data[right_base], &result.storage.data[result_base], size);
     } else {
         const size: usize = array_size<f64>(&result);
         var linear: usize = 0;
@@ -207,6 +260,58 @@ export fn sub_f64(left: &Array<f64>, right: &Array<f64>) !Array<f64> {
     };
 }
 
+export fn mul_f64_scalar(left: &Array<f64>, right: &Array<f64>) !Array<f64> {
+    const result_shape: Shape = try broadcast_shapes(left.shape, right.shape);
+    var left_view: Array<f64> = try broadcast_to<f64>(left, clone_shape(&result_shape));
+    var right_view: Array<f64> = try broadcast_to<f64>(right, clone_shape(&result_shape));
+    var result: Array<f64> = try empty<f64>(left.storage.allocator, clone_shape(&result_shape));
+
+    const left_base: usize = try offset_as_usize(left_view.offset);
+    const right_base: usize = try offset_as_usize(right_view.offset);
+    const result_base: usize = try offset_as_usize(result.offset);
+    const size: usize = array_size<f64>(&result);
+    var i: usize = 0;
+    while i < size {
+        result.storage.data[result_base + i] = left_view.storage.data[left_base + i] * right_view.storage.data[right_base + i];
+        i = i + 1;
+    }
+
+    storage_retain<f64>(result.storage);
+    return Array<f64>{
+        storage: result.storage,
+        offset: result.offset,
+        shape: result.shape,
+        strides: result.strides,
+        flags: result.flags,
+    };
+}
+
+export fn mul_f64_simd(left: &Array<f64>, right: &Array<f64>) !Array<f64> {
+    const result_shape: Shape = try broadcast_shapes(left.shape, right.shape);
+    var left_view: Array<f64> = try broadcast_to<f64>(left, clone_shape(&result_shape));
+    var right_view: Array<f64> = try broadcast_to<f64>(right, clone_shape(&result_shape));
+    var result: Array<f64> = try empty<f64>(left.storage.allocator, clone_shape(&result_shape));
+
+    if !binary_op_use_contiguous_path<f64>(&left_view, &right_view, &result) {
+        return error.NumuyaNotContiguous;
+    }
+
+    const left_base: usize = try offset_as_usize(left_view.offset);
+    const right_base: usize = try offset_as_usize(right_view.offset);
+    const result_base: usize = try offset_as_usize(result.offset);
+    const size: usize = array_size<f64>(&result);
+    numuya_simd_mul_f64(&left_view.storage.data[left_base], &right_view.storage.data[right_base], &result.storage.data[result_base], size);
+
+    storage_retain<f64>(result.storage);
+    return Array<f64>{
+        storage: result.storage,
+        offset: result.offset,
+        shape: result.shape,
+        strides: result.strides,
+        flags: result.flags,
+    };
+}
+
 export fn mul_f64(left: &Array<f64>, right: &Array<f64>) !Array<f64> {
     const result_shape: Shape = try broadcast_shapes(left.shape, right.shape);
     var left_view: Array<f64> = try broadcast_to<f64>(left, clone_shape(&result_shape));
@@ -218,11 +323,7 @@ export fn mul_f64(left: &Array<f64>, right: &Array<f64>) !Array<f64> {
         const right_base: usize = try offset_as_usize(right_view.offset);
         const result_base: usize = try offset_as_usize(result.offset);
         const size: usize = array_size<f64>(&result);
-        var i: usize = 0;
-        while i < size {
-            result.storage.data[result_base + i] = left_view.storage.data[left_base + i] * right_view.storage.data[right_base + i];
-            i = i + 1;
-        }
+        numuya_simd_mul_f64(&left_view.storage.data[left_base], &right_view.storage.data[right_base], &result.storage.data[result_base], size);
     } else {
         const size: usize = array_size<f64>(&result);
         var linear: usize = 0;

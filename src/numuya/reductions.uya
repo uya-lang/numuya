@@ -3,6 +3,14 @@ use creation;
 use shape;
 use storage;
 
+@c_import("simd_stub.c", "", "");
+
+extern fn numuya_simd_sum_f64(data: &f64, n: usize) f64;
+
+fn force_storage_release_usize(storage_value: &Storage<usize>) void {
+    storage_release<usize>(storage_value);
+}
+
 const REDUCTIONS_MAX_USIZE: usize = 18446744073709551615;
 
 fn clone_shape(shape_value: &Shape) Shape {
@@ -112,6 +120,41 @@ fn array_size_safe<T>(array_value: &Array<T>) !usize {
     return size;
 }
 
+export fn sum_all_f64_scalar(array_value: &Array<f64>) !f64 {
+    try validate_array<f64>(array_value);
+    const size: usize = try array_size_safe<f64>(array_value);
+
+    var total: f64 = 0.0;
+    if size == 0 {
+        return total;
+    }
+
+    const base: usize = try offset_as_usize(array_value.offset);
+    var i: usize = 0;
+    while i < size {
+        total = total + array_value.storage.data[base + i];
+        i = i + 1;
+    }
+
+    return total;
+}
+
+export fn sum_all_f64_simd(array_value: &Array<f64>) !f64 {
+    try validate_array<f64>(array_value);
+    const size: usize = try array_size_safe<f64>(array_value);
+
+    if size == 0 {
+        return 0.0;
+    }
+
+    if !array_is_c_contiguous<f64>(array_value) {
+        return error.NumuyaNotContiguous;
+    }
+
+    const base: usize = try offset_as_usize(array_value.offset);
+    return numuya_simd_sum_f64(&array_value.storage.data[base], size);
+}
+
 export fn sum_all_f64(array_value: &Array<f64>) !f64 {
     try validate_array<f64>(array_value);
     const size: usize = try array_size_safe<f64>(array_value);
@@ -123,11 +166,7 @@ export fn sum_all_f64(array_value: &Array<f64>) !f64 {
 
     if array_is_c_contiguous<f64>(array_value) {
         const base: usize = try offset_as_usize(array_value.offset);
-        var i: usize = 0;
-        while i < size {
-            total = total + array_value.storage.data[base + i];
-            i = i + 1;
-        }
+        total = numuya_simd_sum_f64(&array_value.storage.data[base], size);
     } else {
         var indices: [usize: NUMUYA_MAX_DIMS] = [0: NUMUYA_MAX_DIMS];
         var linear: usize = 0;

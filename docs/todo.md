@@ -33,13 +33,7 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 19: SIMD 与性能
 
-
-- [ ] 为 add/mul/sum 增加 SIMD fast path。
-- [ ] TDD: SIMD path 与标量 path 结果一致。
-- [ ] TDD: 长度不是 vector width 倍数时尾部正确。
-- [ ] TDD: 非 contiguous 输入仍走标量 path。
 - [ ] 添加 benchmark，但 benchmark 不代替测试。
-- [ ] 验收：correctness tests 全绿。
 
 ## Phase 20: CUDA backend 基础
 

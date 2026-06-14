@@ -357,3 +357,38 @@
   - 测试期望新增 SIMD 专用 API：`ufunc.add_f64_scalar`、`ufunc.add_f64_simd`、`ufunc.mul_f64_scalar`、`ufunc.mul_f64_simd`、`reductions.sum_all_f64_scalar`、`reductions.sum_all_f64_simd`。
   - 验证命令：`../uya/bin/uya test src/numuya/_tests/test_simd_equivalence.uya --manifest-path uya.toml`
   - 验证结果：测试文件自身无结构/导入错误；因 SIMD 专用函数尚未实现，类型检查阶段按预期失败（`模块不存在`）。
+
+
+## Phase 19: SIMD 与性能
+
+- [x] 为 add/mul/sum 增加 SIMD fast path。
+- [x] TDD: SIMD path 与标量 path 结果一致。
+- [x] TDD: 长度不是 vector width 倍数时尾部正确。
+- [x] TDD: 非 contiguous 输入仍走标量 path。
+- [x] 验收：correctness tests 全绿。
+
+验证记录：
+- 聚焦测试：
+  ```bash
+  ../uya/bin/uya test src/numuya/_tests/test_simd_equivalence.uya --manifest-path uya.toml
+  ```
+  结果：7 tests passed, 0 failed。
+- 相关回归测试：
+  ```bash
+  ../uya/bin/uya test src/numuya/_tests/test_ufunc.uya --manifest-path uya.toml
+  ../uya/bin/uya test src/numuya/_tests/test_reductions.uya --manifest-path uya.toml
+  ```
+  结果：ufunc 20/20 passed；reductions 23/23 passed。
+- 全量 correctness tests：
+  ```bash
+  make test
+  ```
+  结果：全部 20 个测试文件通过，exit code 0。
+
+实现要点：
+- 新增 `src/numuya/simd_stub.c`，使用 AVX2 intrinsics（4-wide f64）并提供运行时 `__builtin_cpu_supports("avx2")` 检测；非 x86_64 平台回退到标量循环。
+- `src/numuya/ufunc.uya` 新增 `add_f64_scalar`、`add_f64_simd`、`mul_f64_scalar`、`mul_f64_simd`；公共 `add_f64`/`mul_f64` 在 contiguous 时走 SIMD fast path，否则保持原标量 stride path。
+- `src/numuya/reductions.uya` 新增 `sum_all_f64_scalar`、`sum_all_f64_simd`；公共 `sum_all_f64` 在 contiguous 时走 SIMD fast path。
+- `src/numuya/errors.uya` 新增 `NumuyaNotContiguous`；`_simd` 变体对非 contiguous 输入返回该错误。
+- 修复 `src/numuya/_tests/test_simd_equivalence.uya` 中的 Uya 语法问题（模块前缀调用、`array_size` 泛型参数、helper 函数返回 codegen 问题），并补充 `force_storage_release_usize` 以触发 Uya 生成所需 `Storage<usize>` release 函数。
+
