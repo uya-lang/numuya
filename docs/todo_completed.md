@@ -24,3 +24,9 @@
   - 添加 `src/numuya/errors.uya`、`src/numuya/testing.uya` 作为源码根占位。
   - 添加 `.gitkeep` 保留测试与 fixture 目录。
   - 验证：`../uya/bin/uya upm install --manifest-path uya.toml` 通过，退出码 0，并生成 `uya.lock`。
+
+## Phase 0: 脚手架与测试基础
+
+- [x] 创建目录结构：`src/numuya/`、`src/numuya/_tests/`、`tests/fixtures/`。
+  - 验证命令：`ls -ld src/numuya src/numuya/_tests tests/fixtures`
+  - 验证结果：通过，三个目录均存在。
