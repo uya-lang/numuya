@@ -106,3 +106,9 @@
 - [x] TDD: complex add/mul/conj helper。
   - 验证命令：`../uya/bin/uya test src/numuya/_tests/test_fft.uya --manifest-path uya.toml`
   - 结果：7/7 tests passed，其中 `complex add multiply and conjugate helpers` 测试验证 `complex_add`、`complex_mul`、`complex_conj` 返回正确结果。
+
+## Phase 15: FFT
+
+- [x] TDD: `fft_f64` 长度 1。
+  验证命令：`../uya/bin/uya test src/numuya/_tests/test_fft.uya --manifest-path uya.toml`
+  结果：7/7 测试通过，包含 `fft_f64 length 1 returns constant`。
