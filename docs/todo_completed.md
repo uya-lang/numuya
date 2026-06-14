@@ -564,3 +564,9 @@
     - `../uya/bin/uya check src/numuya/_tests/test_cuda_device_array.uya --manifest-path uya.toml` — 类型检查通过
     - `NUMUYA_CUDA_REQUIRED=1 LDFLAGS="-lcuda" ../uya/bin/uya test src/numuya/_tests/test_cuda_device_array.uya --manifest-path uya.toml` — 7 个测试中 `cuda_malloc`/`cuda_free` 相关 2 个通过（其余 5 个依赖尚未实现的 `device_array.uya`）
     - `make test` — 全部非 CUDA 测试文件通过
+
+## Phase 21: CUDA DeviceArray 与拷贝
+
+- [x] 实现 `src/numuya/cuda/device_array.uya`。
+  - 验证：`make test-cuda` 通过（`test_cuda_device_array.uya` 7/7，`test_cuda_driver.uya` 21/21）；`make test` 通过。
+  - 实现要点：补全 `DeviceStorage<T>` 分配/释放、`DeviceArray<T>` 构造/视图、H2D/D2H 拷贝；在 `cuda/driver.uya` 与 `driver_stub.c` 新增 `cuda_memcpy_htod/dtoh` 绑定；修复 `test_cuda_device_array.uya` 中 H2D/D2H 测试使用 `get1` 访问 rank-2 数组的笔误，改为 `getn`。

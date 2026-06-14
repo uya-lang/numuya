@@ -22,6 +22,8 @@ extern fn numuya_cuda_synchronize_stream(context: usize, stream: usize) i32;
 extern fn numuya_cuda_destroy_stream(context: usize, stream: usize) i32;
 extern fn numuya_cuda_malloc(size: usize, ptr: &usize) i32;
 extern fn numuya_cuda_free(ptr: usize) i32;
+extern fn numuya_cuda_memcpy_htod(dst: usize, src: &byte, size: usize) i32;
+extern fn numuya_cuda_memcpy_dtoh(dst: &byte, src: usize, size: usize) i32;
 
 const NUMUYA_CUDA_OK: i32 = 0;
 const NUMUYA_CUDA_UNAVAILABLE: i32 = 1;
@@ -167,6 +169,34 @@ export fn cuda_driver_free(ptr: usize) !void {
         return;
     }
     const status: i32 = numuya_cuda_free(ptr);
+    if status == NUMUYA_CUDA_OK {
+        return;
+    } else if status == NUMUYA_CUDA_UNAVAILABLE {
+        return error.NumuyaGpuUnavailable;
+    } else {
+        return error.NumuyaCudaError;
+    }
+}
+
+export fn cuda_memcpy_htod(dst: usize, src: &byte, size: usize) !void {
+    if size == 0 {
+        return;
+    }
+    const status: i32 = numuya_cuda_memcpy_htod(dst, src, size);
+    if status == NUMUYA_CUDA_OK {
+        return;
+    } else if status == NUMUYA_CUDA_UNAVAILABLE {
+        return error.NumuyaGpuUnavailable;
+    } else {
+        return error.NumuyaCudaError;
+    }
+}
+
+export fn cuda_memcpy_dtoh(dst: &byte, src: usize, size: usize) !void {
+    if size == 0 {
+        return;
+    }
+    const status: i32 = numuya_cuda_memcpy_dtoh(dst, src, size);
     if status == NUMUYA_CUDA_OK {
         return;
     } else if status == NUMUYA_CUDA_UNAVAILABLE {

@@ -1,9 +1,12 @@
 use array;
+use creation;
+use cuda.driver;
 use cuda.memory;
 use errors;
 use shape;
 
 use std.mem.allocator.IAllocator;
+use std.mem.allocator.MallocAllocator;
 
 export struct DeviceStorage<T> {
     ptr: &byte,
@@ -12,22 +15,64 @@ export struct DeviceStorage<T> {
     pool: &MemoryPool,
 }
 
+var device_array_header_allocator: MallocAllocator = MallocAllocator{};
+
+fn element_size_of<T>() usize {
+    var sample: [T: 1] = [];
+    return (@size_of(sample[0]) as! usize).value;
+}
+
 export fn device_storage_new<T>(pool: &MemoryPool, len: usize) !&DeviceStorage<T> {
-    _ = pool;
-    _ = len;
-    return error.NumuyaCudaError;
+    const bytes: usize = element_size_of<T>() * len;
+    const ptr: &byte = try cuda_malloc(pool, bytes);
+
+    var allocator: IAllocator = device_array_header_allocator;
+    var header_sample: [DeviceStorage<T>: 1] = [];
+    const header_size: usize = (@size_of(header_sample[0]) as! usize).value;
+    const header_raw: &byte = allocator.alloc(header_size) catch |err| {
+        cuda_free(pool, ptr) catch {};
+        return err;
+    };
+    const header: &DeviceStorage<T> = header_raw as &DeviceStorage<T>;
+    header[0] = DeviceStorage<T>{
+        ptr: ptr,
+        len: len,
+        ref_count: 1,
+        pool: pool,
+    };
+    return header;
 }
 
 export fn device_storage_retain<T>(storage_value: &DeviceStorage<T>) void {
     storage_value.ref_count = storage_value.ref_count + 1;
 }
 
+fn _force_device_storage_release_instantiations() void {
+    var _df64: &DeviceStorage<f64> = null;
+    var _df32: &DeviceStorage<f32> = null;
+    var _di32: &DeviceStorage<i32> = null;
+    var _di64: &DeviceStorage<i64> = null;
+    var _du8: &DeviceStorage<u8> = null;
+    device_storage_release<f64>(_df64);
+    device_storage_release<f32>(_df32);
+    device_storage_release<i32>(_di32);
+    device_storage_release<i64>(_di64);
+    device_storage_release<u8>(_du8);
+}
+
 export fn device_storage_release<T>(storage_value: &DeviceStorage<T>) void {
+    if storage_value == null {
+        return;
+    }
     if storage_value.ref_count > 1 {
         storage_value.ref_count = storage_value.ref_count - 1;
         return;
     }
-    // Placeholder: real implementation will free device memory and update pool.
+
+    cuda_free(storage_value.pool, storage_value.ptr) catch {};
+
+    var allocator: IAllocator = device_array_header_allocator;
+    allocator.dealloc(storage_value as &byte);
 }
 
 export struct DeviceArray<T> {
@@ -41,9 +86,13 @@ export struct DeviceArray<T> {
 }
 
 export fn device_array_new<T>(pool: &MemoryPool, shape_value: Shape) !DeviceArray<T> {
-    _ = pool;
-    _ = shape_value;
-    return error.NumuyaCudaError;
+    const len: usize = try shape_size(shape_value);
+    const storage_value: &DeviceStorage<T> = try device_storage_new<T>(pool, len);
+    return DeviceArray<T>{
+        storage: storage_value,
+        offset: 0,
+        shape: shape_value,
+    };
 }
 
 export fn device_array_view<T>(array_value: &DeviceArray<T>) DeviceArray<T> {
@@ -56,13 +105,17 @@ export fn device_array_view<T>(array_value: &DeviceArray<T>) DeviceArray<T> {
 }
 
 export fn device_array_from_host<T>(pool: &MemoryPool, host_array: &Array<T>) !DeviceArray<T> {
-    _ = pool;
-    _ = host_array;
-    return error.NumuyaCudaError;
+    const device: DeviceArray<T> = try device_array_new<T>(pool, host_array.shape);
+    const bytes: usize = element_size_of<T>() * device.storage.len;
+    const host_ptr: &byte = host_array.storage.data as &byte;
+    try cuda_memcpy_htod(device.storage.ptr as usize, host_ptr, bytes);
+    return device;
 }
 
 export fn device_array_to_host<T>(allocator: IAllocator, device_array_value: &DeviceArray<T>) !Array<T> {
-    _ = allocator;
-    _ = device_array_value;
-    return error.NumuyaCudaError;
+    var host_array: Array<T> = try empty<T>(allocator, device_array_value.shape);
+    const bytes: usize = element_size_of<T>() * device_array_value.storage.len;
+    const host_ptr: &byte = host_array.storage.data as &byte;
+    try cuda_memcpy_dtoh(host_ptr, device_array_value.storage.ptr as usize, bytes);
+    return host_array;
 }

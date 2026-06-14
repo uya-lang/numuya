@@ -129,7 +129,8 @@ test "H2D and D2H copy preserves element values" {
 
     var i: usize = 0;
     while i < 6 {
-        const actual: f64 = try get1<f64>(&host_dst, i);
+        var idx: [usize: 2] = [i / 3, i % 3];
+        const actual: f64 = try getn<f64>(&host_dst, idx[0:2]);
         const expected: f64 = source[i];
         if actual != expected {
             return error.NumuyaExpectationFailed;
