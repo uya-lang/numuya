@@ -252,3 +252,13 @@
   - 验证命令：`../uya/bin/uya test src/numuya/_tests/test_advanced_indexing.uya --manifest-path uya.toml` — 6/6 通过。
   - 回归验证：`../uya/bin/uya test src/numuya/_tests/test_indexing.uya --manifest-path uya.toml` — 6/6 通过。
   - 回归验证：`make test` — 全量测试通过。
+
+## Phase 17: Advanced indexing
+
+- [x] TDD: fancy indexing copy 语义。
+  - 新增测试：`src/numuya/_tests/test_advanced_indexing.uya` 添加 `fancy indexing returns writeable copies with independent storage`，验证 `take`/`boolean_mask` 返回可写、自有 storage 的副本，并且源与结果互不影响。
+  - 失败确认：`../uya/bin/uya test src/numuya/_tests/test_advanced_indexing.uya --manifest-path uya.toml` — 新增用例直接通过，说明现有实现已满足 copy 语义，无需生产代码改动。
+  - 验证命令：`../uya/bin/uya check src/numuya/_tests/test_advanced_indexing.uya --manifest-path uya.toml` — checker 通过。
+  - 验证命令：`../uya/bin/uya test src/numuya/_tests/test_advanced_indexing.uya --manifest-path uya.toml` — 7/7 通过。
+  - 回归验证：`../uya/bin/uya test src/numuya/_tests/test_indexing.uya --manifest-path uya.toml` — 6/6 通过。
+  - 回归验证：`../uya/bin/uya check src/numuya/indexing.uya --manifest-path uya.toml` — checker 通过。
