@@ -112,3 +112,9 @@
 - [x] TDD: `fft_f64` 长度 1。
   验证命令：`../uya/bin/uya test src/numuya/_tests/test_fft.uya --manifest-path uya.toml`
   结果：7/7 测试通过，包含 `fft_f64 length 1 returns constant`。
+
+## Phase 15: FFT
+
+- [x] TDD: `fft_f64` 长度 2。
+  - 验证命令：`TEST=src/numuya/_tests/test_fft.uya make test-one`
+  - 结果：7/7 测试通过，包含 `fft_f64 length 2 on impulse`。

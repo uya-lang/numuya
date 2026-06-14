@@ -33,7 +33,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 15: FFT
 
-- [ ] TDD: `fft_f64` 长度 2。
 - [ ] TDD: impulse 输入。
 - [ ] TDD: `ifft(fft(x)) ~= x`。
 - [ ] TDD: 非 power-of-two 返回 `NumuyaInvalidArgument`，直到 fallback 实现完成。
