@@ -33,7 +33,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 11: Sorting 与 searching
 
-- [ ] 写 `src/numuya/_tests/test_sorting.uya`。
 - [ ] 实现 `src/numuya/sorting.uya`。
 - [ ] TDD: `sort_f64`。
   - 已排序、逆序、重复元素。

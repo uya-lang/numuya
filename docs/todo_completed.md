@@ -802,3 +802,9 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
   - 新增文件：
     - `src/numuya/stats.uya`
     - `src/numuya/_tests/test_stats.uya`
+
+## Phase 11: Sorting 与 searching
+
+- [x] 写 `src/numuya/_tests/test_sorting.uya`。
+  - 验证命令：`../uya/bin/uya check src/numuya/_tests/test_sorting.uya --manifest-path uya.toml`
+  - 验证结果：TDD 预期失败；`src/numuya/sorting.uya` 尚未实现，`sort_f64`/`argsort_f64`/`searchsorted_left_f64`/`searchsorted_right_f64`/`unique_f64` 未定义，编译器报告 `try 的操作数必须是错误联合类型 !T`。
