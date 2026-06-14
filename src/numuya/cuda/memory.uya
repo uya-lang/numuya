@@ -1,0 +1,29 @@
+use errors;
+
+export struct MemoryPool {
+    budget_bytes: usize,
+    used_bytes: usize,
+}
+
+export fn memory_pool_new(budget_bytes: usize) MemoryPool {
+    return MemoryPool{
+        budget_bytes: budget_bytes,
+        used_bytes: 0,
+    };
+}
+
+export fn memory_pool_used_bytes(pool: &MemoryPool) usize {
+    return pool.used_bytes;
+}
+
+export fn cuda_malloc(pool: &MemoryPool, size: usize) !&byte {
+    _ = pool;
+    _ = size;
+    return error.NumuyaCudaError;
+}
+
+export fn cuda_free(pool: &MemoryPool, ptr: &byte) !void {
+    _ = pool;
+    _ = ptr;
+    return error.NumuyaCudaError;
+}

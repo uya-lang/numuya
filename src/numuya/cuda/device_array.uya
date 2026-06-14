@@ -1,0 +1,68 @@
+use array;
+use cuda.memory;
+use errors;
+use shape;
+
+use std.mem.allocator.IAllocator;
+
+export struct DeviceStorage<T> {
+    ptr: &byte,
+    len: usize,
+    ref_count: usize,
+    pool: &MemoryPool,
+}
+
+export fn device_storage_new<T>(pool: &MemoryPool, len: usize) !&DeviceStorage<T> {
+    _ = pool;
+    _ = len;
+    return error.NumuyaCudaError;
+}
+
+export fn device_storage_retain<T>(storage_value: &DeviceStorage<T>) void {
+    storage_value.ref_count = storage_value.ref_count + 1;
+}
+
+export fn device_storage_release<T>(storage_value: &DeviceStorage<T>) void {
+    if storage_value.ref_count > 1 {
+        storage_value.ref_count = storage_value.ref_count - 1;
+        return;
+    }
+    // Placeholder: real implementation will free device memory and update pool.
+}
+
+export struct DeviceArray<T> {
+    storage: &DeviceStorage<T>,
+    offset: usize,
+    shape: Shape,
+
+    fn drop(self: DeviceArray<T>) void {
+        device_storage_release<T>(self.storage);
+    }
+}
+
+export fn device_array_new<T>(pool: &MemoryPool, shape_value: Shape) !DeviceArray<T> {
+    _ = pool;
+    _ = shape_value;
+    return error.NumuyaCudaError;
+}
+
+export fn device_array_view<T>(array_value: &DeviceArray<T>) DeviceArray<T> {
+    device_storage_retain<T>(array_value.storage);
+    return DeviceArray<T>{
+        storage: array_value.storage,
+        offset: array_value.offset,
+        shape: array_value.shape,
+    };
+}
+
+export fn device_array_from_host<T>(pool: &MemoryPool, host_array: &Array<T>) !DeviceArray<T> {
+    _ = pool;
+    _ = host_array;
+    return error.NumuyaCudaError;
+}
+
+export fn device_array_to_host<T>(allocator: IAllocator, device_array_value: &DeviceArray<T>) !Array<T> {
+    _ = allocator;
+    _ = device_array_value;
+    return error.NumuyaCudaError;
+}

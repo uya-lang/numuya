@@ -540,3 +540,12 @@
   - 验证命令：`make test-cuda TEST=src/numuya/_tests/test_cuda_driver.uya`
   - 验证结果：21/21 tests passed on RTX 3060
 
+
+## Phase 21: CUDA DeviceArray 与拷贝
+
+- [x] 写 `src/numuya/_tests/test_cuda_device_array.uya`。
+  - 验证命令：`../uya/bin/uya check src/numuya/_tests/test_cuda_device_array.uya --manifest-path uya.toml`
+  - 结果：checker 通过，类型检查通过。
+  - 验证命令：`NUMUYA_CUDA_REQUIRED=1 LDFLAGS="-lcuda" ../uya/bin/uya test src/numuya/_tests/test_cuda_device_array.uya --manifest-path uya.toml`
+  - 结果：编译、链接、运行均成功；7 个测试全部按预期失败（ERROR），因为本轮仅交付测试文件及最小可编译骨架，`src/numuya/cuda/memory.uya` 与 `src/numuya/cuda/device_array.uya` 尚未实现真正的 CUDA 设备内存分配/释放与拷贝。
+
