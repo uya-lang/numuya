@@ -33,7 +33,7 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 12: Linear algebra MVP
 
-- [ ] TDD: `eye_f64`。
+- [x] TDD: `eye_f64`。
   - `eye(3, 3, 0)`。
   - `k=1`、`k=-1`。
 - [ ] TDD: `diag_f64`。

@@ -852,3 +852,10 @@ done
 
 - [x] 实现 `src/numuya/linalg.uya`。
   - 验证命令：`../uya/bin/uya test src/numuya/_tests/test_linalg.uya --manifest-path uya.toml`（10/10 通过）；`make test`（全部通过）。
+
+## Phase 12: Linear algebra MVP
+
+- [x] TDD: `eye_f64`。
+  - `eye(3, 3, 0)`。
+  - `k=1`、`k=-1`。
+  - 验证：`make test-one TEST=src/numuya/_tests/test_linalg.uya` 通过（10/10 tests passed）；`make test` 全绿（所有 14 个测试文件通过）。
