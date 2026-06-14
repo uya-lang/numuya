@@ -141,9 +141,12 @@ test "add_i32 computes element-wise sum for same shape" {
 
     try expect_eq_usize(result.shape.rank, 1);
     try expect_eq_usize(result.shape.dims[0], 3);
-    if result.storage.data[0] != (5 as i32) { return error.NumuyaExpectationFailed; }
-    if result.storage.data[1] != (7 as i32) { return error.NumuyaExpectationFailed; }
-    if result.storage.data[2] != (9 as i32) { return error.NumuyaExpectationFailed; }
+    var x0: i32 = result.storage.data[0];
+    var x1: i32 = result.storage.data[1];
+    var x2: i32 = result.storage.data[2];
+    if x0 != 5 { return error.NumuyaExpectationFailed; }
+    if x1 != 7 { return error.NumuyaExpectationFailed; }
+    if x2 != 9 { return error.NumuyaExpectationFailed; }
 }
 
 test "add_f64 handles non-contiguous transpose input" {

@@ -520,3 +520,12 @@
   - 验证：`../uya/bin/uya test src/numuya/_tests/test_ufunc.uya --manifest-path uya.toml`
   - 结果：类型检查失败，因为 `src/numuya/ufunc.uya` 尚未实现，`add_f64/sub_f64/mul_f64/div_f64/neg_f64/add_i32` 未定义；符合 TDD 先写测试再实现的预期失败。
   - 相关既有测试回跑通过：`test_shape.uya`、`test_array_creation.uya`、`test_broadcast.uya`、`test_stride_views.uya`。
+
+## Phase 7: UFunc 基础
+
+- [x] 实现 `src/numuya/ufunc.uya`。
+  验证：
+  - `../uya/bin/uya test src/numuya/_tests/test_ufunc.uya --manifest-path uya.toml` → 11/11 通过
+  - `../uya/bin/uya test src/numuya/_tests/test_broadcast.uya --manifest-path uya.toml` → 7/7 通过
+  - `../uya/bin/uya test src/numuya/_tests/test_stride_views.uya --manifest-path uya.toml` → 13/13 通过
+  说明：实现了 `add_f64/sub_f64/mul_f64/div_f64/neg_f64/add_i32`，支持同 shape、broadcast 与非连续输入；为绕过当前 Uya C 后端对 `return local Array<T>` 的生成错误，返回前显式 `storage_retain` 并以结构体字面量返回；`test_ufunc.uya` 中 `add_i32` 测试的比较写法因类型检查问题调整为先赋值到 `i32` 局部变量再比较。

@@ -31,7 +31,7 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 7: UFunc 基础
 
-- [ ] 实现 `src/numuya/ufunc.uya`。
+- [x] 实现 `src/numuya/ufunc.uya`。
 - [ ] TDD: `add_f64/sub_f64/mul_f64/div_f64`。
   - 同 shape。
   - broadcast shape。
