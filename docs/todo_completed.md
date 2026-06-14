@@ -529,3 +529,16 @@
   - `../uya/bin/uya test src/numuya/_tests/test_broadcast.uya --manifest-path uya.toml` → 7/7 通过
   - `../uya/bin/uya test src/numuya/_tests/test_stride_views.uya --manifest-path uya.toml` → 13/13 通过
   说明：实现了 `add_f64/sub_f64/mul_f64/div_f64/neg_f64/add_i32`，支持同 shape、broadcast 与非连续输入；为绕过当前 Uya C 后端对 `return local Array<T>` 的生成错误，返回前显式 `storage_retain` 并以结构体字面量返回；`test_ufunc.uya` 中 `add_i32` 测试的比较写法因类型检查问题调整为先赋值到 `i32` 局部变量再比较。
+
+## Phase 7: UFunc 基础
+
+- [x] 实现 `src/numuya/ufunc.uya`。
+  - 验证命令：
+    - `../uya/bin/uya test src/numuya/_tests/test_ufunc.uya`
+    - `../uya/bin/uya test src/numuya/_tests/test_broadcast.uya`
+    - `../uya/bin/uya test src/numuya/_tests/test_stride_views.uya`
+  - 验证结果：全部通过。
+    - `test_ufunc.uya`：11/11 tests passed。
+    - `test_broadcast.uya`：7/7 tests passed。
+    - `test_stride_views.uya`：13/13 tests passed。
+  - 备注：编译 `test_ufunc.uya` 时 storage 模块有一个既有的 C 指针类型警告（`assignment to 'int32_t *' from incompatible pointer type 'double *'`），不影响测试通过。
