@@ -27,10 +27,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 1: Shape、axis、size
 
-- [ ] TDD: `shape_from_slice`。
-  - rank 0 slice 创建 scalar。
-  - rank 16 成功。
-  - rank 17 返回 `NumuyaRankTooLarge`。
 - [ ] TDD: `shape_size`。
   - `(2, 3, 4)` size 是 24。
   - `(0, 3)` size 是 0。

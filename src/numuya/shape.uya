@@ -35,6 +35,21 @@ export fn shape3(dim0: usize, dim1: usize, dim2: usize) Shape {
     return Shape{ rank: 3, dims: dims };
 }
 
+export fn shape_from_slice(input_dims: &[usize]) !Shape {
+    if input_dims.len > NUMUYA_MAX_DIMS {
+        return error.NumuyaRankTooLarge;
+    }
+
+    var dims: [usize: NUMUYA_MAX_DIMS] = [0:NUMUYA_MAX_DIMS];
+    var i: usize = 0;
+    while i < input_dims.len {
+        dims[i] = input_dims[i];
+        i = i + 1;
+    }
+
+    return Shape{ rank: input_dims.len, dims: dims };
+}
+
 export fn shape_size(shape: Shape) usize {
     var size: usize = 1;
     var i: usize = 0;
