@@ -126,6 +126,37 @@ test "setn and get3 share contiguous indexing math" {
     try expect_close_f64(try valuen, 7.25, 1e-12);
 }
 
+test "set helpers reject read-only arrays" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var array1: Array<f64> = try make_array1(allocator, 4);
+    var array2: Array<f64> = try make_array2(allocator, 2, 3);
+    var array3: Array<f64> = try make_array3(allocator, 2, 2, 2);
+    var indices: [usize: 3] = [1, 0, 1];
+
+    array1.flags.writeable = false;
+    array2.flags.writeable = false;
+    array3.flags.writeable = false;
+
+    const set1_result: !void = set1<f64>(&array1, 0, 1.0);
+    match set1_result {
+        error.NumuyaReadOnly => {}
+        else => { return error.NumuyaExpectationFailed; }
+    }
+
+    const set2_result: !void = set2<f64>(&array2, 0, 1, 2.5);
+    match set2_result {
+        error.NumuyaReadOnly => {}
+        else => { return error.NumuyaExpectationFailed; }
+    }
+
+    const setn_result: !void = setn<f64>(&array3, indices[0:3], 7.25);
+    match setn_result {
+        error.NumuyaReadOnly => {}
+        else => { return error.NumuyaExpectationFailed; }
+    }
+}
+
 test "get helpers reject bounds and rank mismatches" {
     var malloc_allocator: MallocAllocator = MallocAllocator{};
     var allocator: IAllocator = malloc_allocator;

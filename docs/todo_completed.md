@@ -327,3 +327,13 @@
     - `make test-one TEST=src/numuya/_tests/test_indexing.uya`（先失败：`get helpers reject bounds and rank mismatches`，因 `getn` rank mismatch 返回 `NumuyaShapeMismatch`）
     - `make test-one TEST=src/numuya/_tests/test_indexing.uya`（通过）
     - `make test`（通过；`test_array_creation`、`test_indexing` 与其余当前默认单测全绿）
+
+## Phase 3: 创建数组与基础 get/set
+- [x] TDD: `set1/set2/setn`。
+  - 正常写后能读回。
+  - 只读 array 返回 `NumuyaReadOnly`。
+  - 验证：
+    - `make test-one TEST=src/numuya/_tests/test_indexing.uya`
+      - 结果：通过，6 tests passed。
+    - `make test`
+      - 结果：通过，`test_array_creation` 6 tests、`test_indexing` 6 tests、`test_shape` 8 tests、`test_storage` 7 tests、`test_testing_helpers` 2 tests。
