@@ -33,7 +33,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 17: Advanced indexing
 
-- [ ] TDD: `take` 1-D。
 - [ ] TDD: `take` axis 0/1。
 - [ ] TDD: boolean mask 1-D。
 - [ ] TDD: boolean mask shape mismatch。

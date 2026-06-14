@@ -1,6 +1,9 @@
 use array;
+use creation;
 use shape;
 use storage;
+
+use std.mem.allocator.IAllocator;
 
 const INDEXING_MAX_USIZE: usize = 18446744073709551615;
 
@@ -155,4 +158,33 @@ export fn setn<T>(array_value: &Array<T>, indices: &[usize], value: T) !void {
     const index: usize = try compute_physical_index<T>(array_value, indices);
     array_value.storage.data[index] = value;
     return;
+}
+
+export fn take<T>(allocator: IAllocator, array_value: &Array<T>, indices: &[usize], axis: isize) !Array<T> {
+    try validate_fixed_rank<T>(array_value, 1);
+
+    const normalized_axis: usize = try normalize_axis(axis, array_value.shape.rank);
+    if normalized_axis != 0 {
+        return error.NumuyaAxisOutOfBounds;
+    }
+
+    var result: Array<T> = try empty<T>(allocator, shape1(indices.len));
+    var source_index: [usize: 1] = [0];
+
+    var i: usize = 0;
+    while i < indices.len {
+        source_index[0] = indices[i];
+        const physical_index: usize = try compute_physical_index<T>(array_value, source_index[0:1]);
+        result.storage.data[i] = array_value.storage.data[physical_index];
+        i = i + 1;
+    }
+
+    storage_retain<T>(result.storage);
+    return Array<T>{
+        storage: result.storage,
+        offset: result.offset,
+        shape: result.shape,
+        strides: result.strides,
+        flags: result.flags,
+    };
 }

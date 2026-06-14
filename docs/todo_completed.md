@@ -216,3 +216,11 @@
   验证：
   `../uya/bin/uya check src/numuya/_tests/test_advanced_indexing.uya --manifest-path uya.toml` -> 通过
   `../uya/bin/uya test src/numuya/_tests/test_advanced_indexing.uya --manifest-path uya.toml` -> 1 passed, 0 failed
+
+## Phase 17: Advanced indexing
+
+- [x] TDD: `take` 1-D。
+  - 说明：新增 1-D `take` 测试，支持 rank-1 输入，按归一化后的 axis 选择并复制元素。
+  - 验证命令：`../uya/bin/uya test src/numuya/_tests/test_advanced_indexing.uya --manifest-path uya.toml` — 2/2 通过。
+  - 回归验证：`../uya/bin/uya test src/numuya/_tests/test_indexing.uya --manifest-path uya.toml` — 6/6 通过。
+  - 检查：`../uya/bin/uya check src/numuya/indexing.uya --manifest-path uya.toml` — checker 通过。

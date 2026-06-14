@@ -69,3 +69,19 @@ test "advanced indexing fixtures build reusable source arrays and masks" {
     try expect_eq_bool(try get2<bool>(&mask_matrix, 0, 1), false);
     try expect_eq_bool(try get2<bool>(&mask_matrix, 1, 2), true);
 }
+
+test "take selects 1-D elements into a new vector" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var vector: Array<f64> = try make_source_vector(allocator);
+    var indices: [usize: 4] = [4, 1, 4, 0];
+    var taken: Array<f64> = try take<f64>(allocator, &vector, indices[0:4], -1);
+    var expected_shape: [usize: 1] = [4];
+
+    try expect_shape_eq(taken.shape.dims[0:taken.shape.rank], expected_shape[0:1]);
+    try expect_eq_usize(array_size<f64>(&taken), 4);
+    try expect_close_f64(try get1<f64>(&taken, 0), 50.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&taken, 1), 20.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&taken, 2), 50.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&taken, 3), 10.0, 1e-12);
+}
