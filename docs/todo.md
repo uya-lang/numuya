@@ -35,9 +35,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 20: CUDA backend 基础
 
-- [ ] TDD: context current 规则。
-  - 任意 Driver API wrapper 调用前设置正确 context。
-  - 跨 backend stream 使用返回 `NumuyaDeviceMismatch`。
 - [ ] 验收：`src/numuya/_tests/test_cuda_driver.uya` 在本机 RTX 3060 上绿；没有 CUDA 时测试可标记 skip 或返回明确错误。
 
 ## Phase 21: CUDA DeviceArray 与拷贝

@@ -11,3 +11,4 @@ export error NumuyaNotContiguous;
 export error NumuyaSingularMatrix;
 export error NumuyaGpuUnavailable;
 export error NumuyaCudaError;
+export error NumuyaDeviceMismatch;

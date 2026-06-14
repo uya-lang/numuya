@@ -162,11 +162,11 @@ test "cuda_create_stream(0) returns non-zero handle when cuda is available" {
     try cuda_init();
     const ctx: usize = try cuda_create_context(0);
     defer cuda_destroy_context(ctx) catch {};
-    const stream: usize = try cuda_create_stream();
+    const stream: usize = try cuda_create_stream(ctx);
     if stream == 0 {
         return error.NumuyaExpectationFailed;
     }
-    try cuda_destroy_stream(stream);
+    try cuda_destroy_stream(ctx, stream);
 }
 
 test "cuda_synchronize_stream completes for a fresh stream" {
@@ -176,16 +176,37 @@ test "cuda_synchronize_stream completes for a fresh stream" {
     try cuda_init();
     const ctx: usize = try cuda_create_context(0);
     defer cuda_destroy_context(ctx) catch {};
-    const stream: usize = try cuda_create_stream();
-    defer cuda_destroy_stream(stream) catch {};
-    try cuda_synchronize_stream(stream);
+    const stream: usize = try cuda_create_stream(ctx);
+    defer cuda_destroy_stream(ctx, stream) catch {};
+    try cuda_synchronize_stream(ctx, stream);
+}
+
+test "cuda_synchronize_stream returns NumuyaDeviceMismatch for cross context stream" {
+    if !backend_is_cuda_available() {
+        return;
+    }
+    try cuda_init();
+    const ctx_a: usize = try cuda_create_context(0);
+    defer cuda_destroy_context(ctx_a) catch {};
+    const ctx_b: usize = try cuda_create_context(0);
+    defer cuda_destroy_context(ctx_b) catch {};
+    const stream_a: usize = try cuda_create_stream(ctx_a);
+    defer cuda_destroy_stream(ctx_a, stream_a) catch {};
+    const result: !void = cuda_synchronize_stream(ctx_b, stream_a);
+    match result {
+        error.NumuyaDeviceMismatch => {}
+        else => { return error.NumuyaExpectationFailed; }
+    }
 }
 
 test "cuda_destroy_stream returns error for null handle" {
     if !backend_is_cuda_available() {
         return;
     }
-    const result: !void = cuda_destroy_stream(0);
+    try cuda_init();
+    const ctx: usize = try cuda_create_context(0);
+    defer cuda_destroy_context(ctx) catch {};
+    const result: !void = cuda_destroy_stream(ctx, 0);
     match result {
         error.NumuyaInvalidArgument => {}
         error.NumuyaCudaError => {}
@@ -197,10 +218,37 @@ test "cuda_create_stream returns error when cuda is unavailable" {
     if backend_is_cuda_available() {
         return;
     }
-    const result: !usize = cuda_create_stream();
+    const result: !usize = cuda_create_stream(0);
     match result {
         error.NumuyaGpuUnavailable => {}
         error.NumuyaCudaError => {}
+        else => { return error.NumuyaExpectationFailed; }
+    }
+}
+
+test "backend_init with Cuda kind creates context and stream" {
+    if !backend_is_cuda_available() {
+        return;
+    }
+    var state: BackendState = try backend_init(BackendKind.Cuda);
+    if state.context == 0 || state.stream == 0 {
+        return error.NumuyaExpectationFailed;
+    }
+    try cuda_synchronize_stream(state.context, state.stream);
+    try backend_deinit(&state);
+}
+
+test "cross backend stream use returns NumuyaDeviceMismatch" {
+    if !backend_is_cuda_available() {
+        return;
+    }
+    var state_a: BackendState = try backend_init(BackendKind.Cuda);
+    defer backend_deinit(&state_a) catch {};
+    var state_b: BackendState = try backend_init(BackendKind.Cuda);
+    defer backend_deinit(&state_b) catch {};
+    const result: !void = cuda_synchronize_stream(state_b.context, state_a.stream);
+    match result {
+        error.NumuyaDeviceMismatch => {}
         else => { return error.NumuyaExpectationFailed; }
     }
 }

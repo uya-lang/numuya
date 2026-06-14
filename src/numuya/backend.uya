@@ -40,6 +40,8 @@ export fn backend_init(kind: BackendKind) !BackendState {
         BackendKind.Cuda => {
             try cuda_init();
             state.kind = BackendKind.Cuda;
+            state.context = try cuda_create_context(0);
+            state.stream = try cuda_create_stream(state.context);
         }
         BackendKind.Auto => {
             var cuda_ok: bool = true;
@@ -48,6 +50,8 @@ export fn backend_init(kind: BackendKind) !BackendState {
             };
             if cuda_ok {
                 state.kind = BackendKind.Cuda;
+                state.context = try cuda_create_context(0);
+                state.stream = try cuda_create_stream(state.context);
             } else {
                 state.kind = BackendKind.Cpu;
             }
@@ -61,6 +65,15 @@ export fn backend_init(kind: BackendKind) !BackendState {
 export fn backend_deinit(state: &BackendState) !void {
     if active_device_storage_count > 0 {
         return error.NumuyaInvalidArgument;
+    }
+
+    if state.kind == BackendKind.Cuda {
+        if state.stream != 0 {
+            cuda_destroy_stream(state.context, state.stream) catch {};
+        }
+        if state.context != 0 {
+            cuda_destroy_context(state.context) catch {};
+        }
     }
 
     state.kind = BackendKind.Auto;

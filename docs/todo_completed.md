@@ -516,3 +516,21 @@
   - 验证命令：`make test-cuda TEST=src/numuya/_tests/test_cuda_driver.uya`
   - 结果：18 tests passed, 0 failed
   - 改动文件：`src/numuya/cuda/driver.uya`、`src/numuya/cuda/driver_stub.c`、`src/numuya/_tests/test_cuda_driver.uya`
+
+## Phase 20: CUDA backend 基础
+
+- [x] TDD: context current 规则。
+  - 任意 Driver API wrapper 调用前设置正确 context。
+  - 跨 backend stream 使用返回 `NumuyaDeviceMismatch`。
+  - 新增错误：`src/numuya/errors.uya` 添加 `NumuyaDeviceMismatch`。
+  - 新增 Driver API：`src/numuya/cuda/driver.uya` 添加 `cuda_set_current_context`，并修改 `cuda_create_stream`/`cuda_synchronize_stream`/`cuda_destroy_stream` 为 context-aware API，调用前通过 stub 设置当前 context；跨 context stream 操作返回 `NumuyaDeviceMismatch`。
+  - 更新 stub：`src/numuya/cuda/driver_stub.c` 动态加载 `cuCtxSetCurrent`，维护 stream 到 context 的映射，在 stream 操作前 set current context 并检测 mismatch。
+  - 更新 backend：`src/numuya/backend.uya` 中 `backend_init(Cuda)`/`backend_init(Auto)` 创建 context 和 stream，`backend_deinit` 按正确顺序销毁 stream 和 context。
+  - 新增测试：`src/numuya/_tests/test_cuda_driver.uya` 添加：
+    - `cuda_synchronize_stream returns NumuyaDeviceMismatch for cross context stream`
+    - `backend_init with Cuda kind creates context and stream`
+    - `cross backend stream use returns NumuyaDeviceMismatch`
+  - 验证命令：
+    - `make test-cuda TEST=src/numuya/_tests/test_cuda_driver.uya` — 21/21 通过
+    - `make test-cuda-vendor TEST=src/numuya/_tests/test_cuda_driver.uya` — 21/21 通过
+    - `make test` — 非 CUDA 测试全绿，exit code 0
