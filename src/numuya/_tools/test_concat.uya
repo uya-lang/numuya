@@ -1,0 +1,4 @@
+export fn main() i32 {
+    const s: &const byte = "hello " "world\n" as &const byte;
+    return 0;
+}

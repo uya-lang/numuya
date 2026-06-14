@@ -1,0 +1,149 @@
+.version 7.8
+.target sm_86
+.address_size 64
+
+// NumUya core CUDA kernels for sm_86.
+// This file is the source-of-truth for device code.  It is embedded into
+// src/numuya/cuda/kernels_ptx.uya by src/numuya/_tools/embed_ptx.uya.
+// No .cu source or nvcc invocation is required for the TDD path.
+
+.visible .entry numuya_add_f64(
+    .param .u64 numuya_add_f64_param_0,
+    .param .u64 numuya_add_f64_param_1,
+    .param .u64 numuya_add_f64_param_2,
+    .param .u64 numuya_add_f64_param_3,
+    .param .u64 numuya_add_f64_param_4,
+    .param .u64 numuya_add_f64_param_5
+)
+{
+    .reg .u32   r32<4>;
+    .reg .u64   r64<9>;
+    .reg .f64   f64<3>;
+    .reg .pred  p;
+
+    ld.param.u64    r64_0, [numuya_add_f64_param_0];
+    ld.param.u64    r64_1, [numuya_add_f64_param_1];
+    ld.param.u64    r64_2, [numuya_add_f64_param_2];
+    ld.param.u64    r64_3, [numuya_add_f64_param_3];
+    ld.param.u64    r64_4, [numuya_add_f64_param_4];
+    ld.param.u64    r64_5, [numuya_add_f64_param_5];
+
+    mov.u32         r32_0, %tid.x;
+    cvt.u64.u32     r64_6, r32_0;
+    mov.u32         r32_1, %ctaid.x;
+    cvt.u64.u32     r64_7, r32_1;
+    mov.u32         r32_2, %ntid.x;
+    cvt.u64.u32     r64_8, r32_2;
+    mad.lo.u64      r64_6, r64_7, r64_8, r64_6;
+
+    setp.ge.u64     p, r64_6, r64_3;
+    @p bra          END;
+
+    mul.lo.u64      r64_7, r64_6, r64_4;
+    add.u64         r64_7, r64_1, r64_7;
+    ld.f64          f64_0, [r64_7];
+
+    mul.lo.u64      r64_7, r64_6, r64_5;
+    add.u64         r64_7, r64_2, r64_7;
+    ld.f64          f64_1, [r64_7];
+
+    add.f64         f64_2, f64_0, f64_1;
+
+    mul.lo.u64      r64_7, r64_6, 8;
+    add.u64         r64_7, r64_0, r64_7;
+    st.f64          [r64_7], f64_2;
+
+END:
+    ret;
+}
+
+.visible .entry numuya_mul_f64(
+    .param .u64 numuya_mul_f64_param_0,
+    .param .u64 numuya_mul_f64_param_1,
+    .param .u64 numuya_mul_f64_param_2,
+    .param .u64 numuya_mul_f64_param_3,
+    .param .u64 numuya_mul_f64_param_4,
+    .param .u64 numuya_mul_f64_param_5
+)
+{
+    .reg .u32   r32<4>;
+    .reg .u64   r64<9>;
+    .reg .f64   f64<3>;
+    .reg .pred  p;
+
+    ld.param.u64    r64_0, [numuya_mul_f64_param_0];
+    ld.param.u64    r64_1, [numuya_mul_f64_param_1];
+    ld.param.u64    r64_2, [numuya_mul_f64_param_2];
+    ld.param.u64    r64_3, [numuya_mul_f64_param_3];
+    ld.param.u64    r64_4, [numuya_mul_f64_param_4];
+    ld.param.u64    r64_5, [numuya_mul_f64_param_5];
+
+    mov.u32         r32_0, %tid.x;
+    cvt.u64.u32     r64_6, r32_0;
+    mov.u32         r32_1, %ctaid.x;
+    cvt.u64.u32     r64_7, r32_1;
+    mov.u32         r32_2, %ntid.x;
+    cvt.u64.u32     r64_8, r32_2;
+    mad.lo.u64      r64_6, r64_7, r64_8, r64_6;
+
+    setp.ge.u64     p, r64_6, r64_3;
+    @p bra          END;
+
+    mul.lo.u64      r64_7, r64_6, r64_4;
+    add.u64         r64_7, r64_1, r64_7;
+    ld.f64          f64_0, [r64_7];
+
+    mul.lo.u64      r64_7, r64_6, r64_5;
+    add.u64         r64_7, r64_2, r64_7;
+    ld.f64          f64_1, [r64_7];
+
+    mul.f64         f64_2, f64_0, f64_1;
+
+    mul.lo.u64      r64_7, r64_6, 8;
+    add.u64         r64_7, r64_0, r64_7;
+    st.f64          [r64_7], f64_2;
+
+END:
+    ret;
+}
+
+.visible .entry numuya_sum_all_f64(
+    .param .u64 numuya_sum_all_f64_param_0,
+    .param .u64 numuya_sum_all_f64_param_1,
+    .param .u64 numuya_sum_all_f64_param_2,
+    .param .u64 numuya_sum_all_f64_param_3
+)
+{
+    .reg .u32   r32<1>;
+    .reg .u64   r64<6>;
+    .reg .f64   f64<2>;
+    .reg .pred  p;
+
+    ld.param.u64    r64_0, [numuya_sum_all_f64_param_0];
+    ld.param.u64    r64_1, [numuya_sum_all_f64_param_1];
+    ld.param.u64    r64_2, [numuya_sum_all_f64_param_2];
+    ld.param.u64    r64_3, [numuya_sum_all_f64_param_3];
+
+    mov.u32         r32_0, %tid.x;
+    setp.ne.u32     p, r32_0, 0;
+    @p bra          END;
+
+    mov.f64         f64_0, 0D0000000000000000;
+    mov.u64         r64_4, 0;
+
+LOOP:
+    setp.ge.u64     p, r64_4, r64_2;
+    @p bra          DONE;
+    mul.lo.u64      r64_5, r64_4, r64_3;
+    add.u64         r64_5, r64_1, r64_5;
+    ld.f64          f64_1, [r64_5];
+    add.f64         f64_0, f64_0, f64_1;
+    add.u64         r64_4, r64_4, 1;
+    bra             LOOP;
+
+DONE:
+    st.f64          [r64_0], f64_0;
+
+END:
+    ret;
+}
