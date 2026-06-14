@@ -35,9 +35,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 22: CUDA ufunc 与 reduction
 
-- [ ] TDD: `make cuda-ptx-embed` 或等价命令。
-  - PTX 文本嵌入到 `kernels_ptx.uya`。
-  - 生成结果稳定可重复。
 - [ ] TDD: `make cuda-ptx-validate` 或等价命令。
   - `ptxas -arch=sm_86` 校验通过。
   - cubin cache 不是唯一 source-of-truth。

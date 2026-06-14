@@ -8,10 +8,13 @@ TESTS := $(sort $(wildcard src/numuya/_tests/test_*.uya))
 BENCH ?= src/numuya/_benchmarks/bench_simd.uya
 BENCHES := $(sort $(wildcard src/numuya/_benchmarks/bench_*.uya))
 
-.PHONY: bootstrap-upm upm-install test-one test test-cuda test-cuda-vendor check-one verify-upm-consumer require-upm bench
+.PHONY: bootstrap-upm upm-install test-one test test-cuda test-cuda-vendor check-one verify-upm-consumer require-upm bench cuda-ptx-embed
 
 require-upm:
 	@test -x "$(UPM)" || { echo "missing executable $(UPM)"; exit 1; }
+
+cuda-ptx-embed: require-upm
+	$(UYA) run src/numuya/_tools/embed_ptx.uya --manifest-path $(MANIFEST)
 
 bootstrap-upm: require-upm
 	$(UPM) install --manifest-path $(MANIFEST)

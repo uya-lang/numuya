@@ -703,3 +703,18 @@
 
 - [x] 实现 `src/numuya/cuda/module.uya` 和 `kernels.uya`。
   - 验证：`../uya/bin/uya check src/numuya/cuda/module.uya --manifest-path uya.toml` 与 `../uya/bin/uya check src/numuya/cuda/kernels.uya --manifest-path uya.toml` 类型检查通过；`../uya/bin/uya test src/numuya/_tests/test_cuda_module.uya --manifest-path uya.toml` 4/4 通过。
+
+## Phase 22: CUDA ufunc 与 reduction
+
+- [x] TDD: `make cuda-ptx-embed` 或等价命令。
+  - PTX 文本嵌入到 `kernels_ptx.uya`。
+  - 生成结果稳定可重复。
+  - 实现：`Makefile` 新增 `.PHONY` 目标 `cuda-ptx-embed`，调用 `../uya/bin/uya run src/numuya/_tools/embed_ptx.uya --manifest-path uya.toml`。
+  - 测试：`src/numuya/_tests/test_ptx_embed.uya` 新增 3 个测试：
+    - `make cuda-ptx-embed succeeds`
+    - `embedded PTX begins with .version 7.8`
+    - `embedded PTX contains expected kernel entries`
+  - 验证命令：
+    - `../uya/bin/uya test src/numuya/_tests/test_ptx_embed.uya --manifest-path uya.toml` — 3/3 通过
+    - `make test` — 全部非 CUDA 测试文件通过
+    - `make cuda-ptx-embed` 连续运行两次，`src/numuya/cuda/kernels_ptx.uya` sha256 均为 `26ae5abe809388639964a6b752f32e126760c7e9e606eb3f08a8d3a4841b0787`

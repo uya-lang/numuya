@@ -1,0 +1,53 @@
+use cuda.driver;
+use cuda.kernels;
+use libc.system;
+use std.string.strlen;
+
+test "make cuda-ptx-embed succeeds" {
+    const result: i32 = system("make cuda-ptx-embed 2>&1" as &const byte);
+    if result != 0 {
+        return error.NumuyaExpectationFailed;
+    }
+}
+
+test "embedded PTX begins with .version 7.8" {
+    const ptx: &const byte = core_sm86_ptx();
+    const expected: &const byte = ".version 7.8" as &const byte;
+    var i: usize = 0;
+    while i < 12 {
+        if ptx[i] != expected[i] {
+            return error.NumuyaExpectationFailed;
+        }
+        i = i + 1;
+    }
+}
+
+test "embedded PTX contains expected kernel entries" {
+    const ptx: &const byte = core_sm86_ptx();
+    if ptx[0] == 0 {
+        return error.NumuyaExpectationFailed;
+    }
+    // Simple substring search for numuya_add_f64.
+    const needle: &const byte = ".entry numuya_add_f64" as &const byte;
+    const ptx_len: usize = strlen(ptx);
+    var i: usize = 0;
+    var found: bool = false;
+    while i + 21 < ptx_len && !found {
+        var j: usize = 0;
+        var is_match: bool = true;
+        while j < 21 {
+            if ptx[i + j] != needle[j] {
+                is_match = false;
+                break;
+            }
+            j = j + 1;
+        }
+        if is_match {
+            found = true;
+        }
+        i = i + 1;
+    }
+    if !found {
+        return error.NumuyaExpectationFailed;
+    }
+}
