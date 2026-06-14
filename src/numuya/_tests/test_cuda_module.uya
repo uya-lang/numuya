@@ -1,0 +1,41 @@
+use cuda.driver;
+use cuda.kernels;
+use cuda.module;
+use errors;
+
+test "core_sm86_ptx returns a non-empty placeholder" {
+    const ptx: &const byte = core_sm86_ptx();
+    if ptx[0] == 0 {
+        return error.NumuyaExpectationFailed;
+    }
+}
+
+test "kernel name constants are non-empty" {
+    if ADD_F64_KERNEL[0] == 0 {
+        return error.NumuyaExpectationFailed;
+    }
+    if MUL_F64_KERNEL[0] == 0 {
+        return error.NumuyaExpectationFailed;
+    }
+    if SUM_ALL_F64_KERNEL[0] == 0 {
+        return error.NumuyaExpectationFailed;
+    }
+}
+
+test "cuda_kernels_load returns unavailable or error when cuda is absent" {
+    const result: !usize = cuda_kernels_load(0);
+    match result {
+        error.NumuyaGpuUnavailable => {}
+        error.NumuyaCudaError => {}
+        else => { return error.NumuyaExpectationFailed; }
+    }
+}
+
+test "cuda_module_get_function returns unavailable or error when cuda is absent" {
+    const result: !usize = cuda_module_get_function(0, ADD_F64_KERNEL);
+    match result {
+        error.NumuyaGpuUnavailable => {}
+        error.NumuyaCudaError => {}
+        else => { return error.NumuyaExpectationFailed; }
+    }
+}

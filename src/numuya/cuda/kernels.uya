@@ -1,0 +1,17 @@
+use cuda.module;
+
+export const ADD_F64_KERNEL: &const byte = "numuya_add_f64" as &const byte;
+export const MUL_F64_KERNEL: &const byte = "numuya_mul_f64" as &const byte;
+export const SUM_ALL_F64_KERNEL: &const byte = "numuya_sum_all_f64" as &const byte;
+
+// Placeholder PTX source-of-truth for sm_86. This module currently holds a
+// syntactically valid PTX skeleton so that `uya check` passes and the loading
+// pipeline can be exercised in follow-up tasks. Real kernels will be embedded
+// here once `src/numuya/cuda/ptx/core_sm86.ptx` and the embed tool are created.
+export fn core_sm86_ptx() &const byte {
+    return ".version 7.8\n.target sm_86\n.address_size 64\n" as &const byte;
+}
+
+export fn cuda_kernels_load(context: usize) !usize {
+    return cuda_module_load_ptx(context, core_sm86_ptx());
+}

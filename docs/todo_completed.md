@@ -698,3 +698,8 @@
 - [x] 写 `src/numuya/_tests/test_cuda_reductions.uya`。
   - 验证命令：`../uya/bin/uya test src/numuya/_tests/test_cuda_reductions.uya --manifest-path uya.toml`
   - 结果：编译失败，符合 TDD 预期。核心错误为 `test_cuda_reductions.uya:(7:1): 错误: 模块中未找到导出项`，即 `cuda.reductions` 模块尚未实现；后续实现该模块后测试应通过。
+
+## Phase 22: CUDA ufunc 与 reduction
+
+- [x] 实现 `src/numuya/cuda/module.uya` 和 `kernels.uya`。
+  - 验证：`../uya/bin/uya check src/numuya/cuda/module.uya --manifest-path uya.toml` 与 `../uya/bin/uya check src/numuya/cuda/kernels.uya --manifest-path uya.toml` 类型检查通过；`../uya/bin/uya test src/numuya/_tests/test_cuda_module.uya --manifest-path uya.toml` 4/4 通过。

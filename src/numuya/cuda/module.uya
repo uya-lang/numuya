@@ -1,0 +1,77 @@
+use errors;
+
+export error NumuyaCudaModuleError;
+
+extern fn numuya_cuda_module_load_ptx(context: usize, ptx: &const byte, module: &usize) i32;
+extern fn numuya_cuda_module_get_function(module: usize, name: &const byte, func: &usize) i32;
+extern fn numuya_cuda_module_unload(module: usize) i32;
+extern fn numuya_cuda_launch_kernel(
+    func: usize,
+    grid_dim_x: u32, grid_dim_y: u32, grid_dim_z: u32,
+    block_dim_x: u32, block_dim_y: u32, block_dim_z: u32,
+    shared_mem_bytes: u32,
+    stream: usize,
+    args: &usize
+) i32;
+
+export fn cuda_module_load_ptx(context: usize, ptx: &const byte) !usize {
+    var module: usize = 0;
+    const status: i32 = numuya_cuda_module_load_ptx(context, ptx, &module);
+    if status == 0 {
+        return module;
+    } else if status == 1 {
+        return error.NumuyaGpuUnavailable;
+    } else {
+        return error.NumuyaCudaError;
+    }
+}
+
+export fn cuda_module_get_function(module: usize, name: &const byte) !usize {
+    var func: usize = 0;
+    const status: i32 = numuya_cuda_module_get_function(module, name, &func);
+    if status == 0 {
+        return func;
+    } else if status == 1 {
+        return error.NumuyaGpuUnavailable;
+    } else {
+        return error.NumuyaCudaError;
+    }
+}
+
+export fn cuda_module_unload(module: usize) !void {
+    if module == 0 {
+        return;
+    }
+    const status: i32 = numuya_cuda_module_unload(module);
+    if status == 0 {
+        return;
+    } else if status == 1 {
+        return error.NumuyaGpuUnavailable;
+    } else {
+        return error.NumuyaCudaError;
+    }
+}
+
+export fn cuda_launch_kernel(
+    func: usize,
+    grid_dim_x: u32, grid_dim_y: u32, grid_dim_z: u32,
+    block_dim_x: u32, block_dim_y: u32, block_dim_z: u32,
+    shared_mem_bytes: u32,
+    stream: usize,
+    args: &usize
+) !void {
+    const status: i32 = numuya_cuda_launch_kernel(
+        func,
+        grid_dim_x, grid_dim_y, grid_dim_z,
+        block_dim_x, block_dim_y, block_dim_z,
+        shared_mem_bytes,
+        stream,
+        args);
+    if status == 0 {
+        return;
+    } else if status == 1 {
+        return error.NumuyaGpuUnavailable;
+    } else {
+        return error.NumuyaCudaError;
+    }
+}
