@@ -25,10 +25,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 - 外部 consumer fixture 才使用 `use numuya.*`，用于验证其他项目通过 UPM 使用 NumUya。
 - `_tests`、`_tools`、`_benchmarks` 是内部模块，外部 consumer fixture 不得导入 `numuya._tests.*`、`numuya._tools.*` 或 `numuya._benchmarks.*`。
 
-## Phase 0: 脚手架与测试基础
-
-- [ ] 验收：`src/numuya/_tests/test_testing_helpers.uya` 绿，外部 UPM consumer fixture 绿。
-
 ## Phase 1: Shape、axis、size
 
 - [ ] 写 `src/numuya/_tests/test_shape.uya`。

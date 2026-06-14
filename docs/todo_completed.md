@@ -81,3 +81,9 @@
     - `../uya/bin/uya check tests/fixtures/upm_consumer/src/main.uya --manifest-path tests/fixtures/upm_consumer/uya.toml`：通过。
     - `../uya/bin/uya test tests/fixtures/upm_consumer/src/main.uya --manifest-path tests/fixtures/upm_consumer/uya.toml`：通过，1 个测试通过，0 个失败。
     - `../uya/bin/uya test src/numuya/_tests/test_testing_helpers.uya --manifest-path uya.toml`：通过，2 个测试 OK。
+
+## Phase 0: 脚手架与测试基础
+
+- [x] 验收：`src/numuya/_tests/test_testing_helpers.uya` 绿，外部 UPM consumer fixture 绿。
+  - 验证：`make test-one TEST=src/numuya/_tests/test_testing_helpers.uya` 通过（2 tests passed）。
+  - 验证：`make verify-upm-consumer` 通过（UPM install、consumer check、consumer run 均成功）。
