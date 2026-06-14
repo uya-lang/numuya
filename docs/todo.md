@@ -33,7 +33,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 16: `.npy` I/O
 
-- [ ] 实现 `src/numuya/io_npy.uya`。
 - [ ] TDD: `load_npy_f64`。
   - magic/header 解析。
   - shape 正确。

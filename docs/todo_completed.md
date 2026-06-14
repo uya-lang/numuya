@@ -168,3 +168,13 @@
     - `python3 tests/fixtures/npy/generate.py` -> exit 0。
     - `python3 tests/fixtures/npy/verify.py` -> `verified 3 npy fixtures`。
     - `make test-one TEST=src/numuya/_tests/test_io_npy.uya` -> 3 个测试通过。
+
+## Phase 16: `.npy` I/O
+
+- [x] 实现 `src/numuya/io_npy.uya`。
+  - 产物：
+    - `src/numuya/io_npy.uya`
+  - 验证：
+    - `../uya/bin/uya check src/numuya/io_npy.uya --manifest-path uya.toml` -> checker 通过。
+    - `make test-one TEST=src/numuya/_tests/test_io_npy.uya` -> 4 个测试通过。
+    - `make test-one TEST=src/numuya/_tests/test_shape.uya` -> 8 个测试通过。

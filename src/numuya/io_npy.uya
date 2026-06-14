@@ -1,0 +1,79 @@
+use shape;
+
+const NPY_HEADER_ALIGNMENT: usize = 16;
+const NPY_V1_HEADER_LEN_BYTES: usize = 2;
+const NPY_V2_HEADER_LEN_BYTES: usize = 4;
+
+struct NpyVersion {
+    major: byte,
+    minor: byte,
+}
+
+struct NpyArrayMetadata {
+    version: NpyVersion,
+    fortran_order: bool,
+    shape: Shape,
+}
+
+fn npy_magic_byte(index: usize) !byte {
+    if index == 0 {
+        return (147 as! byte).value;
+    }
+    if index == 1 {
+        return (78 as! byte).value;
+    }
+    if index == 2 {
+        return (85 as! byte).value;
+    }
+    if index == 3 {
+        return (77 as! byte).value;
+    }
+    if index == 4 {
+        return (80 as! byte).value;
+    }
+    if index == 5 {
+        return (89 as! byte).value;
+    }
+    return error.NumuyaIndexOutOfBounds;
+}
+
+fn npy_header_len_size(version: &NpyVersion) !usize {
+    if version.major == (1 as byte) && version.minor == (0 as byte) {
+        return NPY_V1_HEADER_LEN_BYTES;
+    }
+    if version.major == (2 as byte) && version.minor == (0 as byte) {
+        return NPY_V2_HEADER_LEN_BYTES;
+    }
+    return error.NumuyaInvalidArgument;
+}
+
+fn npy_header_padding(prefix_len: usize, header_len: usize) usize {
+    const total: usize = prefix_len + header_len + 1;
+    const remainder: usize = total % NPY_HEADER_ALIGNMENT;
+    if remainder == 0 {
+        return 0;
+    }
+    return NPY_HEADER_ALIGNMENT - remainder;
+}
+
+fn npy_validate_c_order(metadata: &NpyArrayMetadata) !void {
+    if metadata.fortran_order == true {
+        return error.NumuyaInvalidArgument;
+    }
+    return;
+}
+
+fn npy_shape_size(metadata: &NpyArrayMetadata) !usize {
+    return shape_size(metadata.shape);
+}
+
+fn npy_empty_metadata() NpyArrayMetadata {
+    return NpyArrayMetadata{
+        version: NpyVersion{
+            major: 0 as byte,
+            minor: 0 as byte,
+        },
+        fortran_order: false,
+        shape: shape_scalar(),
+    };
+}

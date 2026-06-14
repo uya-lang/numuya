@@ -1,6 +1,7 @@
 use array;
 use creation;
 use indexing;
+use io_npy;
 use shape;
 use testing.expect_close_f64;
 use testing.expect_eq_usize;
@@ -10,6 +11,9 @@ use std.mem.allocator.IAllocator;
 use std.mem.allocator.MallocAllocator;
 
 const NPY_F64_TOLERANCE: f64 = 1e-12;
+
+test "io_npy test file imports io_npy module" {
+}
 
 fn expect_array1_close_f64(actual: &Array<f64>, expected_values: &[f64]) !void {
     try expect_eq_usize(actual.shape.rank, 1);
