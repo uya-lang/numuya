@@ -35,10 +35,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 21: CUDA DeviceArray 与拷贝
 
-- [ ] TDD: memory pool 统计。
-  - alloc 后 used 增加。
-  - free 后 used 减少。
-  - 真实 allocation 改变 `live_allocations`，view retain/drop 不改变。
 - [ ] 验收：`src/numuya/_tests/test_cuda_device_array.uya` 绿。
 
 ## Phase 22: CUDA ufunc 与 reduction

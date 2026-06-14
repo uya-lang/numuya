@@ -13,6 +13,7 @@ export struct AllocationNode {
 export struct MemoryPool {
     budget_bytes: usize,
     used_bytes: usize,
+    live_allocations: usize,
     allocations: &AllocationNode,
 }
 
@@ -22,12 +23,17 @@ export fn memory_pool_new(budget_bytes: usize) MemoryPool {
     return MemoryPool{
         budget_bytes: budget_bytes,
         used_bytes: 0,
+        live_allocations: 0,
         allocations: null,
     };
 }
 
 export fn memory_pool_used_bytes(pool: &MemoryPool) usize {
     return pool.used_bytes;
+}
+
+export fn memory_pool_live_allocations(pool: &MemoryPool) usize {
+    return pool.live_allocations;
 }
 
 export fn cuda_malloc(pool: &MemoryPool, size: usize) !&byte {
@@ -58,6 +64,7 @@ export fn cuda_malloc(pool: &MemoryPool, size: usize) !&byte {
     };
     pool.allocations = node;
     pool.used_bytes = pool.used_bytes + size;
+    pool.live_allocations = pool.live_allocations + 1;
     return ptr as &byte;
 }
 
@@ -77,6 +84,7 @@ export fn cuda_free(pool: &MemoryPool, ptr: &byte) !void {
                 prev.next = current.next;
             }
             pool.used_bytes = pool.used_bytes - current.size;
+            pool.live_allocations = pool.live_allocations - 1;
             try cuda_driver_free(target);
             var allocator: IAllocator = global_malloc_allocator;
             allocator.dealloc(current as &byte);

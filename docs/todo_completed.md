@@ -657,3 +657,11 @@
     - `device_array_view` 继承 strides/flags 并将 `owns_data` 置为 `false`。
     - 更新 `device_array_new`、`device_empty_f64`、`device_zeros_f64`、`device_array_from_host`、`device_array_view` 以填充新字段。
     - 在 `test_cuda_device_array.uya` 新增 4 个测试覆盖 owner/view/zeros/empty 的 strides 与 flags 一致性。
+
+## Phase 21: CUDA DeviceArray 与拷贝
+
+- [x] TDD: memory pool 统计。
+  - alloc 后 used 增加。
+  - free 后 used 减少。
+  - 真实 allocation 改变 `live_allocations`，view retain/drop 不改变。
+  - 验证：`../uya/bin/uya test src/numuya/_tests/test_cuda_device_array.uya --manifest-path uya.toml` 通过 16/16（CUDA 不可用时测试 early-return，但仍编译链接并执行通过）。
