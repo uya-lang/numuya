@@ -89,12 +89,18 @@ export fn empty<T>(allocator: IAllocator, shape_value: Shape) !Array<T> {
     return make_owned_array<T>(storage_value, shape_value);
 }
 
-fn fill_all_f64(array_value: &Array<f64>, value: f64) void {
+fn fill_all<T>(array_value: &Array<T>, value: T) void {
     var i: usize = 0;
     while i < array_value.storage.len {
         array_value.storage.data[i] = value;
         i = i + 1;
     }
+}
+
+export fn full<T>(allocator: IAllocator, shape_value: Shape, value: T) !Array<T> {
+    var array_value: Array<T> = try empty<T>(allocator, shape_value);
+    fill_all<T>(&array_value, value);
+    return array_value;
 }
 
 export fn zeros_f64(allocator: IAllocator, shape_value: Shape) !Array<f64> {
@@ -108,7 +114,6 @@ export fn ones_f64(allocator: IAllocator, shape_value: Shape) !Array<f64> {
 }
 
 export fn full_f64(allocator: IAllocator, shape_value: Shape, value: f64) !Array<f64> {
-    var array_value: Array<f64> = try empty<f64>(allocator, shape_value);
-    fill_all_f64(&array_value, value);
+    const array_value: Array<f64> = try full<f64>(allocator, shape_value, value);
     return array_value;
 }

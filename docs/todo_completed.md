@@ -273,3 +273,16 @@
     - `make test-one TEST=src/numuya/_tests/test_shape.uya`：通过。
     - `make test-one TEST=src/numuya/_tests/test_storage.uya`：通过。
     - `make test-one TEST=src/numuya/_tests/test_testing_helpers.uya`：通过。
+
+## Phase 3: 创建数组与基础 get/set
+
+- [x] TDD: `full<T>`。
+  - `full_f64(shape2(2, 3), 7.5)` 六个元素都是 7.5。
+  - 验证：
+    - `make test-one TEST=src/numuya/_tests/test_array_creation.uya`（先失败：`try full<f64>(...)` 报错“try 的操作数必须是错误联合类型 !T”）
+    - `make test-one TEST=src/numuya/_tests/test_array_creation.uya`（通过，4/4 tests passed）
+    - `make test`（在既有后续测试 `src/numuya/_tests/test_indexing.uya` 失败；链接错误 `set1_f64/get1_f64/set2_f64/get2_f64/getn_f64/setn_f64/get3_f64` 未定义，属后续 todo，非本任务回归）
+    - `make test-one TEST=src/numuya/_tests/test_testing_helpers.uya`（通过，2/2 tests passed）
+    - `make test-one TEST=src/numuya/_tests/test_shape.uya`（通过，8/8 tests passed）
+    - `make test-one TEST=src/numuya/_tests/test_storage.uya`（通过，7/7 tests passed）
+    - `make test-one TEST=src/numuya/_tests/test_array_creation.uya`（通过，4/4 tests passed）
