@@ -520,3 +520,116 @@ export fn solve_f64(a: &Array<f64>, b: &Array<f64>) !Array<f64> {
     x.storage = null;
     return Array<f64>{ storage: out_storage, offset: out_offset, shape: out_shape, strides: out_strides, flags: out_flags };
 }
+
+@c_import("math_stub.c", "", "-lm");
+
+extern "libc" fn sqrt(x: f64) f64;
+
+export struct QRResult {
+    q: Array<f64>,
+    r: Array<f64>,
+}
+
+fn require_qr_args(a: &Array<f64>) !void {
+    if a.shape.rank != 2 {
+        return error.NumuyaInvalidArgument;
+    }
+    if a.shape.dims[0] < a.shape.dims[1] {
+        return error.NumuyaInvalidArgument;
+    }
+}
+
+export fn qr_f64(a: &Array<f64>) !QRResult {
+    try require_qr_args(a);
+    const m: usize = a.shape.dims[0];
+    const n: usize = a.shape.dims[1];
+
+    var work: Array<f64> = try empty<f64>(a.storage.allocator, shape2(m, n));
+    var row: usize = 0;
+    while row < m {
+        var col: usize = 0;
+        while col < n {
+            work.storage.data[row * n + col] = try get2<f64>(a, row, col);
+            col = col + 1;
+        }
+        row = row + 1;
+    }
+
+    var q: Array<f64> = try empty<f64>(a.storage.allocator, shape2(m, n));
+    var r: Array<f64> = try empty<f64>(a.storage.allocator, shape2(n, n));
+
+    var idx: usize = 0;
+    while idx < m * n {
+        q.storage.data[idx] = 0.0;
+        idx = idx + 1;
+    }
+    idx = 0;
+    while idx < n * n {
+        r.storage.data[idx] = 0.0;
+        idx = idx + 1;
+    }
+
+    const SINGULAR_EPS: f64 = 1e-15;
+
+    var i: usize = 0;
+    while i < n {
+        var norm_sq: f64 = 0.0;
+        row = 0;
+        while row < m {
+            const val: f64 = work.storage.data[row * n + i];
+            norm_sq = norm_sq + val * val;
+            row = row + 1;
+        }
+        const norm: f64 = sqrt(norm_sq);
+
+        if norm < SINGULAR_EPS {
+            return error.NumuyaSingularMatrix;
+        }
+
+        r.storage.data[i * n + i] = norm;
+
+        row = 0;
+        while row < m {
+            q.storage.data[row * n + i] = work.storage.data[row * n + i] / norm;
+            row = row + 1;
+        }
+
+        var j: usize = i + 1;
+        while j < n {
+            var dot_prod: f64 = 0.0;
+            row = 0;
+            while row < m {
+                dot_prod = dot_prod + q.storage.data[row * n + i] * work.storage.data[row * n + j];
+                row = row + 1;
+            }
+            r.storage.data[i * n + j] = dot_prod;
+
+            row = 0;
+            while row < m {
+                work.storage.data[row * n + j] = work.storage.data[row * n + j] - dot_prod * q.storage.data[row * n + i];
+                row = row + 1;
+            }
+            j = j + 1;
+        }
+        i = i + 1;
+    }
+
+    const q_storage: &Storage<f64> = q.storage;
+    const q_offset: isize = q.offset;
+    const q_shape: Shape = q.shape;
+    const q_strides: Strides = q.strides;
+    const q_flags: ArrayFlags = q.flags;
+    q.storage = null;
+
+    const r_storage: &Storage<f64> = r.storage;
+    const r_offset: isize = r.offset;
+    const r_shape: Shape = r.shape;
+    const r_strides: Strides = r.strides;
+    const r_flags: ArrayFlags = r.flags;
+    r.storage = null;
+
+    return QRResult{
+        q: Array<f64>{ storage: q_storage, offset: q_offset, shape: q_shape, strides: q_strides, flags: q_flags },
+        r: Array<f64>{ storage: r_storage, offset: r_offset, shape: r_shape, strides: r_strides, flags: r_flags },
+    };
+}

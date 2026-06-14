@@ -33,7 +33,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 13: Linear algebra advanced
 
-- [ ] TDD: `qr_f64`。
 - [ ] TDD: `svd_f64`。
 - [ ] 验收：advanced linalg tests 绿。
 
