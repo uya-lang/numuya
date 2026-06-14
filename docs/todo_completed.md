@@ -605,3 +605,22 @@
     - 8 tests passed, 0 failed（含新增 `device_array owner and view drop releases buffer exactly once`）。
     - `make test-one TEST=src/numuya/_tests/test_cuda_driver.uya`
     - 21 tests passed, 0 failed。
+
+## Phase 21: CUDA DeviceArray 与拷贝
+
+- [x] TDD: H2D/D2H copy。
+  - host `Array<f64>` -> `DeviceArray<f64>` -> host。
+  - 数据逐元素一致。
+  - stream synchronize 后结果稳定。
+  - 实现：
+    - `src/numuya/cuda/driver_stub.c` 动态加载 `cuMemcpyHtoDAsync_v2` / `cuMemcpyDtoHAsync_v2`。
+    - `src/numuya/cuda/driver.uya` 导出 `cuda_memcpy_htod_async` / `cuda_memcpy_dtoh_async`。
+    - `src/numuya/cuda/device_array.uya` 为 `DeviceArray<T>` 增加 `context` / `stream` 字段；`device_array_from_host` / `device_array_to_host` 改用异步拷贝并在返回前 `cuda_synchronize_stream`。
+    - `src/numuya/_tests/test_cuda_device_array.uya` 更新 `device_array_new` 调用并新增显式 stream synchronize 后的逐元素断言。
+  - 验证：
+    ```bash
+    TEST=src/numuya/_tests/test_cuda_device_array.uya make test-one
+    make test-cuda
+    make test
+    ```
+  - 结果：聚焦测试 8/8 通过；CUDA 测试套件 29/29 通过；非 CUDA 测试套件全部通过。

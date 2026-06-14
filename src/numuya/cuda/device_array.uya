@@ -79,19 +79,23 @@ export struct DeviceArray<T> {
     storage: &DeviceStorage<T>,
     offset: usize,
     shape: Shape,
+    context: usize,
+    stream: usize,
 
     fn drop(self: DeviceArray<T>) void {
         device_storage_release<T>(self.storage);
     }
 }
 
-export fn device_array_new<T>(pool: &MemoryPool, shape_value: Shape) !DeviceArray<T> {
+export fn device_array_new<T>(pool: &MemoryPool, shape_value: Shape, context: usize, stream: usize) !DeviceArray<T> {
     const len: usize = try shape_size(shape_value);
     const storage_value: &DeviceStorage<T> = try device_storage_new<T>(pool, len);
     return DeviceArray<T>{
         storage: storage_value,
         offset: 0,
         shape: shape_value,
+        context: context,
+        stream: stream,
     };
 }
 
@@ -101,14 +105,17 @@ export fn device_array_view<T>(array_value: &DeviceArray<T>) DeviceArray<T> {
         storage: array_value.storage,
         offset: array_value.offset,
         shape: array_value.shape,
+        context: array_value.context,
+        stream: array_value.stream,
     };
 }
 
-export fn device_array_from_host<T>(pool: &MemoryPool, host_array: &Array<T>) !DeviceArray<T> {
-    const device: DeviceArray<T> = try device_array_new<T>(pool, host_array.shape);
+export fn device_array_from_host<T>(pool: &MemoryPool, host_array: &Array<T>, context: usize, stream: usize) !DeviceArray<T> {
+    var device: DeviceArray<T> = try device_array_new<T>(pool, host_array.shape, context, stream);
     const bytes: usize = element_size_of<T>() * device.storage.len;
     const host_ptr: &byte = host_array.storage.data as &byte;
-    try cuda_memcpy_htod(device.storage.ptr as usize, host_ptr, bytes);
+    try cuda_memcpy_htod_async(device.storage.ptr as usize, host_ptr, bytes, stream);
+    try cuda_synchronize_stream(context, stream);
     return device;
 }
 
@@ -116,6 +123,7 @@ export fn device_array_to_host<T>(allocator: IAllocator, device_array_value: &De
     var host_array: Array<T> = try empty<T>(allocator, device_array_value.shape);
     const bytes: usize = element_size_of<T>() * device_array_value.storage.len;
     const host_ptr: &byte = host_array.storage.data as &byte;
-    try cuda_memcpy_dtoh(host_ptr, device_array_value.storage.ptr as usize, bytes);
+    try cuda_memcpy_dtoh_async(host_ptr, device_array_value.storage.ptr as usize, bytes, device_array_value.stream);
+    try cuda_synchronize_stream(device_array_value.context, device_array_value.stream);
     return host_array;
 }

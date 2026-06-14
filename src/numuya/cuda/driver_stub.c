@@ -35,6 +35,8 @@ typedef CUresult (*numuya_cuMemAlloc_t)(size_t*, size_t);
 typedef CUresult (*numuya_cuMemFree_t)(size_t);
 typedef CUresult (*numuya_cuMemcpyHtoD_t)(size_t, const void*, size_t);
 typedef CUresult (*numuya_cuMemcpyDtoH_t)(void*, size_t, size_t);
+typedef CUresult (*numuya_cuMemcpyHtoDAsync_t)(size_t, const void*, size_t, CUstream);
+typedef CUresult (*numuya_cuMemcpyDtoHAsync_t)(void*, size_t, size_t, CUstream);
 
 #define NUMUYA_CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR 75
 #define NUMUYA_CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MINOR 76
@@ -54,6 +56,8 @@ static numuya_cuMemAlloc_t numuya_pfn_cuMemAlloc = NULL;
 static numuya_cuMemFree_t numuya_pfn_cuMemFree = NULL;
 static numuya_cuMemcpyHtoD_t numuya_pfn_cuMemcpyHtoD = NULL;
 static numuya_cuMemcpyDtoH_t numuya_pfn_cuMemcpyDtoH = NULL;
+static numuya_cuMemcpyHtoDAsync_t numuya_pfn_cuMemcpyHtoDAsync = NULL;
+static numuya_cuMemcpyDtoHAsync_t numuya_pfn_cuMemcpyDtoHAsync = NULL;
 
 static void* numuya_current_context = NULL;
 
@@ -148,6 +152,14 @@ static int numuya_cuda_load(void) {
     if (numuya_pfn_cuMemcpyDtoH == NULL) {
         numuya_pfn_cuMemcpyDtoH = (numuya_cuMemcpyDtoH_t)dlsym(numuya_cuda_handle, "cuMemcpyDtoH");
     }
+    numuya_pfn_cuMemcpyHtoDAsync = (numuya_cuMemcpyHtoDAsync_t)dlsym(numuya_cuda_handle, "cuMemcpyHtoDAsync_v2");
+    if (numuya_pfn_cuMemcpyHtoDAsync == NULL) {
+        numuya_pfn_cuMemcpyHtoDAsync = (numuya_cuMemcpyHtoDAsync_t)dlsym(numuya_cuda_handle, "cuMemcpyHtoDAsync");
+    }
+    numuya_pfn_cuMemcpyDtoHAsync = (numuya_cuMemcpyDtoHAsync_t)dlsym(numuya_cuda_handle, "cuMemcpyDtoHAsync_v2");
+    if (numuya_pfn_cuMemcpyDtoHAsync == NULL) {
+        numuya_pfn_cuMemcpyDtoHAsync = (numuya_cuMemcpyDtoHAsync_t)dlsym(numuya_cuda_handle, "cuMemcpyDtoHAsync");
+    }
 
     if (numuya_pfn_cuInit == NULL ||
         numuya_pfn_cuDeviceGet == NULL ||
@@ -162,7 +174,9 @@ static int numuya_cuda_load(void) {
         numuya_pfn_cuMemAlloc == NULL ||
         numuya_pfn_cuMemFree == NULL ||
         numuya_pfn_cuMemcpyHtoD == NULL ||
-        numuya_pfn_cuMemcpyDtoH == NULL) {
+        numuya_pfn_cuMemcpyDtoH == NULL ||
+        numuya_pfn_cuMemcpyHtoDAsync == NULL ||
+        numuya_pfn_cuMemcpyDtoHAsync == NULL) {
         return NUMUYA_CUDA_UNAVAILABLE;
     }
 
@@ -432,6 +446,48 @@ int numuya_cuda_memcpy_dtoh(void* dst, size_t src, size_t size) {
     }
 
     const CUresult res = numuya_pfn_cuMemcpyDtoH(dst, src, size);
+    if (res != 0) {
+        return NUMUYA_CUDA_ERROR;
+    }
+    return NUMUYA_CUDA_OK;
+}
+
+int numuya_cuda_memcpy_htod_async(size_t dst, const void* src, size_t size, size_t stream) {
+    const int status = numuya_cuda_load();
+    if (status != NUMUYA_CUDA_OK) {
+        return status;
+    }
+
+    if (size == 0) {
+        return NUMUYA_CUDA_OK;
+    }
+
+    if (numuya_current_context == NULL) {
+        return NUMUYA_CUDA_ERROR;
+    }
+
+    const CUresult res = numuya_pfn_cuMemcpyHtoDAsync(dst, src, size, (CUstream)stream);
+    if (res != 0) {
+        return NUMUYA_CUDA_ERROR;
+    }
+    return NUMUYA_CUDA_OK;
+}
+
+int numuya_cuda_memcpy_dtoh_async(void* dst, size_t src, size_t size, size_t stream) {
+    const int status = numuya_cuda_load();
+    if (status != NUMUYA_CUDA_OK) {
+        return status;
+    }
+
+    if (size == 0) {
+        return NUMUYA_CUDA_OK;
+    }
+
+    if (numuya_current_context == NULL) {
+        return NUMUYA_CUDA_ERROR;
+    }
+
+    const CUresult res = numuya_pfn_cuMemcpyDtoHAsync(dst, src, size, (CUstream)stream);
     if (res != 0) {
         return NUMUYA_CUDA_ERROR;
     }

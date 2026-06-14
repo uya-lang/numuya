@@ -89,10 +89,11 @@ test "device_array_view retains the same storage and does not free owner buffer 
     if !backend_is_cuda_available() {
         return;
     }
-    try cuda_init();
+    var state: BackendState = try backend_init(BackendKind.Cuda);
+    defer backend_deinit(&state) catch {};
 
     var pool: MemoryPool = memory_pool_new(4 * NUMUYA_MIB);
-    var owner: DeviceArray<f64> = try device_array_new<f64>(&pool, shape2(2, 3));
+    var owner: DeviceArray<f64> = try device_array_new<f64>(&pool, shape2(2, 3), state.context, state.stream);
     try expect_eq_usize(owner.storage.ref_count, 1);
 
     var view: DeviceArray<f64> = device_array_view<f64>(&owner);
@@ -112,11 +113,12 @@ test "device_array owner and view drop releases buffer exactly once" {
     if !backend_is_cuda_available() {
         return;
     }
-    try cuda_init();
+    var state: BackendState = try backend_init(BackendKind.Cuda);
+    defer backend_deinit(&state) catch {};
 
     var pool: MemoryPool = memory_pool_new(4 * NUMUYA_MIB);
     {
-        var owner: DeviceArray<f64> = try device_array_new<f64>(&pool, shape2(2, 3));
+        var owner: DeviceArray<f64> = try device_array_new<f64>(&pool, shape2(2, 3), state.context, state.stream);
         try expect_eq_usize(owner.storage.ref_count, 1);
 
         var view: DeviceArray<f64> = device_array_view<f64>(&owner);
@@ -128,11 +130,12 @@ test "device_array owner and view drop releases buffer exactly once" {
     try expect_eq_usize(memory_pool_used_bytes(&pool), 0);
 }
 
-test "H2D and D2H copy preserves element values" {
+test "H2D and D2H copy preserves element values after stream synchronize" {
     if !backend_is_cuda_available() {
         return;
     }
-    try cuda_init();
+    var state: BackendState = try backend_init(BackendKind.Cuda);
+    defer backend_deinit(&state) catch {};
 
     var malloc_allocator: MallocAllocator = MallocAllocator{};
     var allocator: IAllocator = malloc_allocator;
@@ -141,9 +144,11 @@ test "H2D and D2H copy preserves element values" {
     var source: [f64: 6] = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
     const host_src: Array<f64> = try from_slice<f64>(allocator, source[0:6], shape2(2, 3));
 
-    var device: DeviceArray<f64> = try device_array_from_host<f64>(&pool, &host_src);
+    var device: DeviceArray<f64> = try device_array_from_host<f64>(&pool, &host_src, state.context, state.stream);
+    try cuda_synchronize_stream(state.context, state.stream);
 
     var host_dst: Array<f64> = try device_array_to_host<f64>(allocator, &device);
+    try cuda_synchronize_stream(state.context, state.stream);
 
     try expect_eq_usize(array_size<f64>(&host_dst), 6);
 
