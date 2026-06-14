@@ -611,3 +611,13 @@
   - `make test-one TEST=src/numuya/_tests/test_stride_views.uya` → 13/13 通过
   - `make test` → 全部通过，0 失败
 
+
+## NumUya TDD Todo / Phase 8: Reductions
+
+- [x] 写 `src/numuya/_tests/test_reductions.uya`。
+  - 验证命令：`../uya/bin/uya test src/numuya/_tests/test_reductions.uya --manifest-path uya.toml`
+  - 验证结果：测试文件已创建；checker 失败原因为 `reductions.uya` 尚未实现，`sum_all_f64/prod_all_f64/min_all_f64/max_all_f64/mean_all_f64/sum_axis_f64/mean_axis_f64/argmax_axis_f64` 等函数未定义，符合 TDD 先写失败测试的预期。
+  - 回归验证：
+    - `../uya/bin/uya test src/numuya/_tests/test_ufunc.uya --manifest-path uya.toml` → 17/17 通过
+    - `../uya/bin/uya test src/numuya/_tests/test_stride_views.uya --manifest-path uya.toml` → 13/13 通过
+    - `../uya/bin/uya test src/numuya/_tests/test_array_creation.uya --manifest-path uya.toml` → 6/6 通过
