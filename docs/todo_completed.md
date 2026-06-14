@@ -298,3 +298,11 @@
   - 实现：`src/numuya/types.uya` 新增 `DTypeKind`、`Endian`、`DType` 枚举，导出 `dtype_f64/f32/i64/i32/u8`、`dtype_size`、`dtype_name`、`dtype_kind`、`dtype_endian`，以及 `ArrayAny` 结构与 `array_any_from_f64`、`array_any_shape`、`array_any_try_as_f64/f32/i32`。
   - 验证命令：
     - `../uya/bin/uya check src/numuya/types.uya --manifest-path uya.toml` — 类型检查通过
+
+## Phase 18: DType 与 type-erased ArrayAny
+
+- [x] TDD: `DType` size/name/endian helpers。
+  - 说明：本轮进入任务时，`src/numuya/types.uya` 已导出 `DTypeKind`、`Endian`、`DType` 枚举及 `dtype_size`、`dtype_name`、`dtype_kind`、`dtype_endian`；`src/numuya/_tests/test_dtype.uya` 已包含针对 f64/f32/i64/i32/u8 的 size/name/endian/kind 测试。本轮未修改生产代码，仅验证并通过。
+  - 验证命令：`../uya/bin/uya test src/numuya/_tests/test_dtype.uya --manifest-path uya.toml`
+  - 验证结果：9/9 测试通过，0 失败。
+  - 回归验证：`make test` 全量测试通过。
