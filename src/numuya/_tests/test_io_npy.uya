@@ -16,7 +16,23 @@ const NPY_FIXTURE_F64_1D: &const byte = "tests/fixtures/npy/f64_1d.npy";
 const NPY_FIXTURE_F64_2D: &const byte = "tests/fixtures/npy/f64_2d.npy";
 const NPY_FIXTURE_F64_EMPTY: &const byte = "tests/fixtures/npy/f64_empty.npy";
 const NPY_FIXTURE_I32_1D: &const byte = "tests/fixtures/npy/i32_1d.npy";
+const NPY_FIXTURE_F32_1D: &const byte = "tests/fixtures/npy/f32_1d.npy";
+const NPY_FIXTURE_F32_2D: &const byte = "tests/fixtures/npy/f32_2d.npy";
+const NPY_FIXTURE_F32_EMPTY: &const byte = "tests/fixtures/npy/f32_empty.npy";
+const NPY_FIXTURE_I32_2D: &const byte = "tests/fixtures/npy/i32_2d.npy";
+const NPY_FIXTURE_I32_EMPTY: &const byte = "tests/fixtures/npy/i32_empty.npy";
+const NPY_FIXTURE_I64_1D: &const byte = "tests/fixtures/npy/i64_1d.npy";
+const NPY_FIXTURE_I64_2D: &const byte = "tests/fixtures/npy/i64_2d.npy";
+const NPY_FIXTURE_I64_EMPTY: &const byte = "tests/fixtures/npy/i64_empty.npy";
+const NPY_FIXTURE_U8_1D: &const byte = "tests/fixtures/npy/u8_1d.npy";
+const NPY_FIXTURE_U8_2D: &const byte = "tests/fixtures/npy/u8_2d.npy";
+const NPY_FIXTURE_U8_EMPTY: &const byte = "tests/fixtures/npy/u8_empty.npy";
+
 const NPY_ROUNDTRIP_F64_2D: &const byte = "/tmp/numuya_save_npy_f64_roundtrip.npy";
+const NPY_ROUNDTRIP_F32_2D: &const byte = "/tmp/numuya_save_npy_f32_roundtrip.npy";
+const NPY_ROUNDTRIP_I32_2D: &const byte = "/tmp/numuya_save_npy_i32_roundtrip.npy";
+const NPY_ROUNDTRIP_I64_2D: &const byte = "/tmp/numuya_save_npy_i64_roundtrip.npy";
+const NPY_ROUNDTRIP_U8_2D: &const byte = "/tmp/numuya_save_npy_u8_roundtrip.npy";
 
 test "io_npy test file imports io_npy module" {
 }
@@ -142,4 +158,391 @@ test "save_npy_f64 roundtrips 2d array through load_npy_f64" {
     try expect_array2_close_f64(&actual, 2, 3, expected[0:6]);
 
     _ = unlink(NPY_ROUNDTRIP_F64_2D);
+}
+
+fn expect_eq_f32(actual: f32, expected: f32, tolerance: f32) !void {
+    var diff: f32 = actual - expected;
+    if diff < 0.0 {
+        diff = 0.0 - diff;
+    }
+    if diff > tolerance {
+        return error.NumuyaExpectationFailed;
+    }
+}
+
+fn expect_array1_eq_f32(actual: &Array<f32>, expected_values: &[f32]) !void {
+    try expect_eq_usize(actual.shape.rank, 1);
+    try expect_eq_usize(actual.shape.dims[0], expected_values.len);
+    try expect_eq_usize(array_size<f32>(actual), expected_values.len);
+
+    var i: usize = 0;
+    while i < expected_values.len {
+        try expect_eq_f32(try get1<f32>(actual, i), expected_values[i], 1e-6);
+        i = i + 1;
+    }
+}
+
+fn expect_array2_eq_f32(actual: &Array<f32>, dim0: usize, dim1: usize, expected_values: &[f32]) !void {
+    var expected_shape: [usize: 2] = [dim0, dim1];
+    try expect_shape_eq(actual.shape.dims[0:actual.shape.rank], expected_shape[0:2]);
+    try expect_eq_usize(array_size<f32>(actual), expected_values.len);
+    try expect_eq_usize(expected_values.len, dim0 * dim1);
+
+    var row: usize = 0;
+    while row < dim0 {
+        var col: usize = 0;
+        while col < dim1 {
+            const flat_index: usize = row * dim1 + col;
+            try expect_eq_f32(
+                try get2<f32>(actual, row, col),
+                expected_values[flat_index],
+                1e-6,
+            );
+            col = col + 1;
+        }
+        row = row + 1;
+    }
+}
+
+fn expect_empty_array_f32(actual: &Array<f32>, expected_shape: &[usize]) !void {
+    try expect_shape_eq(actual.shape.dims[0:actual.shape.rank], expected_shape);
+    try expect_eq_usize(array_size<f32>(actual), 0);
+}
+
+fn expect_eq_i32(actual: i32, expected: i32) !void {
+    if actual != expected {
+        return error.NumuyaExpectationFailed;
+    }
+}
+
+fn expect_array1_eq_i32(actual: &Array<i32>, expected_values: &[i32]) !void {
+    try expect_eq_usize(actual.shape.rank, 1);
+    try expect_eq_usize(actual.shape.dims[0], expected_values.len);
+    try expect_eq_usize(array_size<i32>(actual), expected_values.len);
+
+    var i: usize = 0;
+    while i < expected_values.len {
+        try expect_eq_i32(try get1<i32>(actual, i), expected_values[i]);
+        i = i + 1;
+    }
+}
+
+fn expect_array2_eq_i32(actual: &Array<i32>, dim0: usize, dim1: usize, expected_values: &[i32]) !void {
+    var expected_shape: [usize: 2] = [dim0, dim1];
+    try expect_shape_eq(actual.shape.dims[0:actual.shape.rank], expected_shape[0:2]);
+    try expect_eq_usize(array_size<i32>(actual), expected_values.len);
+    try expect_eq_usize(expected_values.len, dim0 * dim1);
+
+    var row: usize = 0;
+    while row < dim0 {
+        var col: usize = 0;
+        while col < dim1 {
+            const flat_index: usize = row * dim1 + col;
+            try expect_eq_i32(
+                try get2<i32>(actual, row, col),
+                expected_values[flat_index],
+            );
+            col = col + 1;
+        }
+        row = row + 1;
+    }
+}
+
+fn expect_empty_array_i32(actual: &Array<i32>, expected_shape: &[usize]) !void {
+    try expect_shape_eq(actual.shape.dims[0:actual.shape.rank], expected_shape);
+    try expect_eq_usize(array_size<i32>(actual), 0);
+}
+
+fn expect_eq_i64(actual: i64, expected: i64) !void {
+    if actual != expected {
+        return error.NumuyaExpectationFailed;
+    }
+}
+
+fn expect_array1_eq_i64(actual: &Array<i64>, expected_values: &[i64]) !void {
+    try expect_eq_usize(actual.shape.rank, 1);
+    try expect_eq_usize(actual.shape.dims[0], expected_values.len);
+    try expect_eq_usize(array_size<i64>(actual), expected_values.len);
+
+    var i: usize = 0;
+    while i < expected_values.len {
+        try expect_eq_i64(try get1<i64>(actual, i), expected_values[i]);
+        i = i + 1;
+    }
+}
+
+fn expect_array2_eq_i64(actual: &Array<i64>, dim0: usize, dim1: usize, expected_values: &[i64]) !void {
+    var expected_shape: [usize: 2] = [dim0, dim1];
+    try expect_shape_eq(actual.shape.dims[0:actual.shape.rank], expected_shape[0:2]);
+    try expect_eq_usize(array_size<i64>(actual), expected_values.len);
+    try expect_eq_usize(expected_values.len, dim0 * dim1);
+
+    var row: usize = 0;
+    while row < dim0 {
+        var col: usize = 0;
+        while col < dim1 {
+            const flat_index: usize = row * dim1 + col;
+            try expect_eq_i64(
+                try get2<i64>(actual, row, col),
+                expected_values[flat_index],
+            );
+            col = col + 1;
+        }
+        row = row + 1;
+    }
+}
+
+fn expect_empty_array_i64(actual: &Array<i64>, expected_shape: &[usize]) !void {
+    try expect_shape_eq(actual.shape.dims[0:actual.shape.rank], expected_shape);
+    try expect_eq_usize(array_size<i64>(actual), 0);
+}
+
+fn expect_eq_u8(actual: u8, expected: u8) !void {
+    if actual != expected {
+        return error.NumuyaExpectationFailed;
+    }
+}
+
+fn expect_array1_eq_u8(actual: &Array<u8>, expected_values: &[u8]) !void {
+    try expect_eq_usize(actual.shape.rank, 1);
+    try expect_eq_usize(actual.shape.dims[0], expected_values.len);
+    try expect_eq_usize(array_size<u8>(actual), expected_values.len);
+
+    var i: usize = 0;
+    while i < expected_values.len {
+        try expect_eq_u8(try get1<u8>(actual, i), expected_values[i]);
+        i = i + 1;
+    }
+}
+
+fn expect_array2_eq_u8(actual: &Array<u8>, dim0: usize, dim1: usize, expected_values: &[u8]) !void {
+    var expected_shape: [usize: 2] = [dim0, dim1];
+    try expect_shape_eq(actual.shape.dims[0:actual.shape.rank], expected_shape[0:2]);
+    try expect_eq_usize(array_size<u8>(actual), expected_values.len);
+    try expect_eq_usize(expected_values.len, dim0 * dim1);
+
+    var row: usize = 0;
+    while row < dim0 {
+        var col: usize = 0;
+        while col < dim1 {
+            const flat_index: usize = row * dim1 + col;
+            try expect_eq_u8(
+                try get2<u8>(actual, row, col),
+                expected_values[flat_index],
+            );
+            col = col + 1;
+        }
+        row = row + 1;
+    }
+}
+
+fn expect_empty_array_u8(actual: &Array<u8>, expected_shape: &[usize]) !void {
+    try expect_shape_eq(actual.shape.dims[0:actual.shape.rank], expected_shape);
+    try expect_eq_usize(array_size<u8>(actual), 0);
+}
+
+test "load_npy_f32 loads 1d fixture data" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var expected: [f32: 4] = [1.0, 2.5, -3.0, 8.25];
+    var actual: Array<f32> = try load_npy_f32(allocator, NPY_FIXTURE_F32_1D);
+
+    try expect_array1_eq_f32(&actual, expected[0:4]);
+}
+
+test "load_npy_f32 loads 2d fixture data" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var expected: [f32: 6] = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
+    var actual: Array<f32> = try load_npy_f32(allocator, NPY_FIXTURE_F32_2D);
+
+    try expect_array2_eq_f32(&actual, 2, 3, expected[0:6]);
+}
+
+test "load_npy_f32 loads empty fixture shape" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var expected_shape: [usize: 1] = [0];
+    var actual: Array<f32> = try load_npy_f32(allocator, NPY_FIXTURE_F32_EMPTY);
+
+    try expect_empty_array_f32(&actual, expected_shape[0:1]);
+}
+
+test "load_npy_i32 loads 1d fixture data" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var expected: [i32: 4] = [1, -2, 7, 42];
+    var actual: Array<i32> = try load_npy_i32(allocator, NPY_FIXTURE_I32_1D);
+
+    try expect_array1_eq_i32(&actual, expected[0:4]);
+}
+
+test "load_npy_i32 loads 2d fixture data" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var expected: [i32: 6] = [1, 2, 3, 4, 5, 6];
+    var actual: Array<i32> = try load_npy_i32(allocator, NPY_FIXTURE_I32_2D);
+
+    try expect_array2_eq_i32(&actual, 2, 3, expected[0:6]);
+}
+
+test "load_npy_i32 loads empty fixture shape" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var expected_shape: [usize: 1] = [0];
+    var actual: Array<i32> = try load_npy_i32(allocator, NPY_FIXTURE_I32_EMPTY);
+
+    try expect_empty_array_i32(&actual, expected_shape[0:1]);
+}
+
+test "load_npy_i64 loads 1d fixture data" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var expected: [i64: 4] = [1, -2, 7, 42];
+    var actual: Array<i64> = try load_npy_i64(allocator, NPY_FIXTURE_I64_1D);
+
+    try expect_array1_eq_i64(&actual, expected[0:4]);
+}
+
+test "load_npy_i64 loads 2d fixture data" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var expected: [i64: 6] = [1, 2, 3, 4, 5, 6];
+    var actual: Array<i64> = try load_npy_i64(allocator, NPY_FIXTURE_I64_2D);
+
+    try expect_array2_eq_i64(&actual, 2, 3, expected[0:6]);
+}
+
+test "load_npy_i64 loads empty fixture shape" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var expected_shape: [usize: 1] = [0];
+    var actual: Array<i64> = try load_npy_i64(allocator, NPY_FIXTURE_I64_EMPTY);
+
+    try expect_empty_array_i64(&actual, expected_shape[0:1]);
+}
+
+test "load_npy_u8 loads 1d fixture data" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var expected: [u8: 4] = [1, 2, 7, 42];
+    var actual: Array<u8> = try load_npy_u8(allocator, NPY_FIXTURE_U8_1D);
+
+    try expect_array1_eq_u8(&actual, expected[0:4]);
+}
+
+test "load_npy_u8 loads 2d fixture data" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var expected: [u8: 6] = [1, 2, 3, 4, 5, 6];
+    var actual: Array<u8> = try load_npy_u8(allocator, NPY_FIXTURE_U8_2D);
+
+    try expect_array2_eq_u8(&actual, 2, 3, expected[0:6]);
+}
+
+test "load_npy_u8 loads empty fixture shape" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var expected_shape: [usize: 1] = [0];
+    var actual: Array<u8> = try load_npy_u8(allocator, NPY_FIXTURE_U8_EMPTY);
+
+    try expect_empty_array_u8(&actual, expected_shape[0:1]);
+}
+
+test "load_npy_f64 rejects f32 fixture as unsupported dtype" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+
+    const result: !Array<f64> = load_npy_f64(allocator, NPY_FIXTURE_F32_1D);
+    match result {
+        error.NumuyaUnsupportedDType => {}
+        else => { return error.NumuyaExpectationFailed; }
+    }
+}
+
+test "load_npy_f32 rejects f64 fixture as unsupported dtype" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+
+    const result: !Array<f32> = load_npy_f32(allocator, NPY_FIXTURE_F64_1D);
+    match result {
+        error.NumuyaUnsupportedDType => {}
+        else => { return error.NumuyaExpectationFailed; }
+    }
+}
+
+test "save_npy_f32 roundtrips 2d array through load_npy_f32" {
+    _ = unlink(NPY_ROUNDTRIP_F32_2D);
+
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var expected: [f32: 6] = [1.25, -2.5, 3.75, 4.5, 0.0, 9.125];
+    var source: Array<f32> = try from_slice<f32>(allocator, expected[0:6], shape2(2, 3));
+    errdefer {
+        _ = unlink(NPY_ROUNDTRIP_F32_2D);
+    }
+
+    try save_npy_f32(NPY_ROUNDTRIP_F32_2D, &source);
+
+    var actual: Array<f32> = try load_npy_f32(allocator, NPY_ROUNDTRIP_F32_2D);
+    try expect_array2_eq_f32(&actual, 2, 3, expected[0:6]);
+
+    _ = unlink(NPY_ROUNDTRIP_F32_2D);
+}
+
+test "save_npy_i32 roundtrips 2d array through load_npy_i32" {
+    _ = unlink(NPY_ROUNDTRIP_I32_2D);
+
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var expected: [i32: 6] = [1, -2, 7, 42, 0, -99];
+    var source: Array<i32> = try from_slice<i32>(allocator, expected[0:6], shape2(2, 3));
+    errdefer {
+        _ = unlink(NPY_ROUNDTRIP_I32_2D);
+    }
+
+    try save_npy_i32(NPY_ROUNDTRIP_I32_2D, &source);
+
+    var actual: Array<i32> = try load_npy_i32(allocator, NPY_ROUNDTRIP_I32_2D);
+    try expect_array2_eq_i32(&actual, 2, 3, expected[0:6]);
+
+    _ = unlink(NPY_ROUNDTRIP_I32_2D);
+}
+
+test "save_npy_i64 roundtrips 2d array through load_npy_i64" {
+    _ = unlink(NPY_ROUNDTRIP_I64_2D);
+
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var expected: [i64: 6] = [1, -2, 7, 42, 0, -99];
+    var source: Array<i64> = try from_slice<i64>(allocator, expected[0:6], shape2(2, 3));
+    errdefer {
+        _ = unlink(NPY_ROUNDTRIP_I64_2D);
+    }
+
+    try save_npy_i64(NPY_ROUNDTRIP_I64_2D, &source);
+
+    var actual: Array<i64> = try load_npy_i64(allocator, NPY_ROUNDTRIP_I64_2D);
+    try expect_array2_eq_i64(&actual, 2, 3, expected[0:6]);
+
+    _ = unlink(NPY_ROUNDTRIP_I64_2D);
+}
+
+test "save_npy_u8 roundtrips 2d array through load_npy_u8" {
+    _ = unlink(NPY_ROUNDTRIP_U8_2D);
+
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var expected: [u8: 6] = [1, 2, 7, 42, 0, 255];
+    var source: Array<u8> = try from_slice<u8>(allocator, expected[0:6], shape2(2, 3));
+    errdefer {
+        _ = unlink(NPY_ROUNDTRIP_U8_2D);
+    }
+
+    try save_npy_u8(NPY_ROUNDTRIP_U8_2D, &source);
+
+    var actual: Array<u8> = try load_npy_u8(allocator, NPY_ROUNDTRIP_U8_2D);
+    try expect_array2_eq_u8(&actual, 2, 3, expected[0:6]);
+
+    _ = unlink(NPY_ROUNDTRIP_U8_2D);
 }

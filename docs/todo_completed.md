@@ -329,3 +329,15 @@
   - 实现：`src/numuya/types.uya` 扩展 `ArrayAny` 支持 f64/f32/i32/i64/u8 五种 dtype；新增 `array_any_from_f32/i32/i64/u8` 与 `array_any_try_as_f64/f32/i32/i64/u8`；dtype 不匹配时统一返回 `error.NumuyaUnsupportedDType`。
   - 测试：`src/numuya/_tests/test_dtype.uya` 新增 f32/i32 roundtrip 与 f32/i32/i64/u8 mismatch 测试。
   - 验证命令：`make test-one TEST=src/numuya/_tests/test_dtype.uya`（15/15 通过），`make test`（全量测试通过，I/O 回归绿）。
+
+## Phase 18: DType 与 type-erased ArrayAny
+
+- [x] 把 `.npy` 逐步扩展到 f32/i32/i64/u8。
+  - 新增 fixture：`tests/fixtures/npy/generate.py` 生成 f32/i32/i64/u8 的 1D/2D/empty npy。
+  - 新增测试：`src/numuya/_tests/test_io_npy.uya` 覆盖加载 fixture、跨 dtype 拒绝、save/load roundtrip。
+  - 实现：`src/numuya/io_npy.uya` 新增 `save_npy_f32/load_npy_f32`、`save_npy_i32/load_npy_i32`、`save_npy_i64/load_npy_i64`、`save_npy_u8/load_npy_u8`；重构 header/descr 校验以支持多 dtype（u8 同时兼容 numpy 的 `|u1` 与 `<u1`）。
+  - 验证命令：
+    - `make test-one TEST=src/numuya/_tests/test_io_npy.uya`：27/27 通过。
+    - `make test-one TEST=src/numuya/_tests/test_dtype.uya`：15/15 通过。
+    - `make test`：全绿，无失败。
+- [x] 验收：dtype tests 绿，I/O 回归绿。

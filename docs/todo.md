@@ -31,11 +31,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 10: Statistics
 
-## Phase 18: DType 与 type-erased ArrayAny
-
-- [ ] 把 `.npy` 逐步扩展到 f32/i32/i64/u8。
-- [ ] 验收：dtype tests 绿，I/O 回归绿。
-
 ## Phase 19: SIMD 与性能
 
 - [ ] 写 `src/numuya/_tests/test_simd_equivalence.uya`。
