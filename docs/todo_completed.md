@@ -250,3 +250,13 @@
   - 结果：按预期失败；新增索引 TDD 用例成功编译到宿主 C 阶段，并因 `set1_f64/get1_f64/set2_f64/get2_f64/get3_f64/getn_f64/setn_f64` 尚未实现而失败。
   - 验证命令：`make test-one TEST=src/numuya/_tests/test_storage.uya`
   - 结果：通过，7 tests passed。
+
+## Phase 3: 创建数组与基础 get/set
+
+- [x] 实现 `src/numuya/creation.uya`。
+  - 实现 `creation.uya` 的 `f64` owner 创建路径，提供 `full_f64`、`zeros_f64`、`ones_f64` 与共享 shape/stride/flags helper。
+  - 验证：
+    - `make test-one TEST=src/numuya/_tests/test_testing_helpers.uya`：通过
+    - `make test-one TEST=src/numuya/_tests/test_shape.uya`：通过
+    - `make test-one TEST=src/numuya/_tests/test_storage.uya`：通过
+    - `make test-one TEST=src/numuya/_tests/test_array_creation.uya`：通过

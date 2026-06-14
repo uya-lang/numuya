@@ -1,3 +1,114 @@
-export fn zeros_f64() i32 {
-    return 0;
+use array;
+use shape;
+use storage;
+
+use std.mem.allocator.IAllocator;
+
+const CREATION_MAX_USIZE: usize = 18446744073709551615;
+
+fn validate_shape(shape_value: &Shape) !void {
+    if shape_value.rank > NUMUYA_MAX_DIMS {
+        return error.NumuyaRankTooLarge;
+    }
+}
+
+fn shape_size_ref(shape_value: &Shape) !usize {
+    var size: usize = 1;
+    var i: usize = 0;
+    while i < shape_value.rank {
+        const dim: usize = shape_value.dims[i];
+        if dim != 0 && size > CREATION_MAX_USIZE / dim {
+            return error.NumuyaShapeOverflow;
+        }
+        size = size * dim;
+        i = i + 1;
+    }
+    return size;
+}
+
+fn make_c_strides(shape_value: &Shape) !Strides {
+    var stride_values: [usize: NUMUYA_MAX_DIMS] = [0: NUMUYA_MAX_DIMS];
+    if shape_value.rank == 0 {
+        return Strides{ rank: 0, strides: stride_values };
+    }
+
+    var next_stride: usize = 1;
+    var axis: usize = shape_value.rank;
+    while axis > 0 {
+        const index: usize = axis - 1;
+        if index >= NUMUYA_MAX_DIMS {
+            return error.NumuyaRankTooLarge;
+        }
+        stride_values[index] = next_stride;
+        next_stride = next_stride * shape_value.dims[index];
+        axis = index;
+    }
+
+    return Strides{ rank: shape_value.rank, strides: stride_values };
+}
+
+fn is_f_contiguous_owner_shape(shape_value: &Shape) bool {
+    var non_unit_dims: usize = 0;
+    var axis: usize = 0;
+    while axis < shape_value.rank {
+        if shape_value.dims[axis] > 1 {
+            non_unit_dims = non_unit_dims + 1;
+            if non_unit_dims > 1 {
+                return false;
+            }
+        }
+        axis = axis + 1;
+    }
+    return true;
+}
+
+fn make_owned_flags(shape_value: &Shape) ArrayFlags {
+    return ArrayFlags{
+        c_contiguous: true,
+        f_contiguous: is_f_contiguous_owner_shape(shape_value),
+        writeable: true,
+        owns_data: true,
+    };
+}
+
+fn make_owned_array_f64(storage_value: &Storage<f64>, shape_value: Shape) !Array<f64> {
+    return Array<f64>{
+        storage: storage_value,
+        offset: 0,
+        shape: shape_value,
+        strides: try make_c_strides(&shape_value),
+        flags: make_owned_flags(&shape_value),
+    };
+}
+
+fn empty_owned_f64(allocator: IAllocator, shape_value: Shape) !Array<f64> {
+    try validate_shape(&shape_value);
+
+    const size: usize = try shape_size_ref(&shape_value);
+    const storage_value: &Storage<f64> = try storage_new<f64>(allocator, size);
+    return make_owned_array_f64(storage_value, shape_value);
+}
+
+fn fill_all_f64(array_value: &Array<f64>, value: f64) void {
+    var i: usize = 0;
+    while i < array_value.storage.len {
+        array_value.storage.data[i] = value;
+        i = i + 1;
+    }
+}
+
+export fn zeros_f64(allocator: IAllocator, shape_value: Shape) !Array<f64> {
+    const array_value: Array<f64> = try full_f64(allocator, shape_value, 0.0);
+    return array_value;
+}
+
+export fn ones_f64(allocator: IAllocator, shape_value: Shape) !Array<f64> {
+    const array_value: Array<f64> = try full_f64(allocator, shape_value, 1.0);
+    return array_value;
+}
+
+export fn full_f64(allocator: IAllocator, shape_value: Shape, value: f64) !Array<f64> {
+    var array_value: Array<f64> = try empty_owned_f64(allocator, shape_value);
+    fill_all_f64(&array_value, value);
+    return array_value;
 }

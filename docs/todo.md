@@ -27,7 +27,7 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 3: 创建数组与基础 get/set
 
-- [ ] 实现 `src/numuya/creation.uya`。
+- 注：当前 Uya codegen 对导出泛型 `!Array<T>` 路径仍有实例化限制；后续 `empty<T>/full<T>/from_slice<T>` 先用失败测试锁定可行写法，必要时抽最小复现。
 - [ ] TDD: `empty<T>`。
   - shape 正确。
   - size 正确。

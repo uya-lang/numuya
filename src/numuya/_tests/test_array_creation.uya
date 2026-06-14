@@ -1,7 +1,56 @@
+use array;
 use creation;
+use shape;
+use storage;
+use testing.expect_eq_usize;
 
-test "Array creation test file imports creation API" {
-    if zeros_f64() != 0 {
+use std.mem.allocator.IAllocator;
+use std.mem.allocator.MallocAllocator;
+
+test "creation exports f64 owner array constructors" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    const array_value: Array<f64> = try full_f64(allocator, shape2(2, 3), 7.5);
+
+    storage_retain<f64>(array_value.storage);
+    storage_release<f64>(array_value.storage);
+
+    try expect_eq_usize(array_rank<f64>(&array_value), 2);
+    try expect_eq_usize(array_size<f64>(&array_value), 6);
+    try expect_eq_usize(array_value.storage.len, 6);
+
+    if shape_eq(array_value.shape, shape2(2, 3)) != true {
         return error.NumuyaExpectationFailed;
     }
+    if array_is_c_contiguous<f64>(&array_value) != true {
+        return error.NumuyaExpectationFailed;
+    }
+    if array_value.flags.c_contiguous != true {
+        return error.NumuyaExpectationFailed;
+    }
+    if array_value.flags.writeable != true {
+        return error.NumuyaExpectationFailed;
+    }
+    if array_value.flags.owns_data != true {
+        return error.NumuyaExpectationFailed;
+    }
+}
+
+test "creation convenience constructors support scalar and zero-sized shapes" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+
+    const scalar_full: Array<f64> = try full_f64(allocator, shape_scalar(), 3.5);
+    const zeros_value: Array<f64> = try zeros_f64(allocator, shape1(0));
+    const ones_value: Array<f64> = try ones_f64(allocator, shape1(0));
+    const full_value: Array<f64> = try full_f64(allocator, shape1(0), 1.25);
+
+    storage_retain<f64>(scalar_full.storage);
+    storage_release<f64>(scalar_full.storage);
+
+    try expect_eq_usize(array_size<f64>(&scalar_full), 1);
+    try expect_eq_usize(scalar_full.storage.len, 1);
+    try expect_eq_usize(array_size<f64>(&zeros_value), 0);
+    try expect_eq_usize(array_size<f64>(&ones_value), 0);
+    try expect_eq_usize(array_size<f64>(&full_value), 0);
 }
