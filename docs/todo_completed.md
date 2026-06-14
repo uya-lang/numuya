@@ -178,3 +178,12 @@
     - `../uya/bin/uya check src/numuya/io_npy.uya --manifest-path uya.toml` -> checker 通过。
     - `make test-one TEST=src/numuya/_tests/test_io_npy.uya` -> 4 个测试通过。
     - `make test-one TEST=src/numuya/_tests/test_shape.uya` -> 8 个测试通过。
+
+## Phase 16: `.npy` I/O
+
+- [x] TDD: `load_npy_f64`。
+  - magic/header 解析。
+  - shape 正确。
+  - 数据正确。
+  - 验证：`make test-one TEST=src/numuya/_tests/test_io_npy.uya` -> 7 个测试通过。
+  - 验证：`../uya/bin/uya check src/numuya/io_npy.uya --manifest-path uya.toml` -> checker 通过。

@@ -1,6 +1,25 @@
+use array;
+use creation;
 use shape;
+use storage;
+
+use std.io.File;
+use std.io.file_close;
+use std.io.file_open;
+use std.io.file_read;
+use std.mem.mem_copy;
+use std.mem.allocator.IAllocator;
+use std.string.strlen;
+
+use libc.O_RDONLY;
+use libc.SEEK_END;
+use libc.SEEK_SET;
+use libc.lseek;
 
 const NPY_HEADER_ALIGNMENT: usize = 16;
+const NPY_MAGIC_LEN: usize = 6;
+const NPY_VERSION_LEN: usize = 2;
+const NPY_F64_SIZE: usize = 8;
 const NPY_V1_HEADER_LEN_BYTES: usize = 2;
 const NPY_V2_HEADER_LEN_BYTES: usize = 4;
 
@@ -75,5 +94,291 @@ fn npy_empty_metadata() NpyArrayMetadata {
         },
         fortran_order: false,
         shape: shape_scalar(),
+    };
+}
+
+fn npy_read_exact(file: &File, buf: &byte, count: usize) !void {
+    var filled: usize = 0;
+    while filled < count {
+        const chunk: isize = file_read(file, &buf[filled], count - filled);
+        if chunk <= 0 {
+            return error.NumuyaInvalidArgument;
+        }
+        const read_len: usize = chunk as! usize catch {
+            return error.NumuyaInvalidArgument;
+        };
+        filled = filled + read_len;
+    }
+}
+
+fn npy_file_size(file: &File) !usize {
+    const end_offset: i64 = lseek(file.fd, 0, SEEK_END);
+    if end_offset < 0 {
+        return error.NumuyaInvalidArgument;
+    }
+    const size: usize = end_offset as! usize catch {
+        return error.NumuyaInvalidArgument;
+    };
+    if lseek(file.fd, 0, SEEK_SET) < 0 {
+        return error.NumuyaInvalidArgument;
+    }
+    return size;
+}
+
+fn npy_validate_magic(data: &byte, len: usize) !void {
+    if len < NPY_MAGIC_LEN + NPY_VERSION_LEN {
+        return error.NumuyaInvalidArgument;
+    }
+
+    var i: usize = 0;
+    while i < NPY_MAGIC_LEN {
+        if data[i] != try npy_magic_byte(i) {
+            return error.NumuyaInvalidArgument;
+        }
+        i = i + 1;
+    }
+}
+
+fn npy_read_version(data: &byte, len: usize) !NpyVersion {
+    if len < NPY_MAGIC_LEN + NPY_VERSION_LEN {
+        return error.NumuyaInvalidArgument;
+    }
+    return NpyVersion{
+        major: data[NPY_MAGIC_LEN],
+        minor: data[NPY_MAGIC_LEN + 1],
+    };
+}
+
+fn npy_read_header_len(data: &byte, len: usize, version: &NpyVersion) !usize {
+    const header_len_size: usize = try npy_header_len_size(version);
+    const header_len_offset: usize = NPY_MAGIC_LEN + NPY_VERSION_LEN;
+    if header_len_offset + header_len_size > len {
+        return error.NumuyaInvalidArgument;
+    }
+
+    if header_len_size == NPY_V1_HEADER_LEN_BYTES {
+        const low: usize = data[header_len_offset] as usize;
+        const high: usize = (data[header_len_offset + 1] as usize) << 8;
+        return low | high;
+    }
+
+    const value: u32 =
+        (data[header_len_offset] as u32) |
+        ((data[header_len_offset + 1] as u32) << 8) |
+        ((data[header_len_offset + 2] as u32) << 16) |
+        ((data[header_len_offset + 3] as u32) << 24);
+    return value as usize;
+}
+
+fn npy_match_string_at(data: &byte, len: usize, offset: usize, text: &const byte) bool {
+    const text_len: usize = strlen(text);
+    if offset + text_len > len {
+        return false;
+    }
+
+    var i: usize = 0;
+    while i < text_len {
+        if data[offset + i] != text[i] {
+            return false;
+        }
+        i = i + 1;
+    }
+    return true;
+}
+
+fn npy_find_string(data: &byte, len: usize, text: &const byte) !usize {
+    const text_len: usize = strlen(text);
+    if text_len == 0 || text_len > len {
+        return error.NumuyaInvalidArgument;
+    }
+
+    var offset: usize = 0;
+    while offset + text_len <= len {
+        if npy_match_string_at(data, len, offset, text) {
+            return offset;
+        }
+        offset = offset + 1;
+    }
+    return error.NumuyaInvalidArgument;
+}
+
+fn npy_header_value_start(header: &byte, header_len: usize, key: &const byte) !usize {
+    const key_offset: usize = try npy_find_string(header, header_len, key);
+    var cursor: usize = key_offset + strlen(key);
+    while cursor < header_len {
+        const ch: byte = header[cursor];
+        if ch == 32 as byte || ch == 58 as byte {
+            cursor = cursor + 1;
+            continue;
+        }
+        return cursor;
+    }
+    return error.NumuyaInvalidArgument;
+}
+
+fn npy_validate_f64_descr(header: &byte, header_len: usize) !void {
+    const value_offset: usize = try npy_header_value_start(header, header_len, "'descr'");
+    if value_offset + 5 > header_len {
+        return error.NumuyaInvalidArgument;
+    }
+    if header[value_offset] != 39 as byte || header[value_offset + 4] != 39 as byte {
+        return error.NumuyaInvalidArgument;
+    }
+    if header[value_offset + 1] == 60 as byte &&
+        header[value_offset + 2] == 102 as byte &&
+        header[value_offset + 3] == 56 as byte {
+        return;
+    }
+    return error.NumuyaUnsupportedDType;
+}
+
+fn npy_parse_fortran_order(header: &byte, header_len: usize) !bool {
+    const value_offset: usize = try npy_header_value_start(header, header_len, "'fortran_order'");
+    if npy_match_string_at(header, header_len, value_offset, "False") {
+        return false;
+    }
+    if npy_match_string_at(header, header_len, value_offset, "True") {
+        return true;
+    }
+    return error.NumuyaInvalidArgument;
+}
+
+fn npy_parse_shape_dim(header: &byte, header_len: usize, cursor: &usize) !usize {
+    if cursor[0] >= header_len {
+        return error.NumuyaInvalidArgument;
+    }
+
+    const zero: byte = 48 as byte;
+    const nine: byte = 57 as byte;
+    if header[cursor[0]] < zero || header[cursor[0]] > nine {
+        return error.NumuyaInvalidArgument;
+    }
+
+    var value: usize = 0;
+    while cursor[0] < header_len {
+        const ch: byte = header[cursor[0]];
+        if ch < zero || ch > nine {
+            break;
+        }
+        value = value * 10 + ((ch - zero) as usize);
+        cursor[0] = cursor[0] + 1;
+    }
+    return value;
+}
+
+fn npy_parse_shape(header: &byte, header_len: usize) !Shape {
+    const value_offset: usize = try npy_header_value_start(header, header_len, "'shape'");
+    if value_offset >= header_len || header[value_offset] != 40 as byte {
+        return error.NumuyaInvalidArgument;
+    }
+
+    var dims: [usize: NUMUYA_MAX_DIMS] = [0: NUMUYA_MAX_DIMS];
+    var rank: usize = 0;
+    var cursor: usize = value_offset + 1;
+
+    while cursor < header_len {
+        while cursor < header_len && header[cursor] == 32 as byte {
+            cursor = cursor + 1;
+        }
+        if cursor >= header_len {
+            return error.NumuyaInvalidArgument;
+        }
+        if header[cursor] == 41 as byte {
+            return Shape{ rank: rank, dims: dims };
+        }
+        if rank >= NUMUYA_MAX_DIMS {
+            return error.NumuyaRankTooLarge;
+        }
+
+        dims[rank] = try npy_parse_shape_dim(header, header_len, &cursor);
+        rank = rank + 1;
+
+        while cursor < header_len && header[cursor] == 32 as byte {
+            cursor = cursor + 1;
+        }
+        if cursor >= header_len {
+            return error.NumuyaInvalidArgument;
+        }
+        if header[cursor] == 44 as byte {
+            cursor = cursor + 1;
+            continue;
+        }
+        if header[cursor] == 41 as byte {
+            return Shape{ rank: rank, dims: dims };
+        }
+        return error.NumuyaInvalidArgument;
+    }
+
+    return error.NumuyaInvalidArgument;
+}
+
+fn npy_parse_metadata(data: &byte, len: usize) !NpyArrayMetadata {
+    try npy_validate_magic(data, len);
+
+    const version: NpyVersion = try npy_read_version(data, len);
+    const header_len_size: usize = try npy_header_len_size(&version);
+    const header_len: usize = try npy_read_header_len(data, len, &version);
+    const header_offset: usize = NPY_MAGIC_LEN + NPY_VERSION_LEN + header_len_size;
+    if header_offset + header_len > len {
+        return error.NumuyaInvalidArgument;
+    }
+
+    const header: &byte = &data[header_offset];
+    try npy_validate_f64_descr(header, header_len);
+
+    return NpyArrayMetadata{
+        version: version,
+        fortran_order: try npy_parse_fortran_order(header, header_len),
+        shape: try npy_parse_shape(header, header_len),
+    };
+}
+
+export fn load_npy_f64(allocator: IAllocator, path: &const byte) !Array<f64> {
+    var file: File = try file_open(path, O_RDONLY as i32, 0);
+    errdefer {
+        _ = file_close(&file) catch {};
+    }
+
+    const file_size: usize = try npy_file_size(&file);
+    const file_bytes: &byte = try allocator.alloc(file_size);
+    errdefer {
+        allocator.dealloc(file_bytes);
+    }
+
+    try npy_read_exact(&file, file_bytes, file_size);
+    try file_close(&file);
+
+    const metadata: NpyArrayMetadata = try npy_parse_metadata(file_bytes, file_size);
+    try npy_validate_c_order(&metadata);
+
+    const header_len_size: usize = try npy_header_len_size(&metadata.version);
+    const header_len: usize = try npy_read_header_len(file_bytes, file_size, &metadata.version);
+    const data_offset: usize = NPY_MAGIC_LEN + NPY_VERSION_LEN + header_len_size + header_len;
+    if data_offset > file_size {
+        return error.NumuyaInvalidArgument;
+    }
+
+    const data_len: usize = file_size - data_offset;
+    if data_len % NPY_F64_SIZE != 0 {
+        return error.NumuyaInvalidArgument;
+    }
+
+    const element_count: usize = try npy_shape_size(&metadata);
+    if data_len / NPY_F64_SIZE != element_count {
+        return error.NumuyaInvalidArgument;
+    }
+
+    var result: Array<f64> = try full_f64(allocator, metadata.shape, 0.0);
+    if data_len > 0 {
+        mem_copy(result.storage.data as &byte, &file_bytes[data_offset], data_len);
+    }
+
+    storage_retain<f64>(result.storage);
+    return Array<f64>{
+        storage: result.storage,
+        offset: result.offset,
+        shape: result.shape,
+        strides: result.strides,
+        flags: result.flags,
     };
 }

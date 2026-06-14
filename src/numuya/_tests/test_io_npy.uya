@@ -11,6 +11,9 @@ use std.mem.allocator.IAllocator;
 use std.mem.allocator.MallocAllocator;
 
 const NPY_F64_TOLERANCE: f64 = 1e-12;
+const NPY_FIXTURE_F64_1D: &const byte = "tests/fixtures/npy/f64_1d.npy";
+const NPY_FIXTURE_F64_2D: &const byte = "tests/fixtures/npy/f64_2d.npy";
+const NPY_FIXTURE_F64_EMPTY: &const byte = "tests/fixtures/npy/f64_empty.npy";
 
 test "io_npy test file imports io_npy module" {
 }
@@ -79,4 +82,31 @@ test "io_npy test helpers validate planned empty fixture shape" {
     var expected_shape: [usize: 1] = [0];
 
     try expect_empty_array_f64(&a, expected_shape[0:1]);
+}
+
+test "load_npy_f64 loads 1d fixture data" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var expected: [f64: 4] = [1.0, 2.5, -3.0, 8.25];
+    var actual: Array<f64> = try load_npy_f64(allocator, NPY_FIXTURE_F64_1D);
+
+    try expect_array1_close_f64(&actual, expected[0:4]);
+}
+
+test "load_npy_f64 loads 2d fixture data" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var expected: [f64: 6] = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
+    var actual: Array<f64> = try load_npy_f64(allocator, NPY_FIXTURE_F64_2D);
+
+    try expect_array2_close_f64(&actual, 2, 3, expected[0:6]);
+}
+
+test "load_npy_f64 loads empty fixture shape" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var expected_shape: [usize: 1] = [0];
+    var actual: Array<f64> = try load_npy_f64(allocator, NPY_FIXTURE_F64_EMPTY);
+
+    try expect_empty_array_f64(&actual, expected_shape[0:1]);
 }
