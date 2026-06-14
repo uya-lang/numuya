@@ -421,3 +421,125 @@ test "qr_f64 decomposes square matrix into q and r" {
     try expect_close_f64(try get2<f64>(&r, 2, 0), 0.0, 1e-12);
     try expect_close_f64(try get2<f64>(&r, 2, 1), 0.0, 1e-12);
 }
+
+test "svd_f64 returns correct shapes for square matrix" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var a_data: [f64: 9] = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 10.0];
+    var a: Array<f64> = try from_slice<f64>(allocator, a_data[0:9], shape2(3, 3));
+
+    var result: SVDResult = try svd_f64(&a);
+
+    try expect_eq_usize(result.u.shape.rank, 2);
+    try expect_eq_usize(result.u.shape.dims[0], 3);
+    try expect_eq_usize(result.u.shape.dims[1], 3);
+    try expect_eq_usize(result.s.shape.rank, 1);
+    try expect_eq_usize(result.s.shape.dims[0], 3);
+    try expect_eq_usize(result.vt.shape.rank, 2);
+    try expect_eq_usize(result.vt.shape.dims[0], 3);
+    try expect_eq_usize(result.vt.shape.dims[1], 3);
+}
+
+test "svd_f64 reconstructs square matrix" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var a_data: [f64: 9] = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 10.0];
+    var a: Array<f64> = try from_slice<f64>(allocator, a_data[0:9], shape2(3, 3));
+
+    var result: SVDResult = try svd_f64(&a);
+    var s_diag: Array<f64> = try diag_f64(&result.s);
+    var us: Array<f64> = try matmul_f64(&result.u, &s_diag);
+    var reconstructed: Array<f64> = try matmul_f64(&us, &result.vt);
+
+    try expect_eq_usize(reconstructed.shape.dims[0], 3);
+    try expect_eq_usize(reconstructed.shape.dims[1], 3);
+
+    var i: usize = 0;
+    while i < 3 {
+        var j: usize = 0;
+        while j < 3 {
+            try expect_close_f64(try get2<f64>(&reconstructed, i, j), try get2<f64>(&a, i, j), 1e-9);
+            j = j + 1;
+        }
+        i = i + 1;
+    }
+}
+
+test "svd_f64 produces orthogonal factors" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var a_data: [f64: 9] = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 10.0];
+    var a: Array<f64> = try from_slice<f64>(allocator, a_data[0:9], shape2(3, 3));
+
+    var result: SVDResult = try svd_f64(&a);
+    var ut: Array<f64> = try transpose<f64>(&result.u);
+    var utu: Array<f64> = try matmul_f64(&ut, &result.u);
+    var vtt: Array<f64> = try transpose<f64>(&result.vt);
+    var vtv: Array<f64> = try matmul_f64(&result.vt, &vtt);
+
+    var i: usize = 0;
+    while i < 3 {
+        var j: usize = 0;
+        while j < 3 {
+            const expected: f64 = if i == j { 1.0 } else { 0.0 };
+            try expect_close_f64(try get2<f64>(&utu, i, j), expected, 1e-9);
+            try expect_close_f64(try get2<f64>(&vtv, i, j), expected, 1e-9);
+            j = j + 1;
+        }
+        i = i + 1;
+    }
+}
+
+test "svd_f64 returns sorted singular values for diagonal matrix" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var a_data: [f64: 4] = [3.0, 0.0, 0.0, 2.0];
+    var a: Array<f64> = try from_slice<f64>(allocator, a_data[0:4], shape2(2, 2));
+
+    var result: SVDResult = try svd_f64(&a);
+
+    try expect_close_f64(try get1<f64>(&result.s, 0), 3.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&result.s, 1), 2.0, 1e-12);
+}
+
+test "svd_f64 handles tall rectangular matrix" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var a_data: [f64: 6] = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
+    var a: Array<f64> = try from_slice<f64>(allocator, a_data[0:6], shape2(3, 2));
+
+    var result: SVDResult = try svd_f64(&a);
+
+    try expect_eq_usize(result.u.shape.dims[0], 3);
+    try expect_eq_usize(result.u.shape.dims[1], 2);
+    try expect_eq_usize(result.s.shape.dims[0], 2);
+    try expect_eq_usize(result.vt.shape.dims[0], 2);
+    try expect_eq_usize(result.vt.shape.dims[1], 2);
+
+    var s_diag: Array<f64> = try diag_f64(&result.s);
+    var us: Array<f64> = try matmul_f64(&result.u, &s_diag);
+    var reconstructed: Array<f64> = try matmul_f64(&us, &result.vt);
+
+    var i: usize = 0;
+    while i < 3 {
+        var j: usize = 0;
+        while j < 2 {
+            try expect_close_f64(try get2<f64>(&reconstructed, i, j), try get2<f64>(&a, i, j), 1e-9);
+            j = j + 1;
+        }
+        i = i + 1;
+    }
+}
+
+test "svd_f64 rejects non-2-D input" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var a_data: [f64: 3] = [1.0, 2.0, 3.0];
+    var a: Array<f64> = try from_slice<f64>(allocator, a_data[0:3], shape1(3));
+
+    const result: !SVDResult = svd_f64(&a);
+    match result {
+        error.NumuyaInvalidArgument => {}
+        else => { return error.NumuyaExpectationFailed; }
+    }
+}

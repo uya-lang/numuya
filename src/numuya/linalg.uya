@@ -633,3 +633,212 @@ export fn qr_f64(a: &Array<f64>) !QRResult {
         r: Array<f64>{ storage: r_storage, offset: r_offset, shape: r_shape, strides: r_strides, flags: r_flags },
     };
 }
+
+export struct SVDResult {
+    u: Array<f64>,
+    s: Array<f64>,
+    vt: Array<f64>,
+}
+
+fn require_svd_args(a: &Array<f64>) !void {
+    if a.shape.rank != 2 {
+        return error.NumuyaInvalidArgument;
+    }
+    if a.shape.dims[0] < a.shape.dims[1] {
+        return error.NumuyaInvalidArgument;
+    }
+}
+
+fn svd_jacobi_solve(work: &Array<f64>, v: &Array<f64>, m: usize, n: usize) void {
+    const MAX_SWEEPS: usize = 30;
+    const EPS: f64 = 1e-15;
+
+    var sweep: usize = 0;
+    while sweep < MAX_SWEEPS {
+        var changed: bool = false;
+        var p: usize = 0;
+        while p < n {
+            var q: usize = p + 1;
+            while q < n {
+                var alpha: f64 = 0.0;
+                var beta: f64 = 0.0;
+                var gamma: f64 = 0.0;
+                var i: usize = 0;
+                while i < m {
+                    const ap: f64 = work.storage.data[i * n + p];
+                    const aq: f64 = work.storage.data[i * n + q];
+                    alpha = alpha + ap * ap;
+                    beta = beta + aq * aq;
+                    gamma = gamma + ap * aq;
+                    i = i + 1;
+                }
+
+                if abs_f64(gamma) > EPS * sqrt(alpha * beta) {
+                    changed = true;
+                    const zeta: f64 = (beta - alpha) / (2.0 * gamma);
+                    const sign_zeta: f64 = if zeta >= 0.0 { 1.0 } else { -1.0 };
+                    const t: f64 = sign_zeta / (abs_f64(zeta) + sqrt(1.0 + zeta * zeta));
+                    const c: f64 = 1.0 / sqrt(1.0 + t * t);
+                    const s: f64 = c * t;
+
+                    i = 0;
+                    while i < m {
+                        const ap: f64 = work.storage.data[i * n + p];
+                        const aq: f64 = work.storage.data[i * n + q];
+                        work.storage.data[i * n + p] = c * ap - s * aq;
+                        work.storage.data[i * n + q] = s * ap + c * aq;
+                        i = i + 1;
+                    }
+
+                    var j: usize = 0;
+                    while j < n {
+                        const vp: f64 = v.storage.data[j * n + p];
+                        const vq: f64 = v.storage.data[j * n + q];
+                        v.storage.data[j * n + p] = c * vp - s * vq;
+                        v.storage.data[j * n + q] = s * vp + c * vq;
+                        j = j + 1;
+                    }
+                }
+                q = q + 1;
+            }
+            p = p + 1;
+        }
+        if changed != true {
+            break;
+        }
+        sweep = sweep + 1;
+    }
+}
+
+export fn svd_f64(a: &Array<f64>) !SVDResult {
+    try require_svd_args(a);
+    const m: usize = a.shape.dims[0];
+    const n: usize = a.shape.dims[1];
+
+    var work: Array<f64> = try empty<f64>(a.storage.allocator, shape2(m, n));
+    var copy_idx: usize = 0;
+    while copy_idx < m * n {
+        work.storage.data[copy_idx] = a.storage.data[copy_idx];
+        copy_idx = copy_idx + 1;
+    }
+
+    var v: Array<f64> = try empty<f64>(a.storage.allocator, shape2(n, n));
+    var init_idx: usize = 0;
+    while init_idx < n * n {
+        v.storage.data[init_idx] = 0.0;
+        init_idx = init_idx + 1;
+    }
+    var i: usize = 0;
+    while i < n {
+        v.storage.data[i * n + i] = 1.0;
+        i = i + 1;
+    }
+
+    svd_jacobi_solve(&work, &v, m, n);
+
+    var u: Array<f64> = try empty<f64>(a.storage.allocator, shape2(m, n));
+    var singular_values: Array<f64> = try empty<f64>(a.storage.allocator, shape1(n));
+
+    var j: usize = 0;
+    while j < n {
+        var norm_sq: f64 = 0.0;
+        var row: usize = 0;
+        while row < m {
+            const val: f64 = work.storage.data[row * n + j];
+            norm_sq = norm_sq + val * val;
+            row = row + 1;
+        }
+        const sigma: f64 = sqrt(norm_sq);
+        singular_values.storage.data[j] = sigma;
+
+        if sigma > 1e-15 {
+            row = 0;
+            while row < m {
+                u.storage.data[row * n + j] = work.storage.data[row * n + j] / sigma;
+                row = row + 1;
+            }
+        } else {
+            row = 0;
+            while row < m {
+                u.storage.data[row * n + j] = 0.0;
+                row = row + 1;
+            }
+        }
+        j = j + 1;
+    }
+
+    var k: usize = 0;
+    while k < n {
+        var max_idx: usize = k;
+        var max_val: f64 = singular_values.storage.data[k];
+        var l: usize = k + 1;
+        while l < n {
+            const candidate: f64 = singular_values.storage.data[l];
+            if candidate > max_val {
+                max_val = candidate;
+                max_idx = l;
+            }
+            l = l + 1;
+        }
+        if max_idx != k {
+            const tmp_s: f64 = singular_values.storage.data[k];
+            singular_values.storage.data[k] = singular_values.storage.data[max_idx];
+            singular_values.storage.data[max_idx] = tmp_s;
+
+            var r: usize = 0;
+            while r < m {
+                const tmp_u: f64 = u.storage.data[r * n + k];
+                u.storage.data[r * n + k] = u.storage.data[r * n + max_idx];
+                u.storage.data[r * n + max_idx] = tmp_u;
+                r = r + 1;
+            }
+
+            var row_idx: usize = 0;
+            while row_idx < n {
+                const tmp_v: f64 = v.storage.data[row_idx * n + k];
+                v.storage.data[row_idx * n + k] = v.storage.data[row_idx * n + max_idx];
+                v.storage.data[row_idx * n + max_idx] = tmp_v;
+                row_idx = row_idx + 1;
+            }
+        }
+        k = k + 1;
+    }
+
+    var vt: Array<f64> = try empty<f64>(a.storage.allocator, shape2(n, n));
+    var r: usize = 0;
+    while r < n {
+        var c: usize = 0;
+        while c < n {
+            vt.storage.data[r * n + c] = v.storage.data[c * n + r];
+            c = c + 1;
+        }
+        r = r + 1;
+    }
+
+    const u_storage: &Storage<f64> = u.storage;
+    const u_offset: isize = u.offset;
+    const u_shape: Shape = u.shape;
+    const u_strides: Strides = u.strides;
+    const u_flags: ArrayFlags = u.flags;
+    u.storage = null;
+
+    const s_storage: &Storage<f64> = singular_values.storage;
+    const s_offset: isize = singular_values.offset;
+    const s_shape: Shape = singular_values.shape;
+    const s_strides: Strides = singular_values.strides;
+    const s_flags: ArrayFlags = singular_values.flags;
+    singular_values.storage = null;
+
+    const vt_storage: &Storage<f64> = vt.storage;
+    const vt_offset: isize = vt.offset;
+    const vt_shape: Shape = vt.shape;
+    const vt_strides: Strides = vt.strides;
+    const vt_flags: ArrayFlags = vt.flags;
+    vt.storage = null;
+
+    return SVDResult{
+        u: Array<f64>{ storage: u_storage, offset: u_offset, shape: u_shape, strides: u_strides, flags: u_flags },
+        s: Array<f64>{ storage: s_storage, offset: s_offset, shape: s_shape, strides: s_strides, flags: s_flags },
+        vt: Array<f64>{ storage: vt_storage, offset: vt_offset, shape: vt_shape, strides: vt_strides, flags: vt_flags },
+    };
+}

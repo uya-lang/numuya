@@ -21,3 +21,19 @@
   - 验证命令：
     - `../uya/bin/uya test src/numuya/_tests/test_linalg.uya --manifest-path uya.toml` — 24/24 通过
     - `make test` — 全部测试文件通过
+
+
+## Phase 13: Linear algebra advanced
+
+- [x] TDD: `svd_f64`。
+  - 新增测试：`src/numuya/_tests/test_linalg.uya` 中添加 6 个测试：
+    - `svd_f64 returns correct shapes for square matrix`
+    - `svd_f64 reconstructs square matrix`
+    - `svd_f64 produces orthogonal factors`
+    - `svd_f64 returns sorted singular values for diagonal matrix`
+    - `svd_f64 handles tall rectangular matrix`
+    - `svd_f64 rejects non-2-D input`
+  - 实现：`src/numuya/linalg.uya` 新增 `SVDResult` 结构与导出 `svd_f64`，使用 one-sided Jacobi 算法对 m×n（m ≥ n）矩阵进行经济型 SVD 分解；奇异值按降序排列，U 与 Vt 正交并满足 A = U·diag(S)·Vt。
+  - 验证命令：
+    - `../uya/bin/uya test src/numuya/_tests/test_linalg.uya --manifest-path uya.toml` — 30/30 通过
+    - `make test` — 全部测试文件通过
