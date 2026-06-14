@@ -905,3 +905,10 @@ done
   - 测试先行：在 `src/numuya/_tests/test_linalg.uya` 的 scaffold 阶段已写入 `matmul_f64 handles non-contiguous matrix input`，实现位于 `src/numuya/linalg.uya` 的 `matmul_impl`。
   - 验证命令：`../uya/bin/uya test src/numuya/_tests/test_linalg.uya --manifest-path uya.toml`
   - 验证结果：12/12 通过，其中 `matmul_f64 handles non-contiguous matrix input` OK。
+
+## Phase 12: Linear algebra MVP
+
+- [x] 验收：`src/numuya/_tests/test_linalg.uya` 绿。
+  - 验证命令：
+    - `../uya/bin/uya test src/numuya/_tests/test_linalg.uya --manifest-path uya.toml`：12/12 通过。
+    - 回跑全部现有包内测试确认无回归（`for t in src/numuya/_tests/test_*.uya; do ../uya/bin/uya test "$t" --manifest-path uya.toml; done`）：全部通过。

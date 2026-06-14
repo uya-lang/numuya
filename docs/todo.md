@@ -31,10 +31,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 10: Statistics
 
-## Phase 12: Linear algebra MVP
-
-- [ ] 验收：`src/numuya/_tests/test_linalg.uya` 绿。
-
 ## Phase 13: Linear algebra advanced
 
 - [ ] TDD: `det_f64` 1x1、2x2、3x3。
