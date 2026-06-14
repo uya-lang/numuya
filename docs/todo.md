@@ -33,7 +33,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 12: Linear algebra MVP
 
-- [ ] TDD: non-contiguous matrix input。
 - [ ] 验收：`src/numuya/_tests/test_linalg.uya` 绿。
 
 ## Phase 13: Linear algebra advanced

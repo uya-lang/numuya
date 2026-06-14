@@ -897,3 +897,11 @@ done
   - 2-D x 2-D。
   - incompatible shape 返回 `NumuyaShapeMismatch`。
   - 验证命令：`../uya/bin/uya test src/numuya/_tests/test_linalg.uya --manifest-path uya.toml`（12/12 通过）
+
+## Phase 12: Linear algebra MVP
+
+- [x] TDD: non-contiguous matrix input。
+  - `matmul_f64` 使用 `get2<T>` 访问输入元素，天然支持非连续（transpose view）矩阵。
+  - 测试先行：在 `src/numuya/_tests/test_linalg.uya` 的 scaffold 阶段已写入 `matmul_f64 handles non-contiguous matrix input`，实现位于 `src/numuya/linalg.uya` 的 `matmul_impl`。
+  - 验证命令：`../uya/bin/uya test src/numuya/_tests/test_linalg.uya --manifest-path uya.toml`
+  - 验证结果：12/12 通过，其中 `matmul_f64 handles non-contiguous matrix input` OK。
