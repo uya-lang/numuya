@@ -841,3 +841,9 @@ done
 - 非 1-D 输入统一返回 `NumuyaInvalidArgument`。
 - 所有返回 `Array<T>` 的函数均按项目惯例先 `storage_retain` 再返回字面量，避免 codegen 对 `return variable` 的返回联合转换问题。
 - 内部 `validate_1d` 在成功路径显式 `return;`，防止返回未初始化的错误联合。
+
+## Phase 12: Linear algebra MVP
+
+- [x] 写 `src/numuya/_tests/test_linalg.uya`。
+  - 验证命令：`../uya/bin/uya check src/numuya/_tests/test_linalg.uya --manifest-path uya.toml`
+  - 失败原因（预期）：`linalg.uya` 尚未实现，`eye_f64`/`diag_f64`/`dot_f64`/`matmul_f64` 未定义，导致 `try eye_f64(...)` 等报 "try 的操作数必须是错误联合类型 !T"。
