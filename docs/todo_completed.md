@@ -762,3 +762,12 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
   - 验证结果：`src/numuya/_tests/test_math.uya` 10 tests passed, 0 failed；其中 `exp_f64 computes element-wise natural exponential` 与 `log_f64 computes element-wise natural logarithm` 均通过。
   - 生产改动：无新增改动；`src/numuya/math.uya` 中 `exp_f64` 与 `log_f64` 已实现并随 `test_math.uya` 全绿。
 
+
+## Phase 9: Math functions
+
+- [x] TDD: `sin_f64/cos_f64`。
+  验证命令：
+  ```bash
+  ../uya/bin/uya test src/numuya/_tests/test_math.uya --manifest-path uya.toml
+  ```
+  结果：`src/numuya/_tests/test_math.uya` 10/10 测试通过，包括 `sin_f64 computes element-wise sine` 和 `cos_f64 computes element-wise cosine`。

@@ -31,7 +31,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 9: Math functions
 
-- [ ] TDD: `sin_f64/cos_f64`。
 - [ ] TDD: broadcast/non-contiguous 输入通过 ufunc 内核复用。
 - [ ] 验收：`src/numuya/_tests/test_math.uya` 绿。
 
