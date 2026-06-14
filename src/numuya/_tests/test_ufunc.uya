@@ -191,3 +191,113 @@ test "add_f64 output is a new owner independent of inputs" {
     try expect_close_f64(try get1<f64>(&right, 0), 4.0, 1e-12);
     try expect_close_f64(try get1<f64>(&result, 0), 99.0, 1e-12);
 }
+
+test "sub_f64 output is a new owner independent of inputs" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var left_data: [f64: 3] = [4.0, 5.0, 6.0];
+    var right_data: [f64: 3] = [1.0, 2.0, 3.0];
+    var left: Array<f64> = try from_slice<f64>(allocator, left_data[0:3], shape1(3));
+    var right: Array<f64> = try from_slice<f64>(allocator, right_data[0:3], shape1(3));
+
+    var result: Array<f64> = try sub_f64(&left, &right);
+
+    try expect_eq_usize(result.storage.ref_count, 1);
+    if result.flags.owns_data != true {
+        return error.NumuyaExpectationFailed;
+    }
+
+    try set1<f64>(&result, 0, 99.0);
+
+    try expect_close_f64(try get1<f64>(&left, 0), 4.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&right, 0), 1.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&result, 0), 99.0, 1e-12);
+}
+
+test "mul_f64 output is a new owner independent of inputs" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var left_data: [f64: 3] = [2.0, 3.0, 4.0];
+    var right_data: [f64: 3] = [5.0, 6.0, 7.0];
+    var left: Array<f64> = try from_slice<f64>(allocator, left_data[0:3], shape1(3));
+    var right: Array<f64> = try from_slice<f64>(allocator, right_data[0:3], shape1(3));
+
+    var result: Array<f64> = try mul_f64(&left, &right);
+
+    try expect_eq_usize(result.storage.ref_count, 1);
+    if result.flags.owns_data != true {
+        return error.NumuyaExpectationFailed;
+    }
+
+    try set1<f64>(&result, 0, 99.0);
+
+    try expect_close_f64(try get1<f64>(&left, 0), 2.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&right, 0), 5.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&result, 0), 99.0, 1e-12);
+}
+
+test "div_f64 output is a new owner independent of inputs" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var left_data: [f64: 3] = [10.0, 21.0, 36.0];
+    var right_data: [f64: 3] = [2.0, 3.0, 4.0];
+    var left: Array<f64> = try from_slice<f64>(allocator, left_data[0:3], shape1(3));
+    var right: Array<f64> = try from_slice<f64>(allocator, right_data[0:3], shape1(3));
+
+    var result: Array<f64> = try div_f64(&left, &right);
+
+    try expect_eq_usize(result.storage.ref_count, 1);
+    if result.flags.owns_data != true {
+        return error.NumuyaExpectationFailed;
+    }
+
+    try set1<f64>(&result, 0, 99.0);
+
+    try expect_close_f64(try get1<f64>(&left, 0), 10.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&right, 0), 2.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&result, 0), 99.0, 1e-12);
+}
+
+test "neg_f64 output is a new owner independent of input" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var data: [f64: 3] = [1.0, -2.0, 3.0];
+    var input: Array<f64> = try from_slice<f64>(allocator, data[0:3], shape1(3));
+
+    var result: Array<f64> = try neg_f64(&input);
+
+    try expect_eq_usize(result.storage.ref_count, 1);
+    if result.flags.owns_data != true {
+        return error.NumuyaExpectationFailed;
+    }
+
+    try set1<f64>(&result, 0, 99.0);
+
+    try expect_close_f64(try get1<f64>(&input, 0), 1.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&result, 0), 99.0, 1e-12);
+}
+
+test "add_i32 output is a new owner independent of inputs" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var left_data: [i32: 3] = [1, 2, 3];
+    var right_data: [i32: 3] = [4, 5, 6];
+    var left: Array<i32> = try from_slice<i32>(allocator, left_data[0:3], shape1(3));
+    var right: Array<i32> = try from_slice<i32>(allocator, right_data[0:3], shape1(3));
+
+    var result: Array<i32> = try add_i32(&left, &right);
+
+    try expect_eq_usize(result.storage.ref_count, 1);
+    if result.flags.owns_data != true {
+        return error.NumuyaExpectationFailed;
+    }
+
+    try set1<i32>(&result, 0, 99);
+
+    var left0: i32 = try get1<i32>(&left, 0);
+    var right0: i32 = try get1<i32>(&right, 0);
+    var result0: i32 = try get1<i32>(&result, 0);
+    if left0 != 1 { return error.NumuyaExpectationFailed; }
+    if right0 != 4 { return error.NumuyaExpectationFailed; }
+    if result0 != 99 { return error.NumuyaExpectationFailed; }
+}
