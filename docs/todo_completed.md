@@ -930,3 +930,13 @@ done
 - [x] TDD: `det_f64` 1x1、2x2、3x3。
   - 验证：`../uya/bin/uya test src/numuya/_tests/test_linalg.uya --manifest-path uya.toml`
   - 结果：15 tests passed, 0 failed；其中 `det_f64 computes 1x1 determinant`、`det_f64 computes 2x2 determinant`、`det_f64 computes 3x3 determinant` 均 OK。
+
+## Phase 13: Linear algebra advanced
+
+- [x] TDD: `solve_f64`。
+  - identity。
+  - 2x2 known system。
+  - singular 返回 `NumuyaSingularMatrix`。
+  - 验证命令：`../uya/bin/uya test src/numuya/_tests/test_linalg.uya --manifest-path uya.toml`
+  - 验证结果：18 tests passed, 0 failed（含新增 solve_f64 identity、2x2 known system、singular 三个测试）
+  - 改动文件：`src/numuya/errors.uya`、`src/numuya/linalg.uya`、`src/numuya/_tests/test_linalg.uya`

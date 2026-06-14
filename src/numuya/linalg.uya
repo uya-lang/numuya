@@ -1,5 +1,6 @@
 use array;
 use creation;
+use errors;
 use indexing;
 use shape;
 use storage;
@@ -302,5 +303,114 @@ export fn det_f64(a: &Array<f64>) !Array<f64> {
     const out_strides: Strides = result.strides;
     const out_flags: ArrayFlags = result.flags;
     result.storage = null;
+    return Array<f64>{ storage: out_storage, offset: out_offset, shape: out_shape, strides: out_strides, flags: out_flags };
+}
+
+fn require_solve_args(a: &Array<f64>, b: &Array<f64>) !void {
+    try require_square_matrix(a);
+    if b.shape.rank != 1 {
+        return error.NumuyaInvalidArgument;
+    }
+    if b.shape.dims[0] != a.shape.dims[0] {
+        return error.NumuyaShapeMismatch;
+    }
+}
+
+fn abs_f64(value: f64) f64 {
+    if value < 0.0 {
+        return 0.0 - value;
+    }
+    return value;
+}
+
+export fn solve_f64(a: &Array<f64>, b: &Array<f64>) !Array<f64> {
+    try require_solve_args(a, b);
+    const n: usize = a.shape.dims[0];
+
+    var work_a: Array<f64> = try empty<f64>(a.storage.allocator, a.shape);
+    var copy_idx: usize = 0;
+    while copy_idx < n * n {
+        work_a.storage.data[copy_idx] = a.storage.data[copy_idx];
+        copy_idx = copy_idx + 1;
+    }
+
+    var work_b: Array<f64> = try empty<f64>(b.storage.allocator, b.shape);
+    var copy_bidx: usize = 0;
+    while copy_bidx < n {
+        work_b.storage.data[copy_bidx] = b.storage.data[copy_bidx];
+        copy_bidx = copy_bidx + 1;
+    }
+
+    const SINGULAR_EPS: f64 = 1e-15;
+
+    var col: usize = 0;
+    while col < n {
+        var pivot_row: usize = col;
+        var max_val: f64 = 0.0;
+        var r: usize = col;
+        while r < n {
+            const val: f64 = work_a.storage.data[r * n + col];
+            const abs_val: f64 = abs_f64(val);
+            if abs_val > max_val {
+                max_val = abs_val;
+                pivot_row = r;
+            }
+            r = r + 1;
+        }
+
+        if max_val < SINGULAR_EPS {
+            return error.NumuyaSingularMatrix;
+        }
+
+        if pivot_row != col {
+            var c: usize = 0;
+            while c < n {
+                const tmp: f64 = work_a.storage.data[col * n + c];
+                work_a.storage.data[col * n + c] = work_a.storage.data[pivot_row * n + c];
+                work_a.storage.data[pivot_row * n + c] = tmp;
+                c = c + 1;
+            }
+            const tmp_b: f64 = work_b.storage.data[col];
+            work_b.storage.data[col] = work_b.storage.data[pivot_row];
+            work_b.storage.data[pivot_row] = tmp_b;
+        }
+
+        var row: usize = col + 1;
+        while row < n {
+            const factor: f64 = work_a.storage.data[row * n + col] / work_a.storage.data[col * n + col];
+            var c: usize = col;
+            while c < n {
+                work_a.storage.data[row * n + c] = work_a.storage.data[row * n + c] - factor * work_a.storage.data[col * n + c];
+                c = c + 1;
+            }
+            work_b.storage.data[row] = work_b.storage.data[row] - factor * work_b.storage.data[col];
+            row = row + 1;
+        }
+        col = col + 1;
+    }
+
+    var x: Array<f64> = try empty<f64>(a.storage.allocator, shape1(n));
+    var i: usize = n;
+    while i > 0 {
+        i = i - 1;
+        var sum: f64 = work_b.storage.data[i];
+        var j: usize = i + 1;
+        while j < n {
+            sum = sum - work_a.storage.data[i * n + j] * x.storage.data[j];
+            j = j + 1;
+        }
+        const diag: f64 = work_a.storage.data[i * n + i];
+        if abs_f64(diag) < SINGULAR_EPS {
+            return error.NumuyaSingularMatrix;
+        }
+        x.storage.data[i] = sum / diag;
+    }
+
+    const out_storage: &Storage<f64> = x.storage;
+    const out_offset: isize = x.offset;
+    const out_shape: Shape = x.shape;
+    const out_strides: Strides = x.strides;
+    const out_flags: ArrayFlags = x.flags;
+    x.storage = null;
     return Array<f64>{ storage: out_storage, offset: out_offset, shape: out_shape, strides: out_strides, flags: out_flags };
 }

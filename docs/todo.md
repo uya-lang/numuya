@@ -33,10 +33,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 13: Linear algebra advanced
 
-- [ ] TDD: `solve_f64`。
-  - identity。
-  - 2x2 known system。
-  - singular 返回 `NumuyaSingularMatrix`。
 - [ ] TDD: `inv_f64`。
 - [ ] TDD: `qr_f64`。
 - [ ] TDD: `svd_f64`。

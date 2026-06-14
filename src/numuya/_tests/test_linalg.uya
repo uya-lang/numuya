@@ -232,6 +232,54 @@ test "det_f64 computes 2x2 determinant" {
     try expect_close_f64(try get0<f64>(&result), -2.0, 1e-12);
 }
 
+test "solve_f64 solves identity system" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var a_data: [f64: 9] = [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0];
+    var a: Array<f64> = try from_slice<f64>(allocator, a_data[0:9], shape2(3, 3));
+    var b_data: [f64: 3] = [4.0, 5.0, 6.0];
+    var b: Array<f64> = try from_slice<f64>(allocator, b_data[0:3], shape1(3));
+
+    var result: Array<f64> = try solve_f64(&a, &b);
+
+    try expect_eq_usize(result.shape.rank, 1);
+    try expect_eq_usize(result.shape.dims[0], 3);
+    try expect_close_f64(try get1<f64>(&result, 0), 4.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&result, 1), 5.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&result, 2), 6.0, 1e-12);
+}
+
+test "solve_f64 solves 2x2 known system" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var a_data: [f64: 4] = [2.0, 1.0, 5.0, 3.0];
+    var a: Array<f64> = try from_slice<f64>(allocator, a_data[0:4], shape2(2, 2));
+    var b_data: [f64: 2] = [4.0, 11.0];
+    var b: Array<f64> = try from_slice<f64>(allocator, b_data[0:2], shape1(2));
+
+    var result: Array<f64> = try solve_f64(&a, &b);
+
+    try expect_eq_usize(result.shape.rank, 1);
+    try expect_eq_usize(result.shape.dims[0], 2);
+    try expect_close_f64(try get1<f64>(&result, 0), 1.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&result, 1), 2.0, 1e-12);
+}
+
+test "solve_f64 returns singular matrix error" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var a_data: [f64: 4] = [1.0, 2.0, 2.0, 4.0];
+    var a: Array<f64> = try from_slice<f64>(allocator, a_data[0:4], shape2(2, 2));
+    var b_data: [f64: 2] = [1.0, 2.0];
+    var b: Array<f64> = try from_slice<f64>(allocator, b_data[0:2], shape1(2));
+
+    const result: !Array<f64> = solve_f64(&a, &b);
+    match result {
+        error.NumuyaSingularMatrix => {}
+        else => { return error.NumuyaExpectationFailed; }
+    }
+}
+
 test "det_f64 computes 3x3 determinant" {
     var malloc_allocator: MallocAllocator = MallocAllocator{};
     var allocator: IAllocator = malloc_allocator;
