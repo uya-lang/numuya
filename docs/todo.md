@@ -33,10 +33,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 19: SIMD 与性能
 
-## Phase 21: CUDA DeviceArray 与拷贝
-
-- [ ] 验收：`src/numuya/_tests/test_cuda_device_array.uya` 绿。
-
 ## Phase 22: CUDA ufunc 与 reduction
 
 - [ ] 写 `src/numuya/_tests/test_cuda_ufunc.uya`。

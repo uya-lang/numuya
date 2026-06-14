@@ -665,3 +665,9 @@
   - free 后 used 减少。
   - 真实 allocation 改变 `live_allocations`，view retain/drop 不改变。
   - 验证：`../uya/bin/uya test src/numuya/_tests/test_cuda_device_array.uya --manifest-path uya.toml` 通过 16/16（CUDA 不可用时测试 early-return，但仍编译链接并执行通过）。
+
+## Phase 21: CUDA DeviceArray 与拷贝
+
+- [x] 验收：`src/numuya/_tests/test_cuda_device_array.uya` 绿。
+  - 验证命令：`NUMUYA_CUDA_REQUIRED=1 LDFLAGS="-lcublasLt -lcublas -lcufft -lcurand -lcuda" ../uya/bin/uya test src/numuya/_tests/test_cuda_device_array.uya --manifest-path uya.toml`
+  - 结果：16 tests passed, 0 failed。
