@@ -118,3 +118,9 @@
 - [x] TDD: `fft_f64` 长度 2。
   - 验证命令：`TEST=src/numuya/_tests/test_fft.uya make test-one`
   - 结果：7/7 测试通过，包含 `fft_f64 length 2 on impulse`。
+
+## Phase 15: FFT
+
+- [x] TDD: impulse 输入。
+  - 验证：`../uya/bin/uya test src/numuya/_tests/test_fft.uya --manifest-path uya.toml`
+  - 结果：8 tests passed，包含新增 `fft_f64 on eight point impulse`。

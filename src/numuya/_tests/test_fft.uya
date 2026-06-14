@@ -82,6 +82,25 @@ test "fft_f64 on four point impulse" {
     }
 }
 
+test "fft_f64 on eight point impulse" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var data: [f64: 8] = [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
+    var input: Array<f64> = try from_slice<f64>(allocator, data[0:8], shape1(8));
+
+    var result: ComplexArray = try fft_f64(allocator, &input);
+
+    try expect_eq_usize(result.re.shape.rank, 1);
+    try expect_eq_usize(result.re.shape.dims[0], 8);
+    try expect_eq_usize(result.im.shape.dims[0], 8);
+    var i: usize = 0;
+    while i < 8 {
+        try expect_close_f64(try get1<f64>(&result.re, i), 1.0, 1e-12);
+        try expect_close_f64(try get1<f64>(&result.im, i), 0.0, 1e-12);
+        i = i + 1;
+    }
+}
+
 test "ifft inverts fft for real input" {
     var malloc_allocator: MallocAllocator = MallocAllocator{};
     var allocator: IAllocator = malloc_allocator;
