@@ -27,10 +27,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 1: Shape、axis、size
 
-- [ ] TDD: `shape_size`。
-  - `(2, 3, 4)` size 是 24。
-  - `(0, 3)` size 是 0。
-  - 溢出返回 `NumuyaShapeOverflow`。
 - [ ] TDD: `shape_eq`。
   - 相同 rank/dims 为 true。
   - rank 不同或 dims 不同为 false。

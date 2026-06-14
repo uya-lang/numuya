@@ -16,7 +16,19 @@ test "shape_scalar creates rank-zero shape with size one" {
     const scalar: Shape = shape_scalar();
 
     try expect_eq_usize(scalar.rank, 0);
-    try expect_eq_usize(shape_size(scalar), 1);
+    try expect_eq_usize(try shape_size(scalar), 1);
+}
+
+test "shape_size multiplies dimensions allows zero and rejects overflow" {
+    try expect_eq_usize(try shape_size(shape3(2, 3, 4)), 24);
+    try expect_eq_usize(try shape_size(shape2(0, 3)), 0);
+
+    const overflow_shape: Shape = shape2(9223372036854775808, 2);
+    const result: !usize = shape_size(overflow_shape);
+    match result {
+        error.NumuyaShapeOverflow => {}
+        else => { return error.NumuyaExpectationFailed; }
+    }
 }
 
 test "shape1 shape2 shape3 create fixed-rank shapes" {

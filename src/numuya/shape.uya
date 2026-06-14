@@ -1,4 +1,5 @@
 export const NUMUYA_MAX_DIMS: usize = 16;
+const NUMUYA_MAX_USIZE: usize = 18446744073709551615;
 
 export struct Shape {
     rank: usize,
@@ -50,11 +51,15 @@ export fn shape_from_slice(input_dims: &[usize]) !Shape {
     return Shape{ rank: input_dims.len, dims: dims };
 }
 
-export fn shape_size(shape: Shape) usize {
+export fn shape_size(shape: Shape) !usize {
     var size: usize = 1;
     var i: usize = 0;
     while i < shape.rank {
-        size = size * shape.dims[i];
+        const dim: usize = shape.dims[i];
+        if dim != 0 && size > NUMUYA_MAX_USIZE / dim {
+            return error.NumuyaShapeOverflow;
+        }
+        size = size * dim;
         i = i + 1;
     }
     return size;

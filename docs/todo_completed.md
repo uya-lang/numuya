@@ -124,3 +124,13 @@
   - 验证：
     - `make test-one TEST=src/numuya/_tests/test_shape.uya`：通过，5 个 shape 测试 OK。
     - `make test`：通过，当前 2 个测试文件 OK。
+# NumUya TDD Todo
+## Phase 1: Shape、axis、size
+
+- [x] TDD: `shape_size`。
+  - `(2, 3, 4)` size 是 24。
+  - `(0, 3)` size 是 0。
+  - 溢出返回 `NumuyaShapeOverflow`。
+  - 验证：
+    - `make test-one TEST=src/numuya/_tests/test_shape.uya` 通过。
+    - `make test` 通过。
