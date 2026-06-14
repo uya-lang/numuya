@@ -35,9 +35,11 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 20: CUDA backend 基础
 
-- [ ] TDD: `cuda_init()`。
+- [x] TDD: `cuda_init()`。
   - 成功时返回 ok。
   - driver 初始化失败映射为 `NumuyaGpuUnavailable` 或 `NumuyaCudaError`。
+  - 验证命令：`../uya/bin/uya test src/numuya/_tests/test_cuda_driver.uya --manifest-path uya.toml`
+  - 验证结果：6/6 测试通过，0 失败（含 `cuda_init succeeds when cuda is available and errors gracefully otherwise`）。
 - [ ] TDD: `cuda_get_device(0)`。
   - device ordinal 是 0。
   - compute capability 应识别为 Ampere `sm_86` 或至少 major/minor 非 0。

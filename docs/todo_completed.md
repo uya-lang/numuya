@@ -467,3 +467,12 @@
     - `../uya/bin/uya test src/numuya/_tests/test_cuda_driver.uya --manifest-path uya.toml` — 6/6 通过
     - `make test` — 非 CUDA 测试全部通过
     - `make test-cuda` — RTX 3060 上 6/6 通过
+
+
+## Phase 20: CUDA backend 基础
+
+- [x] TDD: `cuda_init()`。
+  - 成功时返回 ok。
+  - driver 初始化失败映射为 `NumuyaGpuUnavailable` 或 `NumuyaCudaError`。
+  - 验证命令：`../uya/bin/uya test src/numuya/_tests/test_cuda_driver.uya --manifest-path uya.toml`
+  - 验证结果：6/6 测试通过，0 失败（含 `cuda_init succeeds when cuda is available and errors gracefully otherwise`）。
