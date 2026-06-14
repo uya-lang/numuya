@@ -570,3 +570,11 @@
 - [x] 实现 `src/numuya/cuda/device_array.uya`。
   - 验证：`make test-cuda` 通过（`test_cuda_device_array.uya` 7/7，`test_cuda_driver.uya` 21/21）；`make test` 通过。
   - 实现要点：补全 `DeviceStorage<T>` 分配/释放、`DeviceArray<T>` 构造/视图、H2D/D2H 拷贝；在 `cuda/driver.uya` 与 `driver_stub.c` 新增 `cuda_memcpy_htod/dtoh` 绑定；修复 `test_cuda_device_array.uya` 中 H2D/D2H 测试使用 `get1` 访问 rank-2 数组的笔误，改为 `getn`。
+
+## Phase 21: CUDA DeviceArray 与拷贝
+
+- [x] TDD: `cuda_malloc/cuda_free`。
+  - 申请 1MB 成功。
+  - 超过 budget 返回 `NumuyaGpuOutOfMemory`。
+  - 验证命令：`make test-cuda TEST=src/numuya/_tests/test_cuda_device_array.uya`
+  - 验证结果：7 tests passed, 0 failed（其中 `cuda_malloc allocates 1MB from pool and cuda_free releases it` 与 `cuda_malloc returns NumuyaGpuOutOfMemory when exceeding budget` 通过）。

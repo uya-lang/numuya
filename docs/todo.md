@@ -36,9 +36,8 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 ## Phase 21: CUDA DeviceArray 与拷贝
 
 
-- [ ] TDD: `cuda_malloc/cuda_free`。
-  - 申请 1MB 成功。
-  - 超过 budget 返回 `NumuyaGpuOutOfMemory`。
+
+
 - [ ] TDD: `DeviceStorage<T>` 引用计数。
   - `device_storage_new` 初始 ref_count 为 1。
   - `device_storage_retain` 增加计数。
