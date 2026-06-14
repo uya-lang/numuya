@@ -33,7 +33,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 17: Advanced indexing
 
-- [ ] TDD: boolean mask 1-D。
 - [ ] TDD: boolean mask shape mismatch。
 - [ ] TDD: fancy indexing copy 语义。
 - [ ] 验收：advanced indexing tests 绿。

@@ -232,3 +232,13 @@
   - 验证命令：`../uya/bin/uya test src/numuya/_tests/test_advanced_indexing.uya --manifest-path uya.toml` — 4/4 通过。
   - 回归验证：`../uya/bin/uya check src/numuya/_tests/test_advanced_indexing.uya --manifest-path uya.toml` — checker 通过。
   - 回归验证：`../uya/bin/uya test src/numuya/_tests/test_indexing.uya --manifest-path uya.toml` — 6/6 通过。
+
+## Phase 17: Advanced indexing
+
+- [x] TDD: boolean mask 1-D。
+  - 新增测试：`src/numuya/_tests/test_advanced_indexing.uya` 添加 `boolean_mask selects true entries from 1-D vector`，验证 `[true, false, true, false, true, false]` 会从 `[10, 20, 30, 40, 50, 60]` 选出 `[10, 30, 50]`。
+  - 实现：`src/numuya/indexing.uya` 新增导出 `boolean_mask<T>(allocator, a, mask)`，当前支持 1-D 输入与 1-D mask；mask 长度不一致返回 `NumuyaShapeMismatch`。同时加入 `Storage<bool>` materialization workaround，修复不含 bool fixture 的目标在 codegen 阶段缺少 `bool` 特化定义的问题。
+  - 失败确认：`../uya/bin/uya test src/numuya/_tests/test_advanced_indexing.uya --manifest-path uya.toml` — 失败，新增测试中的 `try boolean_mask<f64>(...)` 报 `try` 操作数不是错误联合类型，说明 API 尚未实现。
+  - 验证命令：`../uya/bin/uya check src/numuya/_tests/test_advanced_indexing.uya --manifest-path uya.toml` — checker 通过。
+  - 验证命令：`../uya/bin/uya test src/numuya/_tests/test_advanced_indexing.uya --manifest-path uya.toml` — 5/5 通过。
+  - 回归验证：`../uya/bin/uya test src/numuya/_tests/test_indexing.uya --manifest-path uya.toml` — 6/6 通过。

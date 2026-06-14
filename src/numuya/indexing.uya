@@ -14,6 +14,14 @@ fn materialize_storage_release<T>(array_value: &Array<T>) void {
     }
 }
 
+fn materialize_bool_storage_type() void {
+    var header_sample: [Storage<bool>: 1] = [];
+    const header_size: usize = (@size_of(header_sample[0]) as! usize).value;
+    if header_size == 0 {
+        return;
+    }
+}
+
 fn validate_array_metadata<T>(array_value: &Array<T>) !void {
     materialize_storage_release<T>(array_value);
     if array_value.shape.rank > NUMUYA_MAX_DIMS {
@@ -223,6 +231,51 @@ export fn take<T>(allocator: IAllocator, array_value: &Array<T>, indices: &[usiz
         const physical_index: usize = try compute_physical_index_unchecked<T>(array_value, source_indices[0:rank]);
         result.storage.data[linear] = array_value.storage.data[physical_index];
         linear = linear + 1;
+    }
+
+    storage_retain<T>(result.storage);
+    return Array<T>{
+        storage: result.storage,
+        offset: result.offset,
+        shape: result.shape,
+        strides: result.strides,
+        flags: result.flags,
+    };
+}
+
+export fn boolean_mask<T>(allocator: IAllocator, array_value: &Array<T>, mask: &Array<bool>) !Array<T> {
+    materialize_bool_storage_type();
+    try validate_fixed_rank<T>(array_value, 1);
+    try validate_fixed_rank<bool>(mask, 1);
+
+    const source_len: usize = array_value.shape.dims[0];
+    if mask.shape.dims[0] != source_len {
+        return error.NumuyaShapeMismatch;
+    }
+
+    var source_indices: [usize: 1] = [0];
+    var selected_len: usize = 0;
+    while source_indices[0] < source_len {
+        const mask_index: usize = try compute_physical_index_unchecked<bool>(mask, source_indices[0:1]);
+        const keep: bool = mask.storage.data[mask_index];
+        if keep != false {
+            selected_len = selected_len + 1;
+        }
+        source_indices[0] = source_indices[0] + 1;
+    }
+
+    var result: Array<T> = try empty<T>(allocator, shape1(selected_len));
+    source_indices[0] = 0;
+    var output_index: usize = 0;
+    while source_indices[0] < source_len {
+        const mask_index: usize = try compute_physical_index_unchecked<bool>(mask, source_indices[0:1]);
+        const keep: bool = mask.storage.data[mask_index];
+        if keep != false {
+            const source_index: usize = try compute_physical_index_unchecked<T>(array_value, source_indices[0:1]);
+            result.storage.data[output_index] = array_value.storage.data[source_index];
+            output_index = output_index + 1;
+        }
+        source_indices[0] = source_indices[0] + 1;
     }
 
     storage_retain<T>(result.storage);
