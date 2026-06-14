@@ -636,3 +636,12 @@
   - 验证结果：20/20 通过。
   - 回归命令：`make test`
   - 回归结果：全部既有测试文件通过（test_array_creation 6、test_broadcast 7、test_indexing 6、test_reductions 20、test_shape 8、test_slicing 10、test_storage 7、test_stride_views 13、test_testing_helpers 2、test_ufunc 17）。
+
+## Phase 8: Reductions
+
+- [x] TDD: `sum_all_f64/prod_all_f64`。
+  - 普通数组。
+  - 空数组。
+  - non-contiguous view。
+  - 验证：`../uya/bin/uya test src/numuya/_tests/test_reductions.uya --manifest-path uya.toml`
+  - 结果：20/20 通过，包含 `sum_all_f64` 普通数组、空数组、non-contiguous transpose view 及 `prod_all_f64` 对应三项。
