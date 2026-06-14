@@ -1,5 +1,13 @@
 # Completed Todo
 
+## Phase 7: UFunc 基础
+
+- [x] 验收：`src/numuya/_tests/test_ufunc.uya` 绿，并回跑 `broadcast`、`stride_views`。
+  - 验证命令：
+    - `../uya/bin/uya test src/numuya/_tests/test_ufunc.uya --manifest-path uya.toml`（17/17 通过）
+    - `../uya/bin/uya test src/numuya/_tests/test_broadcast.uya --manifest-path uya.toml`（7/7 通过）
+    - `../uya/bin/uya test src/numuya/_tests/test_stride_views.uya --manifest-path uya.toml`（13/13 通过）
+
 ## Phase 0: 脚手架与测试基础
 
 - [x] 可选创建 `Makefile`。
