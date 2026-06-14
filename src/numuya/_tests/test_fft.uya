@@ -1,0 +1,114 @@
+use array;
+use creation;
+use fft;
+use indexing;
+use shape;
+use testing.expect_close_f64;
+use testing.expect_eq_usize;
+
+use std.mem.allocator.IAllocator;
+use std.mem.allocator.MallocAllocator;
+
+fn expect_close_complex(actual: Complex, expected_re: f64, expected_im: f64) !void {
+    try expect_close_f64(actual.re, expected_re, 1e-12);
+    try expect_close_f64(actual.im, expected_im, 1e-12);
+}
+
+test "fft test file imports fft module" {
+}
+
+test "complex add multiply and conjugate helpers" {
+    const a: Complex = Complex{ re: 1.0, im: 2.0 };
+    const b: Complex = Complex{ re: 3.0, im: 4.0 };
+
+    const sum: Complex = complex_add(&a, &b);
+    try expect_close_complex(sum, 4.0, 6.0);
+
+    const product: Complex = complex_mul(&a, &b);
+    try expect_close_complex(product, -5.0, 10.0);
+
+    const conj_a: Complex = complex_conj(&a);
+    try expect_close_complex(conj_a, 1.0, -2.0);
+}
+
+test "fft_f64 length 1 returns constant" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var data: [f64: 1] = [1.0];
+    var input: Array<f64> = try from_slice<f64>(allocator, data[0:1], shape1(1));
+
+    var result: ComplexArray = try fft_f64(allocator, &input);
+
+    try expect_eq_usize(result.re.shape.rank, 1);
+    try expect_eq_usize(result.re.shape.dims[0], 1);
+    try expect_eq_usize(result.im.shape.dims[0], 1);
+    try expect_close_f64(try get1<f64>(&result.re, 0), 1.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&result.im, 0), 0.0, 1e-12);
+}
+
+test "fft_f64 length 2 on impulse" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var data: [f64: 2] = [1.0, 0.0];
+    var input: Array<f64> = try from_slice<f64>(allocator, data[0:2], shape1(2));
+
+    var result: ComplexArray = try fft_f64(allocator, &input);
+
+    try expect_eq_usize(result.re.shape.rank, 1);
+    try expect_eq_usize(result.re.shape.dims[0], 2);
+    try expect_eq_usize(result.im.shape.dims[0], 2);
+    try expect_close_f64(try get1<f64>(&result.re, 0), 1.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&result.im, 0), 0.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&result.re, 1), 1.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&result.im, 1), 0.0, 1e-12);
+}
+
+test "fft_f64 on four point impulse" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var data: [f64: 4] = [1.0, 0.0, 0.0, 0.0];
+    var input: Array<f64> = try from_slice<f64>(allocator, data[0:4], shape1(4));
+
+    var result: ComplexArray = try fft_f64(allocator, &input);
+
+    try expect_eq_usize(result.re.shape.rank, 1);
+    try expect_eq_usize(result.re.shape.dims[0], 4);
+    try expect_eq_usize(result.im.shape.dims[0], 4);
+    var i: usize = 0;
+    while i < 4 {
+        try expect_close_f64(try get1<f64>(&result.re, i), 1.0, 1e-12);
+        try expect_close_f64(try get1<f64>(&result.im, i), 0.0, 1e-12);
+        i = i + 1;
+    }
+}
+
+test "ifft inverts fft for real input" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var data: [f64: 4] = [1.0, 2.0, 3.0, 4.0];
+    var input: Array<f64> = try from_slice<f64>(allocator, data[0:4], shape1(4));
+
+    var spectrum: ComplexArray = try fft_f64(allocator, &input);
+    var recovered: ComplexArray = try ifft(allocator, &spectrum);
+
+    try expect_eq_usize(recovered.re.shape.rank, 1);
+    try expect_eq_usize(recovered.re.shape.dims[0], 4);
+    try expect_eq_usize(recovered.im.shape.dims[0], 4);
+    try expect_close_f64(try get1<f64>(&recovered.re, 0), 1.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&recovered.re, 1), 2.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&recovered.re, 2), 3.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&recovered.re, 3), 4.0, 1e-12);
+}
+
+test "fft_f64 rejects non power of two length" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var data: [f64: 3] = [1.0, 2.0, 3.0];
+    var input: Array<f64> = try from_slice<f64>(allocator, data[0:3], shape1(3));
+
+    const result: !ComplexArray = fft_f64(allocator, &input);
+    match result {
+        error.NumuyaInvalidArgument => {}
+        else => { return error.NumuyaExpectationFailed; }
+    }
+}
