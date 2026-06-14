@@ -423,3 +423,11 @@
   - 通过 transpose view set 后，owner 对应元素变化。
   - 验证：`../uya/bin/uya test src/numuya/_tests/test_stride_views.uya --manifest-path uya.toml` 通过，13 个测试全部通过（含 `writing through a transpose view updates the owner` 与 `writing through a swapaxes view updates the owner`）。
   - 验证：`make test` 通过，当前 6 个测试文件（test_array_creation、test_indexing、test_shape、test_storage、test_stride_views、test_testing_helpers）全部通过，无失败。
+
+## Phase 4: Stride、reshape、transpose、view
+
+- [x] 验收：`src/numuya/_tests/test_stride_views.uya` 绿。
+  - 验证命令：`../uya/bin/uya test src/numuya/_tests/test_stride_views.uya --manifest-path uya.toml`
+  - 结果：通过，13 个测试全部 OK。
+  - 验证命令：`make test`
+  - 结果：通过，当前所有 6 个测试文件（test_array_creation.uya、test_indexing.uya、test_shape.uya、test_storage.uya、test_stride_views.uya、test_testing_helpers.uya）全部通过。
