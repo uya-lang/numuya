@@ -46,7 +46,10 @@ static int numuya_cuda_load(void) {
     numuya_pfn_cuInit = (numuya_cuInit_t)dlsym(numuya_cuda_handle, "cuInit");
     numuya_pfn_cuDeviceGet = (numuya_cuDeviceGet_t)dlsym(numuya_cuda_handle, "cuDeviceGet");
     numuya_pfn_cuDeviceGetAttribute = (numuya_cuDeviceGetAttribute_t)dlsym(numuya_cuda_handle, "cuDeviceGetAttribute");
-    numuya_pfn_cuDeviceTotalMem = (numuya_cuDeviceTotalMem_t)dlsym(numuya_cuda_handle, "cuDeviceTotalMem");
+    numuya_pfn_cuDeviceTotalMem = (numuya_cuDeviceTotalMem_t)dlsym(numuya_cuda_handle, "cuDeviceTotalMem_v2");
+    if (numuya_pfn_cuDeviceTotalMem == NULL) {
+        numuya_pfn_cuDeviceTotalMem = (numuya_cuDeviceTotalMem_t)dlsym(numuya_cuda_handle, "cuDeviceTotalMem");
+    }
 
     if (numuya_pfn_cuInit == NULL ||
         numuya_pfn_cuDeviceGet == NULL ||

@@ -35,9 +35,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 20: CUDA backend 基础
 
-- [ ] TDD: `backend_is_cuda_available()`。
-  - 本机 RTX 3060 应返回 true。
-  - 无 CUDA 环境时不能崩溃。
 - [ ] TDD: `cuda_init()`。
   - 成功时返回 ok。
   - driver 初始化失败映射为 `NumuyaGpuUnavailable` 或 `NumuyaCudaError`。

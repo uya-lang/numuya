@@ -454,3 +454,16 @@
 - `make test` 通过且未运行 CUDA 测试（退出码 0）。
 - `make test-cuda` 在 RTX 3060 上通过 6/6 测试，链接 `-lcuda`。
 - `make test-cuda-vendor` 在 RTX 3060 上通过 6/6 测试，链接 `-lcublasLt -lcublas -lcufft -lcurand -lcuda`。
+
+## Phase 20: CUDA backend 基础
+
+- [x] TDD: `backend_is_cuda_available()`。
+  - 本机 RTX 3060 应返回 true。
+  - 无 CUDA 环境时不能崩溃。
+  - 实现改动：
+    - `src/numuya/backend.uya` 新增 `use cuda.driver;`，`backend_is_cuda_available()` 通过 `cuda_init()` 是否成功判断 CUDA 可用性，出错时返回 false 不崩溃。
+    - `src/numuya/cuda/driver_stub.c` 优先加载 `cuDeviceTotalMem_v2`，否则回退 `cuDeviceTotalMem`，修复 RTX 3060 显存识别为 4GB 的问题。
+  - 验证命令：
+    - `../uya/bin/uya test src/numuya/_tests/test_cuda_driver.uya --manifest-path uya.toml` — 6/6 通过
+    - `make test` — 非 CUDA 测试全部通过
+    - `make test-cuda` — RTX 3060 上 6/6 通过

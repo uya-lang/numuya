@@ -1,3 +1,5 @@
+use cuda.driver;
+
 export enum BackendKind {
     Auto,
     Cpu,
@@ -9,7 +11,10 @@ export struct BackendState {
 }
 
 export fn backend_is_cuda_available() bool {
-    return false;
+    cuda_init() catch {
+        return false;
+    };
+    return true;
 }
 
 export fn backend_init(kind: BackendKind) !BackendState {

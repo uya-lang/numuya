@@ -4,11 +4,12 @@ use testing.expect_eq_usize;
 
 const NUMUYA_GIB: usize = 1024 * 1024 * 1024;
 
-test "backend_is_cuda_available returns bool without crashing" {
+test "backend_is_cuda_available returns true on RTX 3060 without crashing" {
     const available: bool = backend_is_cuda_available();
-    // 本机 RTX 3060 期望为 true；无 CUDA 环境至少要不崩溃并返回 false。
-    if available {
-        return;
+    // 本机 RTX 3060 期望为 true；实现若仍返回 false 说明尚未真正检测 CUDA。
+    // 无 CUDA 环境时函数应不崩溃并返回 false，该属性由本测试调用本身保证。
+    if !available {
+        return error.NumuyaExpectationFailed;
     }
 }
 
