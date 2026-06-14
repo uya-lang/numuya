@@ -1,0 +1,142 @@
+use array;
+use creation;
+use indexing;
+use reductions;
+use shape;
+use storage;
+use stride;
+use testing.expect_close_f64;
+use testing.expect_eq_usize;
+use ufunc;
+
+use std.mem.allocator.IAllocator;
+use std.mem.allocator.MallocAllocator;
+
+fn make_linear_f64(allocator: IAllocator, n: usize) !Array<f64> {
+    var data: [f64: 64] = [0.0: 64];
+    var i: usize = 0;
+    while i < n {
+        data[i] = (i as f64) + 1.0;
+        i = i + 1;
+    }
+    var result: Array<f64> = try from_slice<f64>(allocator, data[0:n], shape1(n));
+    return result;
+}
+
+fn expect_array_close_f64(a: &Array<f64>, expected: &Array<f64>, tol: f64) !void {
+    try expect_eq_usize(a.shape.rank, expected.shape.rank);
+    var axis: usize = 0;
+    while axis < a.shape.rank {
+        try expect_eq_usize(a.shape.dims[axis], expected.shape.dims[axis]);
+        axis = axis + 1;
+    }
+    const size: usize = try shape.shape_size(a.shape);
+    var i: usize = 0;
+    while i < size {
+        try expect_close_f64(try get1<f64>(a, i), try get1<f64>(expected, i), tol);
+        i = i + 1;
+    }
+}
+
+test "simd add_f64 matches scalar add_f64 on vector-width multiples" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var left: Array<f64> = try make_linear_f64(allocator, 16);
+    var right: Array<f64> = try make_linear_f64(allocator, 16);
+
+    var scalar_result: Array<f64> = try ufunc.add_f64_scalar(&left, &right);
+    var simd_result: Array<f64> = try ufunc.add_f64_simd(&left, &right);
+
+    try expect_array_close_f64(&simd_result, &scalar_result, 1e-12);
+}
+
+test "simd add_f64 matches scalar add_f64 with non-multiple tail" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var left: Array<f64> = try make_linear_f64(allocator, 7);
+    var right: Array<f64> = try make_linear_f64(allocator, 7);
+
+    var scalar_result: Array<f64> = try ufunc.add_f64_scalar(&left, &right);
+    var simd_result: Array<f64> = try ufunc.add_f64_simd(&left, &right);
+
+    try expect_array_close_f64(&simd_result, &scalar_result, 1e-12);
+}
+
+test "simd mul_f64 matches scalar mul_f64 on vector-width multiples" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var left: Array<f64> = try make_linear_f64(allocator, 16);
+    var right: Array<f64> = try make_linear_f64(allocator, 16);
+
+    var scalar_result: Array<f64> = try ufunc.mul_f64_scalar(&left, &right);
+    var simd_result: Array<f64> = try ufunc.mul_f64_simd(&left, &right);
+
+    try expect_array_close_f64(&simd_result, &scalar_result, 1e-12);
+}
+
+test "simd mul_f64 matches scalar mul_f64 with non-multiple tail" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var left: Array<f64> = try make_linear_f64(allocator, 5);
+    var right: Array<f64> = try make_linear_f64(allocator, 5);
+
+    var scalar_result: Array<f64> = try ufunc.mul_f64_scalar(&left, &right);
+    var simd_result: Array<f64> = try ufunc.mul_f64_simd(&left, &right);
+
+    try expect_array_close_f64(&simd_result, &scalar_result, 1e-12);
+}
+
+test "simd sum_all_f64 matches scalar sum_all_f64 on vector-width multiples" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var a: Array<f64> = try make_linear_f64(allocator, 16);
+
+    const scalar_result: f64 = try reductions.sum_all_f64_scalar(&a);
+    const simd_result: f64 = try reductions.sum_all_f64_simd(&a);
+
+    try expect_close_f64(simd_result, scalar_result, 1e-12);
+}
+
+test "simd sum_all_f64 matches scalar sum_all_f64 with non-multiple tail" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var a: Array<f64> = try make_linear_f64(allocator, 9);
+
+    const scalar_result: f64 = try reductions.sum_all_f64_scalar(&a);
+    const simd_result: f64 = try reductions.sum_all_f64_simd(&a);
+
+    try expect_close_f64(simd_result, scalar_result, 1e-12);
+}
+
+test "simd paths reject non-contiguous transpose input" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var source: [f64: 6] = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
+    var original: Array<f64> = try from_slice<f64>(allocator, source[0:6], shape2(2, 3));
+    var transposed: Array<f64> = try transpose<f64>(&original);
+
+    if array.array_is_c_contiguous<f64>(&transposed) {
+        return error.NumuyaExpectationFailed;
+    }
+
+    var other: Array<f64> = try make_linear_f64(allocator, 6);
+    var left: Array<f64> = try reshape<f64>(&other, shape2(3, 2));
+
+    const add_result: !Array<f64> = ufunc.add_f64_simd(&transposed, &left);
+    match add_result {
+        error.NumuyaNotContiguous => {}
+        else => { return error.NumuyaExpectationFailed; }
+    }
+
+    const mul_result: !Array<f64> = ufunc.mul_f64_simd(&transposed, &left);
+    match mul_result {
+        error.NumuyaNotContiguous => {}
+        else => { return error.NumuyaExpectationFailed; }
+    }
+
+    const sum_result: !f64 = reductions.sum_all_f64_simd(&transposed);
+    match sum_result {
+        error.NumuyaNotContiguous => {}
+        else => { return error.NumuyaExpectationFailed; }
+    }
+}

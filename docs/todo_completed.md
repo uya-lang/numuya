@@ -341,3 +341,19 @@
     - `make test-one TEST=src/numuya/_tests/test_dtype.uya`：15/15 通过。
     - `make test`：全绿，无失败。
 - [x] 验收：dtype tests 绿，I/O 回归绿。
+
+## Phase 19: SIMD 与性能
+
+- [x] 写 `src/numuya/_tests/test_simd_equivalence.uya`。
+  - 交付物：`src/numuya/_tests/test_simd_equivalence.uya`
+  - 新增测试覆盖：
+    - `simd add_f64 matches scalar add_f64 on vector-width multiples`
+    - `simd add_f64 matches scalar add_f64 with non-multiple tail`
+    - `simd mul_f64 matches scalar mul_f64 on vector-width multiples`
+    - `simd mul_f64 matches scalar mul_f64 with non-multiple tail`
+    - `simd sum_all_f64 matches scalar sum_all_f64 on vector-width multiples`
+    - `simd sum_all_f64 matches scalar sum_all_f64 with non-multiple tail`
+    - `simd paths reject non-contiguous transpose input`
+  - 测试期望新增 SIMD 专用 API：`ufunc.add_f64_scalar`、`ufunc.add_f64_simd`、`ufunc.mul_f64_scalar`、`ufunc.mul_f64_simd`、`reductions.sum_all_f64_scalar`、`reductions.sum_all_f64_simd`。
+  - 验证命令：`../uya/bin/uya test src/numuya/_tests/test_simd_equivalence.uya --manifest-path uya.toml`
+  - 验证结果：测试文件自身无结构/导入错误；因 SIMD 专用函数尚未实现，类型检查阶段按预期失败（`模块不存在`）。

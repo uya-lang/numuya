@@ -33,7 +33,7 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 19: SIMD 与性能
 
-- [ ] 写 `src/numuya/_tests/test_simd_equivalence.uya`。
+
 - [ ] 为 add/mul/sum 增加 SIMD fast path。
 - [ ] TDD: SIMD path 与标量 path 结果一致。
 - [ ] TDD: 长度不是 vector width 倍数时尾部正确。
