@@ -38,3 +38,34 @@ export fn array_size<T>(array_value: &Array<T>) usize {
     }
     return size;
 }
+
+export fn array_is_c_contiguous<T>(array_value: &Array<T>) bool {
+    if array_value.strides.rank != array_value.shape.rank {
+        return false;
+    }
+    if array_value.shape.rank > NUMUYA_MAX_DIMS {
+        return false;
+    }
+    if array_value.shape.rank == 0 {
+        return true;
+    }
+
+    var expected_stride: usize = 1;
+    var axis: usize = array_value.shape.rank;
+    while axis > 0 {
+        const index: usize = axis - 1;
+        if index >= NUMUYA_MAX_DIMS {
+            return false;
+        }
+        const dim: usize = array_value.shape.dims[index];
+        if dim == 0 {
+            return true;
+        }
+        if array_value.strides.strides[index] != expected_stride {
+            return false;
+        }
+        expected_stride = expected_stride * dim;
+        axis = index;
+    }
+    return true;
+}

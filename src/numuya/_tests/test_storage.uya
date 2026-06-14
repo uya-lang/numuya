@@ -117,3 +117,57 @@ test "array metadata uses logical shape not backing storage length" {
         return error.NumuyaExpectationFailed;
     }
 }
+
+test "array_is_c_contiguous returns true for owner-style c-order strides" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    const storage_value: &Storage<f64> = try storage_new<f64>(allocator, 6);
+
+    var stride_values: [usize: NUMUYA_MAX_DIMS] = [0: NUMUYA_MAX_DIMS];
+    stride_values[0] = 3;
+    stride_values[1] = 1;
+
+    var array_value: Array<f64> = Array<f64>{
+        storage: storage_value,
+        offset: 0,
+        shape: shape2(2, 3),
+        strides: Strides{ rank: 2, strides: stride_values },
+        flags: ArrayFlags{
+            c_contiguous: false,
+            f_contiguous: false,
+            writeable: true,
+            owns_data: true,
+        },
+    };
+
+    if array_is_c_contiguous<f64>(&array_value) != true {
+        return error.NumuyaExpectationFailed;
+    }
+}
+
+test "array_is_c_contiguous returns false for non-contiguous strides" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    const storage_value: &Storage<f64> = try storage_new<f64>(allocator, 8);
+
+    var stride_values: [usize: NUMUYA_MAX_DIMS] = [0: NUMUYA_MAX_DIMS];
+    stride_values[0] = 4;
+    stride_values[1] = 1;
+
+    var array_value: Array<f64> = Array<f64>{
+        storage: storage_value,
+        offset: 0,
+        shape: shape2(2, 3),
+        strides: Strides{ rank: 2, strides: stride_values },
+        flags: ArrayFlags{
+            c_contiguous: true,
+            f_contiguous: false,
+            writeable: true,
+            owns_data: false,
+        },
+    };
+
+    if array_is_c_contiguous<f64>(&array_value) != false {
+        return error.NumuyaExpectationFailed;
+    }
+}

@@ -215,3 +215,14 @@
   - 验证：
     - `make test-one TEST=src/numuya/_tests/test_storage.uya`：先失败，宿主工具链链接阶段报缺失 `array_rank_f64`、`array_size_f64`、`array_shape_f64`；实现后通过，`test_storage` 5 个测试通过。
     - `make test`：通过；`test_shape` 8 个测试通过，`test_storage` 5 个测试通过，`test_testing_helpers` 2 个测试通过。`test_shape` 仍有既存 `const` qualifier warning，无新增失败。
+
+## Phase 2: Storage 与 Array handle
+
+- [x] TDD: `array_is_c_contiguous`。
+  - contiguous owner 为 true。
+  - 手动构造 stride 不连续时为 false。
+  - 验证：
+    - `make upm-install`：通过。
+    - `make test-one TEST=src/numuya/_tests/test_storage.uya`：首次失败，链接错误 `undefined reference to 'array_is_c_contiguous_f64'`。
+    - `make test-one TEST=src/numuya/_tests/test_storage.uya`：通过，7 个测试全绿。
+    - `make test`：通过，`test_shape`、`test_storage`、`test_testing_helpers` 全绿。
