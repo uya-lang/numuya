@@ -99,3 +99,11 @@
   - 验证：`make test-one TEST=src/numuya/_tests/test_shape.uya` 通过（2 tests passed）。
   - 验证：`make test` 通过（当前 2 个测试文件均通过）。
 
+
+## Phase 1: Shape、axis、size
+
+- [x] TDD: `shape_scalar()`。
+  - scalar rank 是 0。
+  - scalar size 是 1。
+  - 验证：`make test-one TEST=src/numuya/_tests/test_shape.uya` 通过（3 tests passed）。
+  - 验证：`make test` 通过（test_shape 与 test_testing_helpers 均通过）。

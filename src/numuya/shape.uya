@@ -9,3 +9,17 @@ export struct Strides {
     rank: usize,
     strides: [usize: NUMUYA_MAX_DIMS],
 }
+
+export fn shape_scalar() Shape {
+    return Shape{ rank: 0, dims: [0:NUMUYA_MAX_DIMS] };
+}
+
+export fn shape_size(shape: Shape) usize {
+    var size: usize = 1;
+    var i: usize = 0;
+    while i < shape.rank {
+        size = size * shape.dims[i];
+        i = i + 1;
+    }
+    return size;
+}

@@ -1,4 +1,5 @@
 use shape;
+use testing.expect_eq_usize;
 
 test "Shape test file imports Shape" {
 }
@@ -9,4 +10,11 @@ test "Shape exports fixed-rank shape metadata types" {
 
     shape_value.rank = shape_value.rank + 0;
     strides_value.rank = strides_value.rank + 0;
+}
+
+test "shape_scalar creates rank-zero shape with size one" {
+    const scalar: Shape = shape_scalar();
+
+    try expect_eq_usize(scalar.rank, 0);
+    try expect_eq_usize(shape_size(scalar), 1);
 }

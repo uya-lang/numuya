@@ -27,9 +27,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 1: Shape、axis、size
 
-- [ ] TDD: `shape_scalar()`。
-  - scalar rank 是 0。
-  - scalar size 是 1。
 - [ ] TDD: `shape1/shape2/shape3`。
   - `shape2(2, 3)` rank 是 2，dims 为 `[2, 3]`。
 - [ ] TDD: `shape_from_slice`。
