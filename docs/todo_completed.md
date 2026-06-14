@@ -678,3 +678,9 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
   - 验证：
     - `../uya/bin/uya test src/numuya/_tests/test_reductions.uya --manifest-path uya.toml`
     - 结果：20/20 测试通过，其中 `sum_axis_f64 reduces along axis 0`、`sum_axis_f64 reduces along axis 1`、`sum_axis_f64 supports negative axis`、`sum_axis_f64 keepdims preserves reduced axes` 均通过。
+
+## Phase 8: Reductions
+
+- [x] TDD: `mean_axis_f64`。
+  - 验证：`../uya/bin/uya test src/numuya/_tests/test_reductions.uya`
+  - 结果：20 个测试全部通过，包含 `mean_axis_f64` 沿 axis 0 和 keepdims 两个测试。
