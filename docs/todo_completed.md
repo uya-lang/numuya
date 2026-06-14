@@ -100,3 +100,9 @@
 
 - [x] 实现 `src/numuya/fft.uya`。
   - 验证：`../uya/bin/uya test src/numuya/_tests/test_fft.uya --manifest-path uya.toml` 7/7 通过；`make test` 全量测试通过。
+
+## Phase 15: FFT
+
+- [x] TDD: complex add/mul/conj helper。
+  - 验证命令：`../uya/bin/uya test src/numuya/_tests/test_fft.uya --manifest-path uya.toml`
+  - 结果：7/7 tests passed，其中 `complex add multiply and conjugate helpers` 测试验证 `complex_add`、`complex_mul`、`complex_conj` 返回正确结果。
