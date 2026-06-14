@@ -31,8 +31,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 4: Stride、reshape、transpose、view
 
-- [ ] TDD: `physical_index(shape, strides, offset, indices)`.
-  - `(2, 3)` C-order 下 `(1, 2)` 物理 index 是 5。
 - [ ] TDD: `reshape`.
   - `(2, 3)` reshape 到 `(3, 2)` 不复制，storage ref_count 增加。
   - size 不同返回 `NumuyaShapeMismatch`。

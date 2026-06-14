@@ -371,3 +371,11 @@
   - `(2, 3, 4)` strides 是 `[12, 4, 1]`。
   - scalar strides rank 为 0。
   - 验证：`../uya/bin/uya test src/numuya/_tests/test_stride_views.uya --manifest-path uya.toml` 10/10 通过。
+
+## Phase 4: Stride、reshape、transpose、view
+
+- [x] TDD: `physical_index(shape, strides, offset, indices)`.
+  - `(2, 3)` C-order 下 `(1, 2)` 物理 index 是 5。
+  - 验证：
+    - `../uya/bin/uya test src/numuya/_tests/test_stride_views.uya --manifest-path uya.toml`
+    - 结果：通过；`physical_index computes row-major offset for rank-2 shape` OK，返回 index 5。
