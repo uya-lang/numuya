@@ -28,10 +28,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 ## Phase 3: 创建数组与基础 get/set
 
 - 注：当前 Uya codegen 对导出泛型 `!Array<T>` 路径仍有实例化限制；后续 `empty<T>/full<T>/from_slice<T>` 先用失败测试锁定可行写法，必要时抽最小复现。
-- [ ] TDD: `from_slice<T>`。
-  - slice 长度等于 shape size 时成功并复制。
-  - 长度不等返回 `NumuyaShapeMismatch`。
-  - 修改源 slice 不影响 array。
 - [ ] 实现 `src/numuya/indexing.uya`。
 - [ ] TDD: `get1/get2/get3/getn`。
   - 正常读。

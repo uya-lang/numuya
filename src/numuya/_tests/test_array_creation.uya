@@ -149,3 +149,39 @@ test "creation convenience constructors fill expected f64 values" {
 
     try expect_eq_usize(array_size<f64>(&full_value), 0);
 }
+
+test "creation exports generic from_slice constructor and copies input" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var source: [f64: 4] = [1.0, 2.5, 4.0, 8.25];
+
+    const array_value: Array<f64> = try from_slice<f64>(allocator, source[0:4], shape2(2, 2));
+    source[0] = 99.0;
+
+    try expect_eq_usize(array_rank<f64>(&array_value), 2);
+    try expect_eq_usize(array_size<f64>(&array_value), 4);
+    try expect_eq_usize(array_value.storage.len, 4);
+    try expect_close_f64(array_value.storage.data[0], 1.0, 1e-12);
+    try expect_close_f64(array_value.storage.data[1], 2.5, 1e-12);
+    try expect_close_f64(array_value.storage.data[2], 4.0, 1e-12);
+    try expect_close_f64(array_value.storage.data[3], 8.25, 1e-12);
+
+    if shape_eq(array_value.shape, shape2(2, 2)) != true {
+        return error.NumuyaExpectationFailed;
+    }
+    if array_is_c_contiguous<f64>(&array_value) != true {
+        return error.NumuyaExpectationFailed;
+    }
+}
+
+test "creation from_slice rejects mismatched slice length" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var source: [f64: 3] = [1.0, 2.5, 4.0];
+
+    const result: !Array<f64> = from_slice<f64>(allocator, source[0:3], shape2(2, 2));
+    match result {
+        error.NumuyaShapeMismatch => {}
+        else => { return error.NumuyaExpectationFailed; }
+    }
+}

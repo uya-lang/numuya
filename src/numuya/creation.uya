@@ -103,6 +103,20 @@ export fn full<T>(allocator: IAllocator, shape_value: Shape, value: T) !Array<T>
     return array_value;
 }
 
+export fn from_slice<T>(allocator: IAllocator, values: &[T], shape_value: Shape) !Array<T> {
+    var array_value: Array<T> = try empty<T>(allocator, shape_value);
+    if values.len != array_value.storage.len {
+        return error.NumuyaShapeMismatch;
+    }
+
+    var i: usize = 0;
+    while i < values.len {
+        array_value.storage.data[i] = values[i];
+        i = i + 1;
+    }
+    return array_value;
+}
+
 export fn zeros_f64(allocator: IAllocator, shape_value: Shape) !Array<f64> {
     const array_value: Array<f64> = try full_f64(allocator, shape_value, 0.0);
     return array_value;
