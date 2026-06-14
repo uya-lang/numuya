@@ -1,4 +1,5 @@
 use cuda.driver;
+use errors;
 
 export enum BackendKind {
     Auto,
@@ -8,7 +9,13 @@ export enum BackendKind {
 
 export struct BackendState {
     kind: BackendKind,
+    context: usize,
+    stream: usize,
+    module: usize,
+    pool: usize,
 }
+
+var active_device_storage_count: usize = 0;
 
 export fn backend_is_cuda_available() bool {
     cuda_init() catch {
@@ -18,10 +25,57 @@ export fn backend_is_cuda_available() bool {
 }
 
 export fn backend_init(kind: BackendKind) !BackendState {
-    var state: BackendState = BackendState{ kind: kind };
+    var state: BackendState = BackendState{
+        kind: BackendKind.Cpu,
+        context: 0,
+        stream: 0,
+        module: 0,
+        pool: 0,
+    };
+
+    match kind {
+        BackendKind.Cpu => {
+            state.kind = BackendKind.Cpu;
+        }
+        BackendKind.Cuda => {
+            try cuda_init();
+            state.kind = BackendKind.Cuda;
+        }
+        BackendKind.Auto => {
+            var cuda_ok: bool = true;
+            cuda_init() catch {
+                cuda_ok = false;
+            };
+            if cuda_ok {
+                state.kind = BackendKind.Cuda;
+            } else {
+                state.kind = BackendKind.Cpu;
+            }
+        }
+        else => {}
+    }
+
     return state;
 }
 
 export fn backend_deinit(state: &BackendState) !void {
+    if active_device_storage_count > 0 {
+        return error.NumuyaInvalidArgument;
+    }
+
     state.kind = BackendKind.Auto;
+    state.context = 0;
+    state.stream = 0;
+    state.module = 0;
+    state.pool = 0;
+}
+
+export fn backend_device_storage_retain() void {
+    active_device_storage_count = active_device_storage_count + 1;
+}
+
+export fn backend_device_storage_release() void {
+    if active_device_storage_count > 0 {
+        active_device_storage_count = active_device_storage_count - 1;
+    }
 }

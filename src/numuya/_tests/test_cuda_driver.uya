@@ -1,5 +1,6 @@
 use backend;
 use cuda.driver;
+use errors;
 use testing.expect_eq_usize;
 
 const NUMUYA_GIB: usize = 1024 * 1024 * 1024;
@@ -59,4 +60,61 @@ test "backend_init with Cuda kind succeeds when cuda is available" {
 test "backend_init with Auto kind picks a working backend" {
     var state: BackendState = try backend_init(BackendKind.Auto);
     try backend_deinit(&state);
+}
+
+test "backend_init with Cuda kind returns error when cuda is unavailable" {
+    if backend_is_cuda_available() {
+        return;
+    }
+    const result: !BackendState = backend_init(BackendKind.Cuda);
+    match result {
+        error.NumuyaGpuUnavailable => {}
+        error.NumuyaCudaError => {}
+        else => { return error.NumuyaExpectationFailed; }
+    }
+}
+
+test "backend_init with Auto kind falls back to Cpu when cuda is unavailable" {
+    if backend_is_cuda_available() {
+        return;
+    }
+    var state: BackendState = try backend_init(BackendKind.Auto);
+    if state.kind != BackendKind.Cpu {
+        return error.NumuyaExpectationFailed;
+    }
+    try backend_deinit(&state);
+}
+
+test "backend_init with Auto kind picks Cuda when cuda is available" {
+    if !backend_is_cuda_available() {
+        return;
+    }
+    var state: BackendState = try backend_init(BackendKind.Auto);
+    if state.kind != BackendKind.Cuda {
+        return error.NumuyaExpectationFailed;
+    }
+    try backend_deinit(&state);
+}
+
+test "backend_deinit returns NumuyaInvalidArgument while device storage is active" {
+    var state: BackendState = try backend_init(BackendKind.Cpu);
+    backend_device_storage_retain();
+    const deinit_result: !void = backend_deinit(&state);
+    match deinit_result {
+        error.NumuyaInvalidArgument => {}
+        else => { return error.NumuyaExpectationFailed; }
+    }
+    backend_device_storage_release();
+    try backend_deinit(&state);
+}
+
+test "backend_deinit resets state handles when no active device storage" {
+    var state: BackendState = try backend_init(BackendKind.Cpu);
+    try backend_deinit(&state);
+    if state.kind != BackendKind.Auto {
+        return error.NumuyaExpectationFailed;
+    }
+    if state.context != 0 || state.stream != 0 || state.module != 0 || state.pool != 0 {
+        return error.NumuyaExpectationFailed;
+    }
 }

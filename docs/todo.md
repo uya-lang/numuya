@@ -35,12 +35,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 20: CUDA backend 基础
 
-- [ ] TDD: `backend_init` / `backend_deinit`。
-  - `BackendKind.cpu` 不初始化 CUDA。
-  - `BackendKind.cuda` 初始化 CUDA，失败时返回明确错误。
-  - `BackendKind.auto` 可在无 CUDA 时回退 CPU。
-  - 没有活跃 DeviceStorage 时，`backend_deinit` 后 stream/context/module/pool 均释放或置空。
-  - 仍有活跃 DeviceStorage 时，`backend_deinit` 返回 `NumuyaInvalidArgument`。
 - [ ] TDD: `cuda_create_context` / destroy。
 - [ ] TDD: `cuda_create_stream` / synchronize / destroy。
 - [ ] TDD: context current 规则。

@@ -497,3 +497,9 @@
     make test-cuda TEST=src/numuya/_tests/test_cuda_driver.uya
     ```
   - 验证结果：通过 6/6 tests；`cuda_get_device(0)` 返回 ordinal=0、major/minor 非 0、total_memory_bytes > 8 GiB。
+
+
+## Phase 20: CUDA backend 基础
+
+- [x] TDD: `backend_init` / `backend_deinit`。
+  - 验证：`TEST=src/numuya/_tests/test_cuda_driver.uya make test-one` 11/11 通过；`make test` 非 CUDA 测试全绿；`make test-cuda` RTX 3060 上 11/11 通过。
