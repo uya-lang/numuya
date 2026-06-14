@@ -1,6 +1,9 @@
 use array;
+use creation;
 use shape;
 use storage;
+
+use std.mem.allocator.IAllocator;
 
 export enum DTypeKind {
     Float,
@@ -83,11 +86,117 @@ export struct ArrayAny {
     payload: Array<f64>,
 }
 
-export fn array_any_from_f64(array_value: Array<f64>) ArrayAny {
+fn array_any_copy_payload_view(any_value: &ArrayAny) Array<f64> {
+    storage_retain<f64>(any_value.payload.storage);
+    return Array<f64>{
+        storage: any_value.payload.storage,
+        offset: any_value.payload.offset,
+        shape: any_value.payload.shape,
+        strides: any_value.payload.strides,
+        flags: any_value.payload.flags,
+    };
+}
+
+export fn array_any_from_f64(array_value: &Array<f64>) ArrayAny {
+    storage_retain<f64>(array_value.storage);
     return ArrayAny{
         dtype: dtype_f64(),
         shape: array_value.shape,
-        payload: array_value,
+        payload: Array<f64>{
+            storage: array_value.storage,
+            offset: array_value.offset,
+            shape: array_value.shape,
+            strides: array_value.strides,
+            flags: array_value.flags,
+        },
+    };
+}
+
+export fn array_any_from_f32(array_value: &Array<f32>) !ArrayAny {
+    var f64_array: Array<f64> = try empty<f64>(array_value.storage.allocator, array_value.shape);
+    const size: usize = array_size<f32>(array_value);
+    var i: usize = 0;
+    while i < size {
+        f64_array.storage.data[i] = array_value.storage.data[i] as f64;
+        i = i + 1;
+    }
+    storage_retain<f64>(f64_array.storage);
+    return ArrayAny{
+        dtype: dtype_f32(),
+        shape: f64_array.shape,
+        payload: Array<f64>{
+            storage: f64_array.storage,
+            offset: f64_array.offset,
+            shape: f64_array.shape,
+            strides: f64_array.strides,
+            flags: f64_array.flags,
+        },
+    };
+}
+
+export fn array_any_from_i32(array_value: &Array<i32>) !ArrayAny {
+    var f64_array: Array<f64> = try empty<f64>(array_value.storage.allocator, array_value.shape);
+    const size: usize = array_size<i32>(array_value);
+    var i: usize = 0;
+    while i < size {
+        f64_array.storage.data[i] = array_value.storage.data[i] as f64;
+        i = i + 1;
+    }
+    storage_retain<f64>(f64_array.storage);
+    return ArrayAny{
+        dtype: dtype_i32(),
+        shape: f64_array.shape,
+        payload: Array<f64>{
+            storage: f64_array.storage,
+            offset: f64_array.offset,
+            shape: f64_array.shape,
+            strides: f64_array.strides,
+            flags: f64_array.flags,
+        },
+    };
+}
+
+export fn array_any_from_i64(array_value: &Array<i64>) !ArrayAny {
+    var f64_array: Array<f64> = try empty<f64>(array_value.storage.allocator, array_value.shape);
+    const size: usize = array_size<i64>(array_value);
+    var i: usize = 0;
+    while i < size {
+        f64_array.storage.data[i] = array_value.storage.data[i] as f64;
+        i = i + 1;
+    }
+    storage_retain<f64>(f64_array.storage);
+    return ArrayAny{
+        dtype: dtype_i64(),
+        shape: f64_array.shape,
+        payload: Array<f64>{
+            storage: f64_array.storage,
+            offset: f64_array.offset,
+            shape: f64_array.shape,
+            strides: f64_array.strides,
+            flags: f64_array.flags,
+        },
+    };
+}
+
+export fn array_any_from_u8(array_value: &Array<u8>) !ArrayAny {
+    var f64_array: Array<f64> = try empty<f64>(array_value.storage.allocator, array_value.shape);
+    const size: usize = array_size<u8>(array_value);
+    var i: usize = 0;
+    while i < size {
+        f64_array.storage.data[i] = array_value.storage.data[i] as f64;
+        i = i + 1;
+    }
+    storage_retain<f64>(f64_array.storage);
+    return ArrayAny{
+        dtype: dtype_u8(),
+        shape: f64_array.shape,
+        payload: Array<f64>{
+            storage: f64_array.storage,
+            offset: f64_array.offset,
+            shape: f64_array.shape,
+            strides: f64_array.strides,
+            flags: f64_array.flags,
+        },
     };
 }
 
@@ -95,26 +204,106 @@ export fn array_any_shape(any_value: &ArrayAny) Shape {
     return any_value.shape;
 }
 
-export fn array_any_try_as_f64(any_value: &ArrayAny) !&Array<f64> {
-    match any_value.dtype {
-        DType.F64 => { return &any_value.payload; }
-        else => { return error.NumuyaUnsupportedDType; }
+export fn array_any_try_as_f64(any_value: &ArrayAny) !Array<f64> {
+    if any_value.dtype != dtype_f64() {
+        return error.NumuyaUnsupportedDType;
     }
+    return array_any_copy_payload_view(any_value);
 }
 
-export fn array_any_try_as_f32(any_value: &ArrayAny) !&Array<f32> {
-    return error.NumuyaUnsupportedDType;
+export fn array_any_try_as_f32(any_value: &ArrayAny) !Array<f32> {
+    if any_value.dtype != dtype_f32() {
+        return error.NumuyaUnsupportedDType;
+    }
+    var result: Array<f32> = try empty<f32>(any_value.payload.storage.allocator, any_value.shape);
+    const size: usize = array_size<f64>(&any_value.payload);
+    var i: usize = 0;
+    while i < size {
+        result.storage.data[i] = any_value.payload.storage.data[i] as f32;
+        i = i + 1;
+    }
+    storage_retain<f32>(result.storage);
+    return Array<f32>{
+        storage: result.storage,
+        offset: result.offset,
+        shape: result.shape,
+        strides: result.strides,
+        flags: result.flags,
+    };
 }
 
-export fn array_any_try_as_i32(any_value: &ArrayAny) !&Array<i32> {
-    return error.NumuyaUnsupportedDType;
+export fn array_any_try_as_i32(any_value: &ArrayAny) !Array<i32> {
+    if any_value.dtype != dtype_i32() {
+        return error.NumuyaUnsupportedDType;
+    }
+    var result: Array<i32> = try empty<i32>(any_value.payload.storage.allocator, any_value.shape);
+    const size: usize = array_size<f64>(&any_value.payload);
+    var i: usize = 0;
+    while i < size {
+        result.storage.data[i] = any_value.payload.storage.data[i] as i32;
+        i = i + 1;
+    }
+    storage_retain<i32>(result.storage);
+    return Array<i32>{
+        storage: result.storage,
+        offset: result.offset,
+        shape: result.shape,
+        strides: result.strides,
+        flags: result.flags,
+    };
+}
+
+export fn array_any_try_as_i64(any_value: &ArrayAny) !Array<i64> {
+    if any_value.dtype != dtype_i64() {
+        return error.NumuyaUnsupportedDType;
+    }
+    var result: Array<i64> = try empty<i64>(any_value.payload.storage.allocator, any_value.shape);
+    const size: usize = array_size<f64>(&any_value.payload);
+    var i: usize = 0;
+    while i < size {
+        result.storage.data[i] = any_value.payload.storage.data[i] as i64;
+        i = i + 1;
+    }
+    storage_retain<i64>(result.storage);
+    return Array<i64>{
+        storage: result.storage,
+        offset: result.offset,
+        shape: result.shape,
+        strides: result.strides,
+        flags: result.flags,
+    };
+}
+
+export fn array_any_try_as_u8(any_value: &ArrayAny) !Array<u8> {
+    if any_value.dtype != dtype_u8() {
+        return error.NumuyaUnsupportedDType;
+    }
+    var result: Array<u8> = try empty<u8>(any_value.payload.storage.allocator, any_value.shape);
+    const size: usize = array_size<f64>(&any_value.payload);
+    var i: usize = 0;
+    while i < size {
+        result.storage.data[i] = any_value.payload.storage.data[i] as u8;
+        i = i + 1;
+    }
+    storage_retain<u8>(result.storage);
+    return Array<u8>{
+        storage: result.storage,
+        offset: result.offset,
+        shape: result.shape,
+        strides: result.strides,
+        flags: result.flags,
+    };
 }
 
 fn _force_storage_release_instantiations() void {
     var _sf64: &Storage<f64> = null;
     var _sf32: &Storage<f32> = null;
     var _si32: &Storage<i32> = null;
+    var _si64: &Storage<i64> = null;
+    var _su8: &Storage<u8> = null;
     storage_release<f64>(_sf64);
     storage_release<f32>(_sf32);
     storage_release<i32>(_si32);
+    storage_release<i64>(_si64);
+    storage_release<u8>(_su8);
 }

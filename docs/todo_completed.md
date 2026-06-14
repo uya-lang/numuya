@@ -322,3 +322,10 @@
   - 验证命令：`../uya/bin/uya test src/numuya/_tests/test_dtype.uya --manifest-path uya.toml`
   - 验证结果：9/9 测试通过，0 失败（含 3 个 ArrayAny 相关测试）。
   - 回归验证：`../uya/bin/uya test src/numuya/_tests/test_io_npy.uya --manifest-path uya.toml` — 9/9 通过。
+
+## Phase 18: DType 与 type-erased ArrayAny
+
+- [x] TDD: dtype mismatch 返回 `NumuyaUnsupportedDType` 或 `NumuyaInvalidArgument`。
+  - 实现：`src/numuya/types.uya` 扩展 `ArrayAny` 支持 f64/f32/i32/i64/u8 五种 dtype；新增 `array_any_from_f32/i32/i64/u8` 与 `array_any_try_as_f64/f32/i32/i64/u8`；dtype 不匹配时统一返回 `error.NumuyaUnsupportedDType`。
+  - 测试：`src/numuya/_tests/test_dtype.uya` 新增 f32/i32 roundtrip 与 f32/i32/i64/u8 mismatch 测试。
+  - 验证命令：`make test-one TEST=src/numuya/_tests/test_dtype.uya`（15/15 通过），`make test`（全量测试通过，I/O 回归绿）。
