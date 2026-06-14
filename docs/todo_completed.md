@@ -2,6 +2,19 @@
 
 ## Phase 0: 脚手架与测试基础
 
+- [x] 可选创建 `Makefile`。
+  - `make bootstrap-upm`
+  - `make upm-install`
+  - `make test-one TEST=src/numuya/_tests/test_shape.uya`
+  - `make test`
+  - `make check-one TEST=src/numuya/_tests/test_shape.uya`
+  - `make verify-upm-consumer`
+  - 验证：
+    - `make bootstrap-upm && make upm-install && make test-one TEST=src/numuya/_tests/test_testing_helpers.uya && make test && make check-one TEST=src/numuya/_tests/test_testing_helpers.uya && make verify-upm-consumer`
+    - 结果：通过；包内测试 1 个测试文件通过，外部 UPM consumer fixture check/run 通过。
+
+## Phase 0: 脚手架与测试基础
+
 - [x] 验证本地 Uya UPM 子命令可用。
   - 执行 `test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm`。
   - 执行 `../uya/bin/uya upm --help`。

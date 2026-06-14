@@ -27,13 +27,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 0: 脚手架与测试基础
 
-- [ ] 可选创建 `Makefile`。
-  - `make bootstrap-upm`
-  - `make upm-install`
-  - `make test-one TEST=src/numuya/_tests/test_shape.uya`
-  - `make test`
-  - `make check-one TEST=src/numuya/_tests/test_shape.uya`
-  - `make verify-upm-consumer`
 - [ ] 验收：`src/numuya/_tests/test_testing_helpers.uya` 绿，外部 UPM consumer fixture 绿。
 
 ## Phase 1: Shape、axis、size
