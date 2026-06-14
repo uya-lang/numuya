@@ -427,6 +427,9 @@ export fn argmax_axis_f64(array_value: &Array<f64>, axis: i32, keepdims: bool) !
 
     const output_size: usize = array_size<usize>(&result);
     const axis_dim: usize = array_value.shape.dims[normalized_axis];
+    if axis_dim == 0 {
+        return error.NumuyaInvalidArgument;
+    }
 
     var output_indices: [usize: NUMUYA_MAX_DIMS] = [0: NUMUYA_MAX_DIMS];
     var input_indices: [usize: NUMUYA_MAX_DIMS] = [0: NUMUYA_MAX_DIMS];

@@ -264,3 +264,44 @@ test "argmax_axis_f64 returns index of maximum along axis" {
     try expect_eq_usize(try get1<usize>(&result1, 0), 2);
     try expect_eq_usize(try get1<usize>(&result1, 1), 2);
 }
+
+test "argmax_axis_f64 supports negative axis" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var source: [f64: 6] = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
+    var a: Array<f64> = try from_slice<f64>(allocator, source[0:6], shape2(2, 3));
+
+    var result: Array<usize> = try argmax_axis_f64(&a, -1, false);
+
+    try expect_eq_usize(result.shape.rank, 1);
+    try expect_eq_usize(result.shape.dims[0], 2);
+    try expect_eq_usize(try get1<usize>(&result, 0), 2);
+    try expect_eq_usize(try get1<usize>(&result, 1), 2);
+}
+
+test "argmax_axis_f64 supports keepdims" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var source: [f64: 6] = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
+    var a: Array<f64> = try from_slice<f64>(allocator, source[0:6], shape2(2, 3));
+
+    var result: Array<usize> = try argmax_axis_f64(&a, 1, true);
+
+    try expect_eq_usize(result.shape.rank, 2);
+    try expect_eq_usize(result.shape.dims[0], 2);
+    try expect_eq_usize(result.shape.dims[1], 1);
+    try expect_eq_usize(try get2<usize>(&result, 0, 0), 2);
+    try expect_eq_usize(try get2<usize>(&result, 1, 0), 2);
+}
+
+test "argmax_axis_f64 rejects zero-size reduction axis" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var a: Array<f64> = try full_f64(allocator, shape2(2, 0), 1.0);
+
+    const result: !Array<usize> = argmax_axis_f64(&a, 1, false);
+    match result {
+        error.NumuyaInvalidArgument => {}
+        else => { return error.NumuyaExpectationFailed; }
+    }
+}
