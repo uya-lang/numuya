@@ -553,3 +553,9 @@
     - `../uya/bin/uya test src/numuya/_tests/test_ufunc.uya --manifest-path uya.toml` → 11/11 passed
     - `../uya/bin/uya test src/numuya/_tests/test_broadcast.uya --manifest-path uya.toml` → 7/7 passed
     - `../uya/bin/uya test src/numuya/_tests/test_stride_views.uya --manifest-path uya.toml` → 13/13 passed
+
+## Phase 7: UFunc 基础
+
+- [x] TDD: `neg_f64`。
+  - 验证：`../uya/bin/uya test src/numuya/_tests/test_ufunc.uya --manifest-path uya.toml`
+  - 结果：11 tests passed, 0 failed；包含 `neg_f64 negates each element` 通过。

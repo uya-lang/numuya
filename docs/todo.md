@@ -31,7 +31,7 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 7: UFunc 基础
 
-- [ ] TDD: `neg_f64`。
+- [x] TDD: `neg_f64`。
 - [ ] TDD: `add_i32`。
 - [ ] TDD: non-contiguous input。
   - transpose view 输入仍能正确运算。
