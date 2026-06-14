@@ -31,9 +31,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 4: Stride、reshape、transpose、view
 
-- [ ] TDD: `c_order_strides(shape)`.
-  - `(2, 3, 4)` strides 是 `[12, 4, 1]`。
-  - scalar strides rank 为 0。
 - [ ] TDD: `physical_index(shape, strides, offset, indices)`.
   - `(2, 3)` C-order 下 `(1, 2)` 物理 index 是 5。
 - [ ] TDD: `reshape`.

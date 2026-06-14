@@ -364,3 +364,10 @@
   - 结果：`test_stride_views.uya` 10/10 通过；`make test` 全部 6 个测试文件均通过（39 个测试）。
   - 实现内容：`c_order_strides`、`physical_index`、`reshape`、`ravel`、`transpose`、`swapaxes`。
   - 附加改动：修复 `test_stride_views.uya` 的模块调用语法；重命名 `indexing.uya` 内部私有 `physical_index` 为 `compute_physical_index` 以避免与 `stride.physical_index` 命名冲突。
+
+## NumUya TDD Todo / Phase 4: Stride、reshape、transpose、view
+
+- [x] TDD: `c_order_strides(shape)`。
+  - `(2, 3, 4)` strides 是 `[12, 4, 1]`。
+  - scalar strides rank 为 0。
+  - 验证：`../uya/bin/uya test src/numuya/_tests/test_stride_views.uya --manifest-path uya.toml` 10/10 通过。
