@@ -151,3 +151,20 @@
   - 结果：通过，3 个测试全部通过。
   - 验证：`make test-one TEST=src/numuya/_tests/test_array_creation.uya`
   - 结果：通过，6 个测试全部通过。
+
+## Phase 16: `.npy` I/O
+
+- [x] 准备小型 `.npy` fixture。
+  - 1-D f64。
+  - 2-D f64。
+  - empty f64。
+  - 产物：
+    - `tests/fixtures/npy/generate.py`
+    - `tests/fixtures/npy/verify.py`
+    - `tests/fixtures/npy/f64_1d.npy`
+    - `tests/fixtures/npy/f64_2d.npy`
+    - `tests/fixtures/npy/f64_empty.npy`
+  - 验证：
+    - `python3 tests/fixtures/npy/generate.py` -> exit 0。
+    - `python3 tests/fixtures/npy/verify.py` -> `verified 3 npy fixtures`。
+    - `make test-one TEST=src/numuya/_tests/test_io_npy.uya` -> 3 个测试通过。
