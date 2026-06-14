@@ -387,3 +387,10 @@
   - size 不同返回 `NumuyaShapeMismatch`。
   - 验证：`../uya/bin/uya test src/numuya/_tests/test_stride_views.uya --manifest-path uya.toml` 通过（10/10 tests passed），其中 `reshape returns a view sharing storage when total size matches` 与 `reshape rejects mismatched total size` 覆盖上述两点。
   - 回归：`../uya/bin/uya test src/numuya/_tests/test_shape.uya --manifest-path uya.toml`、`test_array_creation.uya`、`test_storage.uya`、`test_indexing.uya`、`test_stride_views.uya` 均通过。
+
+## Phase 4: Stride、reshape、transpose、view
+
+- [x] TDD: `ravel`.
+  - contiguous 返回 shape `(size,)` view。
+  - 验证：`../uya/bin/uya test src/numuya/_tests/test_stride_views.uya --manifest-path uya.toml` 通过（`ravel returns a rank-1 view of a contiguous array` 等 10 个测试全绿）。
+  - 说明：实现已在 `src/numuya/stride.uya` 中提供，`ravel<T>` 对 contiguous 数组返回 shape `(size,)` 的 view；本轮主要完成验证与状态归档。

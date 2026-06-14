@@ -31,8 +31,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 4: Stride、reshape、transpose、view
 
-- [ ] TDD: `ravel`.
-  - contiguous 返回 shape `(size,)` view。
 - [ ] TDD: `transpose`.
   - `(2, 3)` transpose 得 `(3, 2)`。
   - 读转置 view 的 `(2, 1)` 等于原 `(1, 2)`。
