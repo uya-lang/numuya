@@ -38,3 +38,8 @@
   - 验证结果：通过，checker 通过（未执行代码生成）。
   - 验证命令：`../uya/bin/uya upm install --manifest-path uya.toml`
   - 验证结果：通过，退出码 0。
+## Phase 0: 脚手架与测试基础
+
+- [x] 创建 `src/numuya/testing.uya`，写 `expect_close_f64`、`expect_eq_usize`、`expect_shape_eq` 的测试占位。
+  - 验证：`../uya/bin/uya check src/numuya/testing.uya --manifest-path uya.toml` 通过。
+  - 备注：`../uya/bin/uya check src/numuya --manifest-path uya.toml` 不能用于当前库目录验证；编译器要求目录中存在 `main`，返回“未找到包含 main 函数的文件”。

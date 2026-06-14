@@ -1,1 +1,27 @@
-// NumUya test helper declarations will live here.
+export error NumuyaExpectationFailed;
+
+export fn expect_close_f64(actual: f64, expected: f64, tolerance: f64) !void {
+    var diff: f64 = actual - expected;
+    if diff < 0.0 {
+        diff = 0.0 - diff;
+    }
+    if diff > tolerance {
+        return error.NumuyaExpectationFailed;
+    }
+}
+
+export fn expect_eq_usize(actual: usize, expected: usize) !void {
+    if actual != expected {
+        return error.NumuyaExpectationFailed;
+    }
+}
+
+export fn expect_shape_eq(actual: &[usize], expected: &[usize]) !void {
+    try expect_eq_usize(actual.len, expected.len);
+
+    var i: usize = 0;
+    while i < actual.len {
+        try expect_eq_usize(actual[i], expected[i]);
+        i = i + 1;
+    }
+}
