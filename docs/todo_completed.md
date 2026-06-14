@@ -286,3 +286,16 @@
     - `make test-one TEST=src/numuya/_tests/test_shape.uya`（通过，8/8 tests passed）
     - `make test-one TEST=src/numuya/_tests/test_storage.uya`（通过，7/7 tests passed）
     - `make test-one TEST=src/numuya/_tests/test_array_creation.uya`（通过，4/4 tests passed）
+## Phase 3: 创建数组与基础 get/set
+
+- [x] TDD: `zeros_f64/ones_f64/full_f64`。
+  - 验证命令：`make test-one TEST=src/numuya/_tests/test_array_creation.uya`
+  - 结果：通过，4/4 tests passed；新增覆盖 `zeros_f64`、`ones_f64` 非空数组填充值，并补齐 `full_f64` 值断言。
+  - 验证命令：`make test`
+  - 结果：失败，现有 `src/numuya/_tests/test_indexing.uya` 仍缺少 `set1_f64/get1_f64/set2_f64/get2_f64/getn_f64/setn_f64/get3_f64` 实现，与本任务无关。
+  - 验证命令：`make test-one TEST=src/numuya/_tests/test_shape.uya`
+  - 结果：通过，8/8 tests passed。
+  - 验证命令：`make test-one TEST=src/numuya/_tests/test_storage.uya`
+  - 结果：通过，7/7 tests passed。
+  - 验证命令：`make test-one TEST=src/numuya/_tests/test_testing_helpers.uya`
+  - 结果：通过，2/2 tests passed。
