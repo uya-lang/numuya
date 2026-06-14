@@ -37,3 +37,9 @@
   - 验证命令：
     - `../uya/bin/uya test src/numuya/_tests/test_linalg.uya --manifest-path uya.toml` — 30/30 通过
     - `make test` — 全部测试文件通过
+
+## Phase 13: Linear algebra advanced
+
+- [x] TDD: `svd_f64`。
+  - 验证命令：`../uya/bin/uya test src/numuya/_tests/test_linalg.uya --manifest-path uya.toml`
+  - 验证结果：`svd_f64` 相关 6 个测试全部通过；`test_linalg.uya` 共 30 个测试通过，0 失败。
