@@ -692,3 +692,9 @@
     - `gpu_add_f64 handles non-contiguous transpose input`
     - `gpu_add_f64 output is a new owner independent of inputs`
   - 说明：测试文件按 TDD 先写，引用尚未实现的 `cuda.ufunc` API；完整编译/运行需等待后续 `cuda/ufunc.uya` 与 kernels 实现。
+
+## Phase 22: CUDA ufunc 与 reduction
+
+- [x] 写 `src/numuya/_tests/test_cuda_reductions.uya`。
+  - 验证命令：`../uya/bin/uya test src/numuya/_tests/test_cuda_reductions.uya --manifest-path uya.toml`
+  - 结果：编译失败，符合 TDD 预期。核心错误为 `test_cuda_reductions.uya:(7:1): 错误: 模块中未找到导出项`，即 `cuda.reductions` 模块尚未实现；后续实现该模块后测试应通过。
