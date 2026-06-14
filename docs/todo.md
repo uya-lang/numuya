@@ -29,10 +29,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 - 注：当前 Uya codegen 对导出泛型 `!Array<T>` 路径仍有实例化限制；后续 `empty<T>/full<T>/from_slice<T>` 先用失败测试锁定可行写法，必要时抽最小复现。
 
-## Phase 8: Reductions
-
-- [ ] 验收：`src/numuya/_tests/test_reductions.uya` 绿。
-
 ## Phase 9: Math functions
 
 - [ ] 写 `src/numuya/_tests/test_math.uya`。

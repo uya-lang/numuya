@@ -691,3 +691,10 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 - [x] TDD: `argmax_axis_f64`。
   - 验证命令：`../uya/bin/uya test src/numuya/_tests/test_reductions.uya --manifest-path uya.toml`（23/23 通过）、`make test`（全部通过）。
   - 实现/测试变更：在 `src/numuya/_tests/test_reductions.uya` 补充 `argmax_axis_f64` 的负轴、`keepdims` 和零长度规约轴错误测试；在 `src/numuya/reductions.uya` 的 `argmax_axis_f64` 中增加 `axis_dim == 0` 时返回 `NumuyaInvalidArgument`。
+
+## Phase 8: Reductions
+
+- [x] 验收：`src/numuya/_tests/test_reductions.uya` 绿。
+  - 验证命令：
+    - `../uya/bin/uya test src/numuya/_tests/test_reductions.uya --manifest-path uya.toml`（23/23 通过）
+    - `make test`（10/10 测试文件通过）
