@@ -33,7 +33,7 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 17: Advanced indexing
 
-- [ ] 验收：advanced indexing tests 绿。
+- [x] 验收：advanced indexing tests 绿。
 
 ## Phase 18: DType 与 type-erased ArrayAny
 
