@@ -224,3 +224,11 @@
   - 验证命令：`../uya/bin/uya test src/numuya/_tests/test_advanced_indexing.uya --manifest-path uya.toml` — 2/2 通过。
   - 回归验证：`../uya/bin/uya test src/numuya/_tests/test_indexing.uya --manifest-path uya.toml` — 6/6 通过。
   - 检查：`../uya/bin/uya check src/numuya/indexing.uya --manifest-path uya.toml` — checker 通过。
+
+## Phase 17: Advanced indexing
+
+- [x] TDD: `take` axis 0/1。
+  - 说明：为二维 `take` 新增 axis 0 行选择和 axis 1 列选择测试，并将实现扩展为按输出坐标映射回源坐标的通用 rank 复制路径。
+  - 验证命令：`../uya/bin/uya test src/numuya/_tests/test_advanced_indexing.uya --manifest-path uya.toml` — 4/4 通过。
+  - 回归验证：`../uya/bin/uya check src/numuya/_tests/test_advanced_indexing.uya --manifest-path uya.toml` — checker 通过。
+  - 回归验证：`../uya/bin/uya test src/numuya/_tests/test_indexing.uya --manifest-path uya.toml` — 6/6 通过。
