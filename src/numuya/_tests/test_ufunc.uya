@@ -1,0 +1,190 @@
+use array;
+use broadcast;
+use creation;
+use indexing;
+use shape;
+use storage;
+use stride;
+use testing.expect_close_f64;
+use testing.expect_eq_usize;
+use testing.expect_shape_eq;
+use ufunc;
+
+use std.mem.allocator.IAllocator;
+use std.mem.allocator.MallocAllocator;
+
+test "ufunc test file imports ufunc module" {
+}
+
+test "add_f64 computes element-wise sum for same shape" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var left_data: [f64: 3] = [1.0, 2.0, 3.0];
+    var right_data: [f64: 3] = [4.0, 5.0, 6.0];
+    var left: Array<f64> = try from_slice<f64>(allocator, left_data[0:3], shape1(3));
+    var right: Array<f64> = try from_slice<f64>(allocator, right_data[0:3], shape1(3));
+
+    var result: Array<f64> = try add_f64(&left, &right);
+
+    try expect_eq_usize(result.shape.rank, 1);
+    try expect_eq_usize(result.shape.dims[0], 3);
+    try expect_close_f64(try get1<f64>(&result, 0), 5.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&result, 1), 7.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&result, 2), 9.0, 1e-12);
+}
+
+test "sub_f64 computes element-wise difference for same shape" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var left_data: [f64: 3] = [4.0, 5.0, 6.0];
+    var right_data: [f64: 3] = [1.0, 2.0, 3.0];
+    var left: Array<f64> = try from_slice<f64>(allocator, left_data[0:3], shape1(3));
+    var right: Array<f64> = try from_slice<f64>(allocator, right_data[0:3], shape1(3));
+
+    var result: Array<f64> = try sub_f64(&left, &right);
+
+    try expect_close_f64(try get1<f64>(&result, 0), 3.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&result, 1), 3.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&result, 2), 3.0, 1e-12);
+}
+
+test "mul_f64 computes element-wise product for same shape" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var left_data: [f64: 3] = [2.0, 3.0, 4.0];
+    var right_data: [f64: 3] = [5.0, 6.0, 7.0];
+    var left: Array<f64> = try from_slice<f64>(allocator, left_data[0:3], shape1(3));
+    var right: Array<f64> = try from_slice<f64>(allocator, right_data[0:3], shape1(3));
+
+    var result: Array<f64> = try mul_f64(&left, &right);
+
+    try expect_close_f64(try get1<f64>(&result, 0), 10.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&result, 1), 18.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&result, 2), 28.0, 1e-12);
+}
+
+test "div_f64 computes element-wise quotient for same shape" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var left_data: [f64: 3] = [10.0, 21.0, 36.0];
+    var right_data: [f64: 3] = [2.0, 3.0, 4.0];
+    var left: Array<f64> = try from_slice<f64>(allocator, left_data[0:3], shape1(3));
+    var right: Array<f64> = try from_slice<f64>(allocator, right_data[0:3], shape1(3));
+
+    var result: Array<f64> = try div_f64(&left, &right);
+
+    try expect_close_f64(try get1<f64>(&result, 0), 5.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&result, 1), 7.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&result, 2), 9.0, 1e-12);
+}
+
+test "add_f64 broadcasts row vector across matrix" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var matrix_data: [f64: 6] = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
+    var matrix: Array<f64> = try from_slice<f64>(allocator, matrix_data[0:6], shape2(2, 3));
+    var row_data: [f64: 3] = [10.0, 20.0, 30.0];
+    var row: Array<f64> = try from_slice<f64>(allocator, row_data[0:3], shape1(3));
+
+    var result: Array<f64> = try add_f64(&matrix, &row);
+
+    try expect_eq_usize(result.shape.rank, 2);
+    try expect_eq_usize(result.shape.dims[0], 2);
+    try expect_eq_usize(result.shape.dims[1], 3);
+    try expect_close_f64(try get2<f64>(&result, 0, 0), 11.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&result, 0, 1), 22.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&result, 0, 2), 33.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&result, 1, 0), 14.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&result, 1, 1), 25.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&result, 1, 2), 36.0, 1e-12);
+}
+
+test "add_f64 broadcasts scalar array to vector" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var scalar_data: [f64: 1] = [100.0];
+    var scalar: Array<f64> = try from_slice<f64>(allocator, scalar_data[0:1], shape_scalar());
+    var vector_data: [f64: 3] = [1.0, 2.0, 3.0];
+    var vector: Array<f64> = try from_slice<f64>(allocator, vector_data[0:3], shape1(3));
+
+    var result: Array<f64> = try add_f64(&scalar, &vector);
+
+    try expect_eq_usize(result.shape.rank, 1);
+    try expect_eq_usize(result.shape.dims[0], 3);
+    try expect_close_f64(try get1<f64>(&result, 0), 101.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&result, 1), 102.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&result, 2), 103.0, 1e-12);
+}
+
+test "neg_f64 negates each element" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var data: [f64: 3] = [1.0, -2.0, 3.0];
+    var input: Array<f64> = try from_slice<f64>(allocator, data[0:3], shape1(3));
+
+    var result: Array<f64> = try neg_f64(&input);
+
+    try expect_close_f64(try get1<f64>(&result, 0), -1.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&result, 1), 2.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&result, 2), -3.0, 1e-12);
+}
+
+test "add_i32 computes element-wise sum for same shape" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var left_data: [i32: 3] = [1, 2, 3];
+    var right_data: [i32: 3] = [4, 5, 6];
+    var left: Array<i32> = try from_slice<i32>(allocator, left_data[0:3], shape1(3));
+    var right: Array<i32> = try from_slice<i32>(allocator, right_data[0:3], shape1(3));
+
+    var result: Array<i32> = try add_i32(&left, &right);
+
+    try expect_eq_usize(result.shape.rank, 1);
+    try expect_eq_usize(result.shape.dims[0], 3);
+    if result.storage.data[0] != (5 as i32) { return error.NumuyaExpectationFailed; }
+    if result.storage.data[1] != (7 as i32) { return error.NumuyaExpectationFailed; }
+    if result.storage.data[2] != (9 as i32) { return error.NumuyaExpectationFailed; }
+}
+
+test "add_f64 handles non-contiguous transpose input" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var source: [f64: 6] = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
+    var original: Array<f64> = try from_slice<f64>(allocator, source[0:6], shape2(2, 3));
+    var transposed: Array<f64> = try transpose<f64>(&original);
+    var other: Array<f64> = try full_f64(allocator, shape2(3, 2), 1.0);
+
+    var result: Array<f64> = try add_f64(&transposed, &other);
+
+    try expect_eq_usize(result.shape.rank, 2);
+    try expect_eq_usize(result.shape.dims[0], 3);
+    try expect_eq_usize(result.shape.dims[1], 2);
+    try expect_close_f64(try get2<f64>(&result, 0, 0), 2.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&result, 0, 1), 5.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&result, 1, 0), 3.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&result, 1, 1), 6.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&result, 2, 0), 4.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&result, 2, 1), 7.0, 1e-12);
+}
+
+test "add_f64 output is a new owner independent of inputs" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var left_data: [f64: 3] = [1.0, 2.0, 3.0];
+    var right_data: [f64: 3] = [4.0, 5.0, 6.0];
+    var left: Array<f64> = try from_slice<f64>(allocator, left_data[0:3], shape1(3));
+    var right: Array<f64> = try from_slice<f64>(allocator, right_data[0:3], shape1(3));
+
+    var result: Array<f64> = try add_f64(&left, &right);
+
+    try expect_eq_usize(result.storage.ref_count, 1);
+    if result.flags.owns_data != true {
+        return error.NumuyaExpectationFailed;
+    }
+
+    try set1<f64>(&result, 0, 99.0);
+
+    try expect_close_f64(try get1<f64>(&left, 0), 1.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&right, 0), 4.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&result, 0), 99.0, 1e-12);
+}

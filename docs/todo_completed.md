@@ -513,3 +513,10 @@
   - 验证结果：通过，7/7 tests passed。
   - 回归命令：`make test`
   - 回归结果：通过，当前所有 7 个测试文件（test_array_creation.uya、test_broadcast.uya、test_indexing.uya、test_shape.uya、test_slicing.uya、test_storage.uya、test_stride_views.uya、test_testing_helpers.uya）全部通过。
+
+## Phase 7: UFunc 基础
+
+- [x] 写 `src/numuya/_tests/test_ufunc.uya`。
+  - 验证：`../uya/bin/uya test src/numuya/_tests/test_ufunc.uya --manifest-path uya.toml`
+  - 结果：类型检查失败，因为 `src/numuya/ufunc.uya` 尚未实现，`add_f64/sub_f64/mul_f64/div_f64/neg_f64/add_i32` 未定义；符合 TDD 先写测试再实现的预期失败。
+  - 相关既有测试回跑通过：`test_shape.uya`、`test_array_creation.uya`、`test_broadcast.uya`、`test_stride_views.uya`。
