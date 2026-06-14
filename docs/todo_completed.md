@@ -867,3 +867,11 @@ done
   - `k=1`、`k=-1`。
   - 验证命令：`../uya/bin/uya test src/numuya/_tests/test_linalg.uya --manifest-path uya.toml`
   - 验证结果：10/10 通过，其中 `eye_f64` 相关 3 个测试（k=0、k=1、k=-1）全部通过。
+
+## Phase 12: Linear algebra MVP
+
+- [x] TDD: `diag_f64`。
+  - 1-D -> 2-D diagonal matrix。
+  - 2-D -> 1-D diagonal extraction。
+  - 验证命令：`../uya/bin/uya test src/numuya/_tests/test_linalg.uya --manifest-path uya.toml`
+  - 验证结果：10/10 tests passed, diag_f64 1-D->2-D 与 2-D->1-D 两个用例均通过。
