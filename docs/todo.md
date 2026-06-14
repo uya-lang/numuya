@@ -31,10 +31,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 10: Statistics
 
-## Phase 17: Advanced indexing
-
-- [x] 验收：advanced indexing tests 绿。
-
 ## Phase 18: DType 与 type-erased ArrayAny
 
 - [ ] 写 `src/numuya/_tests/test_dtype.uya`。

@@ -269,3 +269,9 @@
   - 验证命令：`../uya/bin/uya test src/numuya/_tests/test_advanced_indexing.uya --manifest-path uya.toml`
   - 结果：7/7 tests passed
   - 回归测试：test_indexing.uya (6/6), test_slicing.uya (10/10), test_shape.uya (8/8), test_array_creation.uya (6/6), test_storage.uya (7/7) 均通过
+
+## Phase 17: Advanced indexing
+
+- [x] 验收：advanced indexing tests 绿。
+  - 验证命令：`../uya/bin/uya test src/numuya/_tests/test_advanced_indexing.uya --manifest-path uya.toml`
+  - 结果：7/7 tests passed, 0 failed
