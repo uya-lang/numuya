@@ -549,3 +549,18 @@
   - 验证命令：`NUMUYA_CUDA_REQUIRED=1 LDFLAGS="-lcuda" ../uya/bin/uya test src/numuya/_tests/test_cuda_device_array.uya --manifest-path uya.toml`
   - 结果：编译、链接、运行均成功；7 个测试全部按预期失败（ERROR），因为本轮仅交付测试文件及最小可编译骨架，`src/numuya/cuda/memory.uya` 与 `src/numuya/cuda/device_array.uya` 尚未实现真正的 CUDA 设备内存分配/释放与拷贝。
 
+
+
+## Phase 21: CUDA DeviceArray 与拷贝
+
+- [x] 实现 `src/numuya/cuda/memory.uya`。
+  - 实现 `MemoryPool` 预算跟踪：新增 `AllocationNode` 链表记录每次 `cuda_malloc` 的 `(ptr, size)`，`cuda_free` 按指针查找并扣减 `used_bytes`。
+  - `cuda_malloc` 在 `used_bytes + size > budget_bytes` 时返回 `NumuyaGpuOutOfMemory`；否则通过 `cuda_driver_malloc` 调用 CUDA driver 的 `cuMemAlloc`。
+  - `cuda_free` 处理 `null` 指针、查找失败返回 `NumuyaInvalidArgument`、成功时释放 device memory 并归还节点。
+  - 为支持无显式 context 的测试场景，同步扩展 `src/numuya/cuda/driver_stub.c` 与 `src/numuya/cuda/driver.uya`：
+    - `driver_stub.c` 动态加载 `cuMemAlloc`/`cuMemFree`，并在 `numuya_cuda_init` 时为 device 0 创建默认 context。
+    - `driver.uya` 导出 `cuda_driver_malloc`/`cuda_driver_free` 供 `memory.uya` 使用。
+  - 验证命令：
+    - `../uya/bin/uya check src/numuya/_tests/test_cuda_device_array.uya --manifest-path uya.toml` — 类型检查通过
+    - `NUMUYA_CUDA_REQUIRED=1 LDFLAGS="-lcuda" ../uya/bin/uya test src/numuya/_tests/test_cuda_device_array.uya --manifest-path uya.toml` — 7 个测试中 `cuda_malloc`/`cuda_free` 相关 2 个通过（其余 5 个依赖尚未实现的 `device_array.uya`）
+    - `make test` — 全部非 CUDA 测试文件通过

@@ -35,7 +35,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 21: CUDA DeviceArray 与拷贝
 
-- [ ] 实现 `src/numuya/cuda/memory.uya`。
 - [ ] 实现 `src/numuya/cuda/device_array.uya`。
 - [ ] TDD: `cuda_malloc/cuda_free`。
   - 申请 1MB 成功。

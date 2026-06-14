@@ -20,6 +20,8 @@ extern fn numuya_cuda_set_current_context(context: usize) i32;
 extern fn numuya_cuda_create_stream(context: usize, stream: &usize) i32;
 extern fn numuya_cuda_synchronize_stream(context: usize, stream: usize) i32;
 extern fn numuya_cuda_destroy_stream(context: usize, stream: usize) i32;
+extern fn numuya_cuda_malloc(size: usize, ptr: &usize) i32;
+extern fn numuya_cuda_free(ptr: usize) i32;
 
 const NUMUYA_CUDA_OK: i32 = 0;
 const NUMUYA_CUDA_UNAVAILABLE: i32 = 1;
@@ -140,6 +142,35 @@ export fn cuda_destroy_stream(context: usize, stream: usize) !void {
         return error.NumuyaGpuUnavailable;
     } else if status == NUMUYA_CUDA_DEVICE_MISMATCH {
         return error.NumuyaDeviceMismatch;
+    } else {
+        return error.NumuyaCudaError;
+    }
+}
+
+export fn cuda_driver_malloc(size: usize) !usize {
+    if size == 0 {
+        return (0 as! usize).value;
+    }
+    var ptr: usize = 0;
+    const status: i32 = numuya_cuda_malloc(size, &ptr);
+    if status == NUMUYA_CUDA_OK {
+        return ptr;
+    } else if status == NUMUYA_CUDA_UNAVAILABLE {
+        return error.NumuyaGpuUnavailable;
+    } else {
+        return error.NumuyaCudaError;
+    }
+}
+
+export fn cuda_driver_free(ptr: usize) !void {
+    if ptr == 0 {
+        return;
+    }
+    const status: i32 = numuya_cuda_free(ptr);
+    if status == NUMUYA_CUDA_OK {
+        return;
+    } else if status == NUMUYA_CUDA_UNAVAILABLE {
+        return error.NumuyaGpuUnavailable;
     } else {
         return error.NumuyaCudaError;
     }

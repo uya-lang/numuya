@@ -1,14 +1,28 @@
+use cuda.driver;
 use errors;
+
+use std.mem.allocator.IAllocator;
+use std.mem.allocator.MallocAllocator;
+
+export struct AllocationNode {
+    ptr: usize,
+    size: usize,
+    next: &AllocationNode,
+}
 
 export struct MemoryPool {
     budget_bytes: usize,
     used_bytes: usize,
+    allocations: &AllocationNode,
 }
+
+var global_malloc_allocator: MallocAllocator = MallocAllocator{};
 
 export fn memory_pool_new(budget_bytes: usize) MemoryPool {
     return MemoryPool{
         budget_bytes: budget_bytes,
         used_bytes: 0,
+        allocations: null,
     };
 }
 
@@ -17,13 +31,60 @@ export fn memory_pool_used_bytes(pool: &MemoryPool) usize {
 }
 
 export fn cuda_malloc(pool: &MemoryPool, size: usize) !&byte {
-    _ = pool;
-    _ = size;
-    return error.NumuyaCudaError;
+    if size == 0 {
+        return null;
+    }
+    if pool.used_bytes + size > pool.budget_bytes {
+        return error.NumuyaGpuOutOfMemory;
+    }
+
+    const ptr: usize = try cuda_driver_malloc(size);
+    if ptr == 0 {
+        return error.NumuyaCudaError;
+    }
+
+    var allocator: IAllocator = global_malloc_allocator;
+    var sample: AllocationNode = AllocationNode{};
+    const node_size: usize = (@size_of(sample) as! usize).value;
+    const node_raw: &byte = allocator.alloc(node_size) catch |err| {
+        cuda_driver_free(ptr) catch {};
+        return err;
+    };
+    const node: &AllocationNode = node_raw as &AllocationNode;
+    node[0] = AllocationNode{
+        ptr: ptr,
+        size: size,
+        next: pool.allocations,
+    };
+    pool.allocations = node;
+    pool.used_bytes = pool.used_bytes + size;
+    return ptr as &byte;
 }
 
 export fn cuda_free(pool: &MemoryPool, ptr: &byte) !void {
-    _ = pool;
-    _ = ptr;
-    return error.NumuyaCudaError;
+    if ptr == null {
+        return;
+    }
+
+    const target: usize = ptr as usize;
+    var current: &AllocationNode = pool.allocations;
+    var prev: &AllocationNode = null;
+    while current != null {
+        if current.ptr == target {
+            if prev == null {
+                pool.allocations = current.next;
+            } else {
+                prev.next = current.next;
+            }
+            pool.used_bytes = pool.used_bytes - current.size;
+            try cuda_driver_free(target);
+            var allocator: IAllocator = global_malloc_allocator;
+            allocator.dealloc(current as &byte);
+            return;
+        }
+        prev = current;
+        current = current.next;
+    }
+
+    return error.NumuyaInvalidArgument;
 }
