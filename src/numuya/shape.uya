@@ -67,6 +67,29 @@ export fn shape_eq(left: Shape, right: Shape) bool {
     return true;
 }
 
+export fn normalize_axis(axis: i32, rank: usize) !usize {
+    const signed_rank: i32 = rank as! i32 catch {
+        return error.NumuyaAxisOutOfBounds;
+    };
+    if axis >= signed_rank {
+        return error.NumuyaAxisOutOfBounds;
+    }
+
+    if axis < 0 {
+        const normalized: i32 = signed_rank + axis;
+        if normalized < 0 {
+            return error.NumuyaAxisOutOfBounds;
+        }
+        return normalized as! usize catch {
+            return error.NumuyaAxisOutOfBounds;
+        };
+    }
+
+    return axis as! usize catch {
+        return error.NumuyaAxisOutOfBounds;
+    };
+}
+
 export fn shape_size(shape: Shape) !usize {
     var size: usize = 1;
     var i: usize = 0;

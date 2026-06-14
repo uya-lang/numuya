@@ -142,3 +142,18 @@
   - rank 不同或 dims 不同为 false。
   - 验证：`make test-one TEST=src/numuya/_tests/test_shape.uya` 通过（7 tests passed）。
   - 验证：`make test` 通过（test_shape 与 test_testing_helpers 均通过）。
+
+## Phase 1: Shape、axis、size
+
+- [x] TDD: `normalize_axis`。
+  - `normalize_axis(0, 3) == 0`。
+  - `normalize_axis(-1, 3) == 2`。
+  - `axis == 3` 或 `axis == -4` 返回 `NumuyaAxisOutOfBounds`。
+  - 验证：`make test-one TEST=src/numuya/_tests/test_shape.uya` 通过（8 tests passed）。
+  - 验证：`make test` 通过（test_shape 8 tests passed；test_testing_helpers 2 tests passed）。
+
+## Phase 1: Shape、axis、size
+
+- [x] 验收：`src/numuya/_tests/test_shape.uya` 绿。
+  - 验证：`../uya/bin/uya test src/numuya/_tests/test_shape.uya --manifest-path uya.toml` 通过（8 tests passed）。
+  - 验证：`../uya/bin/uya test src/numuya/_tests/test_testing_helpers.uya --manifest-path uya.toml` 通过（2 tests passed）。

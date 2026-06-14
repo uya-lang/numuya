@@ -25,14 +25,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 - 外部 consumer fixture 才使用 `use numuya.*`，用于验证其他项目通过 UPM 使用 NumUya。
 - `_tests`、`_tools`、`_benchmarks` 是内部模块，外部 consumer fixture 不得导入 `numuya._tests.*`、`numuya._tools.*` 或 `numuya._benchmarks.*`。
 
-## Phase 1: Shape、axis、size
-
-- [ ] TDD: `normalize_axis`。
-  - `normalize_axis(0, 3) == 0`。
-  - `normalize_axis(-1, 3) == 2`。
-  - `axis == 3` 或 `axis == -4` 返回 `NumuyaAxisOutOfBounds`。
-- [ ] 验收：`src/numuya/_tests/test_shape.uya` 绿。
-
 ## Phase 2: Storage 与 Array handle
 
 - [ ] 写 `src/numuya/_tests/test_storage.uya`。
