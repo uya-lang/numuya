@@ -16,9 +16,9 @@
     .param .u64 numuya_add_f64_param_5
 )
 {
-    .reg .u32   r32<4>;
-    .reg .u64   r64<9>;
-    .reg .f64   f64<3>;
+    .reg .u32   r32_0, r32_1, r32_2, r32_3;
+    .reg .u64   r64_0, r64_1, r64_2, r64_3, r64_4, r64_5, r64_6, r64_7, r64_8;
+    .reg .f64   f64_0, f64_1, f64_2;
     .reg .pred  p;
 
     ld.param.u64    r64_0, [numuya_add_f64_param_0];
@@ -66,9 +66,9 @@ END:
     .param .u64 numuya_mul_f64_param_5
 )
 {
-    .reg .u32   r32<4>;
-    .reg .u64   r64<9>;
-    .reg .f64   f64<3>;
+    .reg .u32   r32_0, r32_1, r32_2, r32_3;
+    .reg .u64   r64_0, r64_1, r64_2, r64_3, r64_4, r64_5, r64_6, r64_7, r64_8;
+    .reg .f64   f64_0, f64_1, f64_2;
     .reg .pred  p;
 
     ld.param.u64    r64_0, [numuya_mul_f64_param_0];
@@ -114,9 +114,9 @@ END:
     .param .u64 numuya_sum_all_f64_param_3
 )
 {
-    .reg .u32   r32<1>;
-    .reg .u64   r64<6>;
-    .reg .f64   f64<2>;
+    .reg .u32   r32_0;
+    .reg .u64   r64_0, r64_1, r64_2, r64_3, r64_4, r64_5;
+    .reg .f64   f64_0, f64_1;
     .reg .pred  p;
 
     ld.param.u64    r64_0, [numuya_sum_all_f64_param_0];

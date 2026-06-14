@@ -51,3 +51,10 @@ test "embedded PTX contains expected kernel entries" {
         return error.NumuyaExpectationFailed;
     }
 }
+
+test "make cuda-ptx-validate assembles PTX for sm_86" {
+    const result: i32 = system("make cuda-ptx-validate 2>&1" as &const byte);
+    if result != 0 {
+        return error.NumuyaExpectationFailed;
+    }
+}

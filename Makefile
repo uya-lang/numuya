@@ -8,13 +8,26 @@ TESTS := $(sort $(wildcard src/numuya/_tests/test_*.uya))
 BENCH ?= src/numuya/_benchmarks/bench_simd.uya
 BENCHES := $(sort $(wildcard src/numuya/_benchmarks/bench_*.uya))
 
-.PHONY: bootstrap-upm upm-install test-one test test-cuda test-cuda-vendor check-one verify-upm-consumer require-upm bench cuda-ptx-embed
+.PHONY: bootstrap-upm upm-install test-one test test-cuda test-cuda-vendor check-one verify-upm-consumer require-upm bench cuda-ptx-embed cuda-ptx-validate
 
 require-upm:
 	@test -x "$(UPM)" || { echo "missing executable $(UPM)"; exit 1; }
 
 cuda-ptx-embed: require-upm
 	$(UYA) run src/numuya/_tools/embed_ptx.uya --manifest-path $(MANIFEST)
+
+CUDA_PTX_SRC := src/numuya/cuda/ptx/core_sm86.ptx
+CUDA_CUBIN_CACHE := src/numuya/cuda/ptx/core_sm86.cubin
+
+cuda-ptx-validate: require-upm
+	@test -f "$(CUDA_PTX_SRC)" || { echo "PTX source-of-truth missing: $(CUDA_PTX_SRC)"; exit 1; }
+	ptxas -arch=sm_86 "$(CUDA_PTX_SRC)" -o /tmp/numuya_core_sm86.cubin
+	@echo "ptxas -arch=sm_86 OK: $(CUDA_PTX_SRC)"
+	@if [ -f "$(CUDA_CUBIN_CACHE)" ]; then \
+		echo "cubin cache exists but is not required: $(CUDA_CUBIN_CACHE)"; \
+	else \
+		echo "cubin cache absent; PTX remains source-of-truth"; \
+	fi
 
 bootstrap-upm: require-upm
 	$(UPM) install --manifest-path $(MANIFEST)

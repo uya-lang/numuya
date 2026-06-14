@@ -718,3 +718,24 @@
     - `../uya/bin/uya test src/numuya/_tests/test_ptx_embed.uya --manifest-path uya.toml` — 3/3 通过
     - `make test` — 全部非 CUDA 测试文件通过
     - `make cuda-ptx-embed` 连续运行两次，`src/numuya/cuda/kernels_ptx.uya` sha256 均为 `26ae5abe809388639964a6b752f32e126760c7e9e606eb3f08a8d3a4841b0787`
+
+## Phase 22: CUDA ufunc 与 reduction
+
+- [x] TDD: `make cuda-ptx-validate` 或等价命令。
+  - `ptxas -arch=sm_86` 校验通过。
+  - cubin cache 不是唯一 source-of-truth。
+  - 验证命令：
+    - `make cuda-ptx-validate`
+    - `../uya/bin/uya test src/numuya/_tests/test_ptx_embed.uya --manifest-path uya.toml`
+    - `make test`
+  - 关键改动：
+    - 在 `Makefile` 新增 `cuda-ptx-validate` target，调用 `ptxas -arch=sm_86` 校验 `src/numuya/cuda/ptx/core_sm86.ptx`，并显式检查 cubin cache 不是唯一 source-of-truth。
+    - 在 `src/numuya/_tests/test_ptx_embed.uya` 新增测试 `make cuda-ptx-validate assembles PTX for sm_86`。
+    - 修正 `src/numuya/cuda/ptx/core_sm86.ptx` 中的寄存器声明语法：将 `.reg .u32 r32<4>` 等数组声明改为逐个寄存器声明（如 `.reg .u32 r32_0, r32_1, r32_2, r32_3`），使其符合 PTX 语法并通过 `ptxas` 校验。
+    - 重新生成 `src/numuya/cuda/kernels_ptx.uya`。
+  - 验证结果：
+    - `make cuda-ptx-validate` 输出 `ptxas -arch=sm_86 OK`。
+    - `test_ptx_embed.uya` 4 个测试全部通过。
+    - `make test`（非 CUDA 测试）全部通过。
+    - 相关 CUDA 测试 `test_cuda_driver.uya`、`test_cuda_device_array.uya`、`test_cuda_module.uya` 均通过。
+    - 当前环境无 GPU，`test_cuda_ufunc.uya` 与 `test_cuda_reductions.uya` 因依赖尚未实现的 `cuda.ufunc` / `cuda.reductions` 模块而类型检查失败，与本任务无关。
