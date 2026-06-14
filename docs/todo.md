@@ -33,8 +33,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 16: `.npy` I/O
 
-- [ ] TDD: `save_npy_f64`。
-  - 保存后再加载 roundtrip。
 - [ ] TDD: unsupported dtype 返回 `NumuyaUnsupportedDType`。
 - [ ] 验收：`src/numuya/_tests/test_io_npy.uya` 绿。
 

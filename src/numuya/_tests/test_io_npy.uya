@@ -9,11 +9,13 @@ use testing.expect_shape_eq;
 
 use std.mem.allocator.IAllocator;
 use std.mem.allocator.MallocAllocator;
+use libc.unlink;
 
 const NPY_F64_TOLERANCE: f64 = 1e-12;
 const NPY_FIXTURE_F64_1D: &const byte = "tests/fixtures/npy/f64_1d.npy";
 const NPY_FIXTURE_F64_2D: &const byte = "tests/fixtures/npy/f64_2d.npy";
 const NPY_FIXTURE_F64_EMPTY: &const byte = "tests/fixtures/npy/f64_empty.npy";
+const NPY_ROUNDTRIP_F64_2D: &const byte = "/tmp/numuya_save_npy_f64_roundtrip.npy";
 
 test "io_npy test file imports io_npy module" {
 }
@@ -109,4 +111,23 @@ test "load_npy_f64 loads empty fixture shape" {
     var actual: Array<f64> = try load_npy_f64(allocator, NPY_FIXTURE_F64_EMPTY);
 
     try expect_empty_array_f64(&actual, expected_shape[0:1]);
+}
+
+test "save_npy_f64 roundtrips 2d array through load_npy_f64" {
+    _ = unlink(NPY_ROUNDTRIP_F64_2D);
+
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var expected: [f64: 6] = [1.25, -2.5, 3.75, 4.5, 0.0, 9.125];
+    var source: Array<f64> = try from_slice<f64>(allocator, expected[0:6], shape2(2, 3));
+    errdefer {
+        _ = unlink(NPY_ROUNDTRIP_F64_2D);
+    }
+
+    try save_npy_f64(NPY_ROUNDTRIP_F64_2D, &source);
+
+    var actual: Array<f64> = try load_npy_f64(allocator, NPY_ROUNDTRIP_F64_2D);
+    try expect_array2_close_f64(&actual, 2, 3, expected[0:6]);
+
+    _ = unlink(NPY_ROUNDTRIP_F64_2D);
 }

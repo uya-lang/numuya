@@ -187,3 +187,9 @@
   - 数据正确。
   - 验证：`make test-one TEST=src/numuya/_tests/test_io_npy.uya` -> 7 个测试通过。
   - 验证：`../uya/bin/uya check src/numuya/io_npy.uya --manifest-path uya.toml` -> checker 通过。
+## Phase 16: `.npy` I/O
+
+- [x] TDD: `save_npy_f64`。
+  - 保存后再加载 roundtrip。
+  - 验证：`make test-one TEST=src/numuya/_tests/test_io_npy.uya` — 8/8 通过。
+  - 回归验证：`make test` — 全量测试通过。
