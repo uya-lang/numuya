@@ -27,9 +27,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 1: Shape、axis、size
 
-- [ ] TDD: `shape_eq`。
-  - 相同 rank/dims 为 true。
-  - rank 不同或 dims 不同为 false。
 - [ ] TDD: `normalize_axis`。
   - `normalize_axis(0, 3) == 0`。
   - `normalize_axis(-1, 3) == 2`。

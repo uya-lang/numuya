@@ -31,6 +31,20 @@ test "shape_size multiplies dimensions allows zero and rejects overflow" {
     }
 }
 
+test "shape_eq compares rank and active dimensions" {
+    if shape_eq(shape2(2, 3), shape2(2, 3)) != true {
+        return error.NumuyaExpectationFailed;
+    }
+
+    if shape_eq(shape2(2, 3), shape3(2, 3, 1)) != false {
+        return error.NumuyaExpectationFailed;
+    }
+
+    if shape_eq(shape2(2, 3), shape2(2, 4)) != false {
+        return error.NumuyaExpectationFailed;
+    }
+}
+
 test "shape1 shape2 shape3 create fixed-rank shapes" {
     const one: Shape = shape1(7);
     try expect_eq_usize(one.rank, 1);

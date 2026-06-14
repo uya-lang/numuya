@@ -134,3 +134,11 @@
   - 验证：
     - `make test-one TEST=src/numuya/_tests/test_shape.uya` 通过。
     - `make test` 通过。
+
+## Phase 1: Shape、axis、size
+
+- [x] TDD: `shape_eq`。
+  - 相同 rank/dims 为 true。
+  - rank 不同或 dims 不同为 false。
+  - 验证：`make test-one TEST=src/numuya/_tests/test_shape.uya` 通过（7 tests passed）。
+  - 验证：`make test` 通过（test_shape 与 test_testing_helpers 均通过）。
