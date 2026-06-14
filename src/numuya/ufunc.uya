@@ -59,32 +59,106 @@ fn physical_index_ref(shape_value: &Shape, strides_value: &Strides, offset: isiz
     return (linear_index as! usize).value;
 }
 
-export fn add_f64(left: &Array<f64>, right: &Array<f64>) !Array<f64> {
-    var left_view: Array<f64> = try broadcast_to<f64>(left, try broadcast_shapes(left.shape, right.shape));
-    var right_view: Array<f64> = try broadcast_to<f64>(right, try broadcast_shapes(left.shape, right.shape));
-    var result: Array<f64> = try empty<f64>(left.storage.allocator, try broadcast_shapes(left.shape, right.shape));
-
-    const size: usize = array_size<f64>(&result);
-    var linear: usize = 0;
-    while linear < size {
-        var indices: [usize: NUMUYA_MAX_DIMS] = [0: NUMUYA_MAX_DIMS];
-        var remaining: usize = linear;
-        var axis: usize = result.shape.rank;
-        while axis > 0 {
-            const index: usize = axis - 1;
-            if index >= NUMUYA_MAX_DIMS {
-                return error.NumuyaRankTooLarge;
-            }
-            const dim: usize = result.shape.dims[index];
-            indices[index] = remaining % dim;
-            remaining = remaining / dim;
-            axis = index;
+fn linear_to_indices(shape_value: &Shape, linear: usize, indices: &[usize]) !void {
+    var remaining: usize = linear;
+    var axis: usize = shape_value.rank;
+    while axis > 0 {
+        const index: usize = axis - 1;
+        if index >= NUMUYA_MAX_DIMS {
+            return error.NumuyaRankTooLarge;
         }
-        const li: usize = try physical_index_ref(&left_view.shape, &left_view.strides, left_view.offset, indices[0:result.shape.rank]);
-        const ri: usize = try physical_index_ref(&right_view.shape, &right_view.strides, right_view.offset, indices[0:result.shape.rank]);
-        const oi: usize = try physical_index_ref(&result.shape, &result.strides, result.offset, indices[0:result.shape.rank]);
-        result.storage.data[oi] = left_view.storage.data[li] + right_view.storage.data[ri];
-        linear = linear + 1;
+        const dim: usize = shape_value.dims[index];
+        indices[index] = remaining % dim;
+        remaining = remaining / dim;
+        axis = index;
+    }
+}
+
+fn offset_as_usize(offset: isize) !usize {
+    if offset < 0 {
+        return error.NumuyaIndexOutOfBounds;
+    }
+    return (offset as! usize).value;
+}
+
+fn clone_shape(shape_value: &Shape) Shape {
+    var cloned: Shape = shape_scalar();
+    cloned.rank = shape_value.rank;
+    var i: usize = 0;
+    while i < shape_value.rank {
+        cloned.dims[i] = shape_value.dims[i];
+        i = i + 1;
+    }
+    return cloned;
+}
+
+fn binary_op_use_contiguous_path<T>(left: &Array<T>, right: &Array<T>, result: &Array<T>) bool {
+    return array_is_c_contiguous<T>(left) && array_is_c_contiguous<T>(right) && array_is_c_contiguous<T>(result);
+}
+
+fn unary_op_use_contiguous_path<T>(input: &Array<T>, result: &Array<T>) bool {
+    return array_is_c_contiguous<T>(input) && array_is_c_contiguous<T>(result);
+}
+
+struct BinaryIndices {
+    left_idx: usize,
+    right_idx: usize,
+    result_idx: usize,
+}
+
+fn binary_stride_indices<T>(left: &Array<T>, right: &Array<T>, result: &Array<T>, linear: usize) !BinaryIndices {
+    var indices: [usize: NUMUYA_MAX_DIMS] = [0: NUMUYA_MAX_DIMS];
+    try linear_to_indices(&result.shape, linear, indices[0:result.shape.rank]);
+    const left_idx: usize = try physical_index_ref(&left.shape, &left.strides, left.offset, indices[0:result.shape.rank]);
+    const right_idx: usize = try physical_index_ref(&right.shape, &right.strides, right.offset, indices[0:result.shape.rank]);
+    const result_idx: usize = try physical_index_ref(&result.shape, &result.strides, result.offset, indices[0:result.shape.rank]);
+    return BinaryIndices{
+        left_idx: left_idx,
+        right_idx: right_idx,
+        result_idx: result_idx,
+    };
+}
+
+struct UnaryIndices {
+    input_idx: usize,
+    result_idx: usize,
+}
+
+fn unary_stride_indices<T>(input: &Array<T>, result: &Array<T>, linear: usize) !UnaryIndices {
+    var indices: [usize: NUMUYA_MAX_DIMS] = [0: NUMUYA_MAX_DIMS];
+    try linear_to_indices(&result.shape, linear, indices[0:result.shape.rank]);
+    const input_idx: usize = try physical_index_ref(&input.shape, &input.strides, input.offset, indices[0:result.shape.rank]);
+    const result_idx: usize = try physical_index_ref(&result.shape, &result.strides, result.offset, indices[0:result.shape.rank]);
+    return UnaryIndices{
+        input_idx: input_idx,
+        result_idx: result_idx,
+    };
+}
+
+export fn add_f64(left: &Array<f64>, right: &Array<f64>) !Array<f64> {
+    const result_shape: Shape = try broadcast_shapes(left.shape, right.shape);
+    var left_view: Array<f64> = try broadcast_to<f64>(left, clone_shape(&result_shape));
+    var right_view: Array<f64> = try broadcast_to<f64>(right, clone_shape(&result_shape));
+    var result: Array<f64> = try empty<f64>(left.storage.allocator, clone_shape(&result_shape));
+
+    if binary_op_use_contiguous_path<f64>(&left_view, &right_view, &result) {
+        const left_base: usize = try offset_as_usize(left_view.offset);
+        const right_base: usize = try offset_as_usize(right_view.offset);
+        const result_base: usize = try offset_as_usize(result.offset);
+        const size: usize = array_size<f64>(&result);
+        var i: usize = 0;
+        while i < size {
+            result.storage.data[result_base + i] = left_view.storage.data[left_base + i] + right_view.storage.data[right_base + i];
+            i = i + 1;
+        }
+    } else {
+        const size: usize = array_size<f64>(&result);
+        var linear: usize = 0;
+        while linear < size {
+            const idx: BinaryIndices = try binary_stride_indices<f64>(&left_view, &right_view, &result, linear);
+            result.storage.data[idx.result_idx] = left_view.storage.data[idx.left_idx] + right_view.storage.data[idx.right_idx];
+            linear = linear + 1;
+        }
     }
 
     storage_retain<f64>(result.storage);
@@ -98,31 +172,29 @@ export fn add_f64(left: &Array<f64>, right: &Array<f64>) !Array<f64> {
 }
 
 export fn sub_f64(left: &Array<f64>, right: &Array<f64>) !Array<f64> {
-    var left_view: Array<f64> = try broadcast_to<f64>(left, try broadcast_shapes(left.shape, right.shape));
-    var right_view: Array<f64> = try broadcast_to<f64>(right, try broadcast_shapes(left.shape, right.shape));
-    var result: Array<f64> = try empty<f64>(left.storage.allocator, try broadcast_shapes(left.shape, right.shape));
+    const result_shape: Shape = try broadcast_shapes(left.shape, right.shape);
+    var left_view: Array<f64> = try broadcast_to<f64>(left, clone_shape(&result_shape));
+    var right_view: Array<f64> = try broadcast_to<f64>(right, clone_shape(&result_shape));
+    var result: Array<f64> = try empty<f64>(left.storage.allocator, clone_shape(&result_shape));
 
-    const size: usize = array_size<f64>(&result);
-    var linear: usize = 0;
-    while linear < size {
-        var indices: [usize: NUMUYA_MAX_DIMS] = [0: NUMUYA_MAX_DIMS];
-        var remaining: usize = linear;
-        var axis: usize = result.shape.rank;
-        while axis > 0 {
-            const index: usize = axis - 1;
-            if index >= NUMUYA_MAX_DIMS {
-                return error.NumuyaRankTooLarge;
-            }
-            const dim: usize = result.shape.dims[index];
-            indices[index] = remaining % dim;
-            remaining = remaining / dim;
-            axis = index;
+    if binary_op_use_contiguous_path<f64>(&left_view, &right_view, &result) {
+        const left_base: usize = try offset_as_usize(left_view.offset);
+        const right_base: usize = try offset_as_usize(right_view.offset);
+        const result_base: usize = try offset_as_usize(result.offset);
+        const size: usize = array_size<f64>(&result);
+        var i: usize = 0;
+        while i < size {
+            result.storage.data[result_base + i] = left_view.storage.data[left_base + i] - right_view.storage.data[right_base + i];
+            i = i + 1;
         }
-        const li: usize = try physical_index_ref(&left_view.shape, &left_view.strides, left_view.offset, indices[0:result.shape.rank]);
-        const ri: usize = try physical_index_ref(&right_view.shape, &right_view.strides, right_view.offset, indices[0:result.shape.rank]);
-        const oi: usize = try physical_index_ref(&result.shape, &result.strides, result.offset, indices[0:result.shape.rank]);
-        result.storage.data[oi] = left_view.storage.data[li] - right_view.storage.data[ri];
-        linear = linear + 1;
+    } else {
+        const size: usize = array_size<f64>(&result);
+        var linear: usize = 0;
+        while linear < size {
+            const idx: BinaryIndices = try binary_stride_indices<f64>(&left_view, &right_view, &result, linear);
+            result.storage.data[idx.result_idx] = left_view.storage.data[idx.left_idx] - right_view.storage.data[idx.right_idx];
+            linear = linear + 1;
+        }
     }
 
     storage_retain<f64>(result.storage);
@@ -136,31 +208,29 @@ export fn sub_f64(left: &Array<f64>, right: &Array<f64>) !Array<f64> {
 }
 
 export fn mul_f64(left: &Array<f64>, right: &Array<f64>) !Array<f64> {
-    var left_view: Array<f64> = try broadcast_to<f64>(left, try broadcast_shapes(left.shape, right.shape));
-    var right_view: Array<f64> = try broadcast_to<f64>(right, try broadcast_shapes(left.shape, right.shape));
-    var result: Array<f64> = try empty<f64>(left.storage.allocator, try broadcast_shapes(left.shape, right.shape));
+    const result_shape: Shape = try broadcast_shapes(left.shape, right.shape);
+    var left_view: Array<f64> = try broadcast_to<f64>(left, clone_shape(&result_shape));
+    var right_view: Array<f64> = try broadcast_to<f64>(right, clone_shape(&result_shape));
+    var result: Array<f64> = try empty<f64>(left.storage.allocator, clone_shape(&result_shape));
 
-    const size: usize = array_size<f64>(&result);
-    var linear: usize = 0;
-    while linear < size {
-        var indices: [usize: NUMUYA_MAX_DIMS] = [0: NUMUYA_MAX_DIMS];
-        var remaining: usize = linear;
-        var axis: usize = result.shape.rank;
-        while axis > 0 {
-            const index: usize = axis - 1;
-            if index >= NUMUYA_MAX_DIMS {
-                return error.NumuyaRankTooLarge;
-            }
-            const dim: usize = result.shape.dims[index];
-            indices[index] = remaining % dim;
-            remaining = remaining / dim;
-            axis = index;
+    if binary_op_use_contiguous_path<f64>(&left_view, &right_view, &result) {
+        const left_base: usize = try offset_as_usize(left_view.offset);
+        const right_base: usize = try offset_as_usize(right_view.offset);
+        const result_base: usize = try offset_as_usize(result.offset);
+        const size: usize = array_size<f64>(&result);
+        var i: usize = 0;
+        while i < size {
+            result.storage.data[result_base + i] = left_view.storage.data[left_base + i] * right_view.storage.data[right_base + i];
+            i = i + 1;
         }
-        const li: usize = try physical_index_ref(&left_view.shape, &left_view.strides, left_view.offset, indices[0:result.shape.rank]);
-        const ri: usize = try physical_index_ref(&right_view.shape, &right_view.strides, right_view.offset, indices[0:result.shape.rank]);
-        const oi: usize = try physical_index_ref(&result.shape, &result.strides, result.offset, indices[0:result.shape.rank]);
-        result.storage.data[oi] = left_view.storage.data[li] * right_view.storage.data[ri];
-        linear = linear + 1;
+    } else {
+        const size: usize = array_size<f64>(&result);
+        var linear: usize = 0;
+        while linear < size {
+            const idx: BinaryIndices = try binary_stride_indices<f64>(&left_view, &right_view, &result, linear);
+            result.storage.data[idx.result_idx] = left_view.storage.data[idx.left_idx] * right_view.storage.data[idx.right_idx];
+            linear = linear + 1;
+        }
     }
 
     storage_retain<f64>(result.storage);
@@ -174,31 +244,29 @@ export fn mul_f64(left: &Array<f64>, right: &Array<f64>) !Array<f64> {
 }
 
 export fn div_f64(left: &Array<f64>, right: &Array<f64>) !Array<f64> {
-    var left_view: Array<f64> = try broadcast_to<f64>(left, try broadcast_shapes(left.shape, right.shape));
-    var right_view: Array<f64> = try broadcast_to<f64>(right, try broadcast_shapes(left.shape, right.shape));
-    var result: Array<f64> = try empty<f64>(left.storage.allocator, try broadcast_shapes(left.shape, right.shape));
+    const result_shape: Shape = try broadcast_shapes(left.shape, right.shape);
+    var left_view: Array<f64> = try broadcast_to<f64>(left, clone_shape(&result_shape));
+    var right_view: Array<f64> = try broadcast_to<f64>(right, clone_shape(&result_shape));
+    var result: Array<f64> = try empty<f64>(left.storage.allocator, clone_shape(&result_shape));
 
-    const size: usize = array_size<f64>(&result);
-    var linear: usize = 0;
-    while linear < size {
-        var indices: [usize: NUMUYA_MAX_DIMS] = [0: NUMUYA_MAX_DIMS];
-        var remaining: usize = linear;
-        var axis: usize = result.shape.rank;
-        while axis > 0 {
-            const index: usize = axis - 1;
-            if index >= NUMUYA_MAX_DIMS {
-                return error.NumuyaRankTooLarge;
-            }
-            const dim: usize = result.shape.dims[index];
-            indices[index] = remaining % dim;
-            remaining = remaining / dim;
-            axis = index;
+    if binary_op_use_contiguous_path<f64>(&left_view, &right_view, &result) {
+        const left_base: usize = try offset_as_usize(left_view.offset);
+        const right_base: usize = try offset_as_usize(right_view.offset);
+        const result_base: usize = try offset_as_usize(result.offset);
+        const size: usize = array_size<f64>(&result);
+        var i: usize = 0;
+        while i < size {
+            result.storage.data[result_base + i] = left_view.storage.data[left_base + i] / right_view.storage.data[right_base + i];
+            i = i + 1;
         }
-        const li: usize = try physical_index_ref(&left_view.shape, &left_view.strides, left_view.offset, indices[0:result.shape.rank]);
-        const ri: usize = try physical_index_ref(&right_view.shape, &right_view.strides, right_view.offset, indices[0:result.shape.rank]);
-        const oi: usize = try physical_index_ref(&result.shape, &result.strides, result.offset, indices[0:result.shape.rank]);
-        result.storage.data[oi] = left_view.storage.data[li] / right_view.storage.data[ri];
-        linear = linear + 1;
+    } else {
+        const size: usize = array_size<f64>(&result);
+        var linear: usize = 0;
+        while linear < size {
+            const idx: BinaryIndices = try binary_stride_indices<f64>(&left_view, &right_view, &result, linear);
+            result.storage.data[idx.result_idx] = left_view.storage.data[idx.left_idx] / right_view.storage.data[idx.right_idx];
+            linear = linear + 1;
+        }
     }
 
     storage_retain<f64>(result.storage);
@@ -214,26 +282,23 @@ export fn div_f64(left: &Array<f64>, right: &Array<f64>) !Array<f64> {
 export fn neg_f64(input: &Array<f64>) !Array<f64> {
     var result: Array<f64> = try empty<f64>(input.storage.allocator, input.shape);
 
-    const size: usize = array_size<f64>(&result);
-    var linear: usize = 0;
-    while linear < size {
-        var indices: [usize: NUMUYA_MAX_DIMS] = [0: NUMUYA_MAX_DIMS];
-        var remaining: usize = linear;
-        var axis: usize = result.shape.rank;
-        while axis > 0 {
-            const index: usize = axis - 1;
-            if index >= NUMUYA_MAX_DIMS {
-                return error.NumuyaRankTooLarge;
-            }
-            const dim: usize = result.shape.dims[index];
-            indices[index] = remaining % dim;
-            remaining = remaining / dim;
-            axis = index;
+    if unary_op_use_contiguous_path<f64>(input, &result) {
+        const input_base: usize = try offset_as_usize(input.offset);
+        const result_base: usize = try offset_as_usize(result.offset);
+        const size: usize = array_size<f64>(&result);
+        var i: usize = 0;
+        while i < size {
+            result.storage.data[result_base + i] = 0.0 - input.storage.data[input_base + i];
+            i = i + 1;
         }
-        const ii: usize = try physical_index_ref(&input.shape, &input.strides, input.offset, indices[0:result.shape.rank]);
-        const oi: usize = try physical_index_ref(&result.shape, &result.strides, result.offset, indices[0:result.shape.rank]);
-        result.storage.data[oi] = 0.0 - input.storage.data[ii];
-        linear = linear + 1;
+    } else {
+        const size: usize = array_size<f64>(&result);
+        var linear: usize = 0;
+        while linear < size {
+            const idx: UnaryIndices = try unary_stride_indices<f64>(input, &result, linear);
+            result.storage.data[idx.result_idx] = 0.0 - input.storage.data[idx.input_idx];
+            linear = linear + 1;
+        }
     }
 
     storage_retain<f64>(result.storage);
@@ -247,31 +312,29 @@ export fn neg_f64(input: &Array<f64>) !Array<f64> {
 }
 
 export fn add_i32(left: &Array<i32>, right: &Array<i32>) !Array<i32> {
-    var left_view: Array<i32> = try broadcast_to<i32>(left, try broadcast_shapes(left.shape, right.shape));
-    var right_view: Array<i32> = try broadcast_to<i32>(right, try broadcast_shapes(left.shape, right.shape));
-    var result: Array<i32> = try empty<i32>(left.storage.allocator, try broadcast_shapes(left.shape, right.shape));
+    const result_shape: Shape = try broadcast_shapes(left.shape, right.shape);
+    var left_view: Array<i32> = try broadcast_to<i32>(left, clone_shape(&result_shape));
+    var right_view: Array<i32> = try broadcast_to<i32>(right, clone_shape(&result_shape));
+    var result: Array<i32> = try empty<i32>(left.storage.allocator, clone_shape(&result_shape));
 
-    const size: usize = array_size<i32>(&result);
-    var linear: usize = 0;
-    while linear < size {
-        var indices: [usize: NUMUYA_MAX_DIMS] = [0: NUMUYA_MAX_DIMS];
-        var remaining: usize = linear;
-        var axis: usize = result.shape.rank;
-        while axis > 0 {
-            const index: usize = axis - 1;
-            if index >= NUMUYA_MAX_DIMS {
-                return error.NumuyaRankTooLarge;
-            }
-            const dim: usize = result.shape.dims[index];
-            indices[index] = remaining % dim;
-            remaining = remaining / dim;
-            axis = index;
+    if binary_op_use_contiguous_path<i32>(&left_view, &right_view, &result) {
+        const left_base: usize = try offset_as_usize(left_view.offset);
+        const right_base: usize = try offset_as_usize(right_view.offset);
+        const result_base: usize = try offset_as_usize(result.offset);
+        const size: usize = array_size<i32>(&result);
+        var i: usize = 0;
+        while i < size {
+            result.storage.data[result_base + i] = left_view.storage.data[left_base + i] + right_view.storage.data[right_base + i];
+            i = i + 1;
         }
-        const li: usize = try physical_index_ref(&left_view.shape, &left_view.strides, left_view.offset, indices[0:result.shape.rank]);
-        const ri: usize = try physical_index_ref(&right_view.shape, &right_view.strides, right_view.offset, indices[0:result.shape.rank]);
-        const oi: usize = try physical_index_ref(&result.shape, &result.strides, result.offset, indices[0:result.shape.rank]);
-        result.storage.data[oi] = left_view.storage.data[li] + right_view.storage.data[ri];
-        linear = linear + 1;
+    } else {
+        const size: usize = array_size<i32>(&result);
+        var linear: usize = 0;
+        while linear < size {
+            const idx: BinaryIndices = try binary_stride_indices<i32>(&left_view, &right_view, &result, linear);
+            result.storage.data[idx.result_idx] = left_view.storage.data[idx.left_idx] + right_view.storage.data[idx.right_idx];
+            linear = linear + 1;
+        }
     }
 
     storage_retain<i32>(result.storage);

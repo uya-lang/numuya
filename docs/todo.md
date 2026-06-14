@@ -31,7 +31,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 7: UFunc 基础
 
-- [ ] 内部重构：提取 contiguous fast path 与 generic stride path。
 - [ ] 验收：`src/numuya/_tests/test_ufunc.uya` 绿，并回跑 `broadcast`、`stride_views`。
 
 ## Phase 8: Reductions

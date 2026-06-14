@@ -593,3 +593,13 @@
   - 验证：
     - `../uya/bin/uya test src/numuya/_tests/test_ufunc.uya --manifest-path uya.toml` 通过 16 个测试，包括 add_f64/sub_f64/mul_f64/div_f64/neg_f64/add_i32 的 output owner 独立性与修改隔离测试。
     - 回跑 `test_broadcast.uya`（7 测）、`test_stride_views.uya`（13 测）、`test_slicing.uya`（10 测）、`test_indexing.uya`（6 测）、`test_array_creation.uya`（6 测）均通过。
+
+## Phase 7: UFunc 基础
+
+- [x] 内部重构：提取 contiguous fast path 与 generic stride path。
+  验证：
+  - `make test-one TEST=src/numuya/_tests/test_ufunc.uya` → 17/17 通过
+  - `make test-one TEST=src/numuya/_tests/test_broadcast.uya` → 7/7 通过
+  - `make test-one TEST=src/numuya/_tests/test_stride_views.uya` → 13/13 通过
+  - `make test` → 全部通过，0 失败
+

@@ -78,6 +78,27 @@ test "div_f64 computes element-wise quotient for same shape" {
     try expect_close_f64(try get1<f64>(&result, 2), 9.0, 1e-12);
 }
 
+test "add_f64 computes element-wise sum for rank-2 contiguous arrays" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var left_data: [f64: 6] = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
+    var right_data: [f64: 6] = [10.0, 20.0, 30.0, 40.0, 50.0, 60.0];
+    var left: Array<f64> = try from_slice<f64>(allocator, left_data[0:6], shape2(2, 3));
+    var right: Array<f64> = try from_slice<f64>(allocator, right_data[0:6], shape2(2, 3));
+
+    var result: Array<f64> = try add_f64(&left, &right);
+
+    try expect_eq_usize(result.shape.rank, 2);
+    try expect_eq_usize(result.shape.dims[0], 2);
+    try expect_eq_usize(result.shape.dims[1], 3);
+    try expect_close_f64(try get2<f64>(&result, 0, 0), 11.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&result, 0, 1), 22.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&result, 0, 2), 33.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&result, 1, 0), 44.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&result, 1, 1), 55.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&result, 1, 2), 66.0, 1e-12);
+}
+
 test "add_f64 broadcasts row vector across matrix" {
     var malloc_allocator: MallocAllocator = MallocAllocator{};
     var allocator: IAllocator = malloc_allocator;
