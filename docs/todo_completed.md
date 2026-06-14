@@ -808,3 +808,36 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 - [x] 写 `src/numuya/_tests/test_sorting.uya`。
   - 验证命令：`../uya/bin/uya check src/numuya/_tests/test_sorting.uya --manifest-path uya.toml`
   - 验证结果：TDD 预期失败；`src/numuya/sorting.uya` 尚未实现，`sort_f64`/`argsort_f64`/`searchsorted_left_f64`/`searchsorted_right_f64`/`unique_f64` 未定义，编译器报告 `try 的操作数必须是错误联合类型 !T`。
+
+## Phase 11: Sorting 与 searching
+
+- [x] 实现 `src/numuya/sorting.uya`。
+- [x] TDD: `sort_f64`。
+  - 已排序、逆序、重复元素。
+  - 输出是 copy。
+- [x] TDD: `argsort_f64`。
+- [x] TDD: `searchsorted_f64`。
+- [x] TDD: `unique_f64`。
+- [x] 第一版限制 1-D contiguous，并对其他输入返回 `NumuyaInvalidArgument` 或先 copy。
+- [x] 验收：`src/numuya/_tests/test_sorting.uya` 绿。
+
+验证：
+```bash
+../uya/bin/uya test src/numuya/_tests/test_sorting.uya --manifest-path uya.toml
+# Tests Passed: 13, Tests Failed: 0
+```
+
+全量回归：
+```bash
+for f in src/numuya/_tests/test_*.uya; do
+  ../uya/bin/uya test "$f" --manifest-path uya.toml;
+done
+# 全部通过
+```
+
+实现要点：
+- `sort_f64` / `argsort_f64` / `unique_f64` 均先通过 `get1` 复制到新的 contiguous 数组再操作，因此天然支持 non-contiguous 1-D 输入。
+- `searchsorted_left_f64` / `searchsorted_right_f64` 在 1-D 数组上做二分查找，同样使用 `get1` 读取元素。
+- 非 1-D 输入统一返回 `NumuyaInvalidArgument`。
+- 所有返回 `Array<T>` 的函数均按项目惯例先 `storage_retain` 再返回字面量，避免 codegen 对 `return variable` 的返回联合转换问题。
+- 内部 `validate_1d` 在成功路径显式 `return;`，防止返回未初始化的错误联合。

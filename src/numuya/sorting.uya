@@ -1,0 +1,180 @@
+use array;
+use creation;
+use errors;
+use indexing;
+use shape;
+use storage;
+
+fn validate_1d<T>(array_value: &Array<T>) !void {
+    if array_value.shape.rank != 1 {
+        return error.NumuyaInvalidArgument;
+    }
+    if array_value.strides.rank != array_value.shape.rank {
+        return error.NumuyaInvalidArgument;
+    }
+    return;
+}
+
+export fn sort_f64(array_value: &Array<f64>) !Array<f64> {
+    try validate_1d<f64>(array_value);
+
+    const size: usize = array_size<f64>(array_value);
+    var result: Array<f64> = try empty<f64>(array_value.storage.allocator, shape1(size));
+
+    var i: usize = 0;
+    while i < size {
+        result.storage.data[i] = try get1<f64>(array_value, i);
+        i = i + 1;
+    }
+
+    insertion_sort_f64_buffer(result.storage.data, size);
+
+    storage_retain<f64>(result.storage);
+    return Array<f64>{
+        storage: result.storage,
+        offset: result.offset,
+        shape: result.shape,
+        strides: result.strides,
+        flags: result.flags,
+    };
+}
+
+fn insertion_sort_f64_buffer(values: &f64, len: usize) void {
+    var i: usize = 1;
+    while i < len {
+        const key: f64 = values[i];
+        var j: usize = i;
+        while j > 0 && values[j - 1] > key {
+            values[j] = values[j - 1];
+            j = j - 1;
+        }
+        values[j] = key;
+        i = i + 1;
+    }
+}
+
+export fn argsort_f64(array_value: &Array<f64>) !Array<usize> {
+    try validate_1d<f64>(array_value);
+
+    const size: usize = array_size<f64>(array_value);
+    var values: Array<f64> = try empty<f64>(array_value.storage.allocator, shape1(size));
+    var result: Array<usize> = try empty<usize>(array_value.storage.allocator, shape1(size));
+
+    var i: usize = 0;
+    while i < size {
+        values.storage.data[i] = try get1<f64>(array_value, i);
+        result.storage.data[i] = i;
+        i = i + 1;
+    }
+
+    // Sort indices by the value each index refers to.
+    i = 1;
+    while i < size {
+        const key_index: usize = result.storage.data[i];
+        const key_value: f64 = values.storage.data[key_index];
+        var j: usize = i;
+        while j > 0 {
+            const prev_index: usize = result.storage.data[j - 1];
+            const prev_value: f64 = values.storage.data[prev_index];
+            if prev_value > key_value {
+                result.storage.data[j] = prev_index;
+                j = j - 1;
+            } else {
+                break;
+            }
+        }
+        result.storage.data[j] = key_index;
+        i = i + 1;
+    }
+
+    storage_retain<usize>(result.storage);
+    return Array<usize>{
+        storage: result.storage,
+        offset: result.offset,
+        shape: result.shape,
+        strides: result.strides,
+        flags: result.flags,
+    };
+}
+
+export fn searchsorted_left_f64(array_value: &Array<f64>, value: f64) !usize {
+    try validate_1d<f64>(array_value);
+
+    const size: usize = array_size<f64>(array_value);
+    var low: usize = 0;
+    var high: usize = size;
+
+    while low < high {
+        const mid: usize = low + (high - low) / 2;
+        const mid_value: f64 = try get1<f64>(array_value, mid);
+        if mid_value < value {
+            low = mid + 1;
+        } else {
+            high = mid;
+        }
+    }
+
+    return low;
+}
+
+export fn searchsorted_right_f64(array_value: &Array<f64>, value: f64) !usize {
+    try validate_1d<f64>(array_value);
+
+    const size: usize = array_size<f64>(array_value);
+    var low: usize = 0;
+    var high: usize = size;
+
+    while low < high {
+        const mid: usize = low + (high - low) / 2;
+        const mid_value: f64 = try get1<f64>(array_value, mid);
+        if mid_value <= value {
+            low = mid + 1;
+        } else {
+            high = mid;
+        }
+    }
+
+    return low;
+}
+
+export fn unique_f64(array_value: &Array<f64>) !Array<f64> {
+    try validate_1d<f64>(array_value);
+
+    const size: usize = array_size<f64>(array_value);
+    var sorted: Array<f64> = try sort_f64(array_value);
+
+    var unique_count: usize = 0;
+    if size > 0 {
+        unique_count = 1;
+        var i: usize = 1;
+        while i < size {
+            if sorted.storage.data[i] != sorted.storage.data[i - 1] {
+                unique_count = unique_count + 1;
+            }
+            i = i + 1;
+        }
+    }
+
+    var result: Array<f64> = try empty<f64>(array_value.storage.allocator, shape1(unique_count));
+    if unique_count > 0 {
+        result.storage.data[0] = sorted.storage.data[0];
+        var write_index: usize = 1;
+        var i: usize = 1;
+        while i < size {
+            if sorted.storage.data[i] != sorted.storage.data[i - 1] {
+                result.storage.data[write_index] = sorted.storage.data[i];
+                write_index = write_index + 1;
+            }
+            i = i + 1;
+        }
+    }
+
+    storage_retain<f64>(result.storage);
+    return Array<f64>{
+        storage: result.storage,
+        offset: result.offset,
+        shape: result.shape,
+        strides: result.strides,
+        flags: result.flags,
+    };
+}

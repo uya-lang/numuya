@@ -3,6 +3,7 @@ use creation;
 use indexing;
 use shape;
 use sorting;
+use stride;
 use testing.expect_close_f64;
 use testing.expect_eq_usize;
 

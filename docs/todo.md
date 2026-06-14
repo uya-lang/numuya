@@ -31,18 +31,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 10: Statistics
 
-## Phase 11: Sorting 与 searching
-
-- [ ] 实现 `src/numuya/sorting.uya`。
-- [ ] TDD: `sort_f64`。
-  - 已排序、逆序、重复元素。
-  - 输出是 copy。
-- [ ] TDD: `argsort_f64`。
-- [ ] TDD: `searchsorted_f64`。
-- [ ] TDD: `unique_f64`。
-- [ ] 第一版限制 1-D contiguous，并对其他输入返回 `NumuyaInvalidArgument` 或先 copy。
-- [ ] 验收：`src/numuya/_tests/test_sorting.uya` 绿。
-
 ## Phase 12: Linear algebra MVP
 
 - [ ] 写 `src/numuya/_tests/test_linalg.uya`。
