@@ -118,3 +118,39 @@ test "backend_deinit resets state handles when no active device storage" {
         return error.NumuyaExpectationFailed;
     }
 }
+
+test "cuda_create_context(0) returns non-zero handle when cuda is available" {
+    if !backend_is_cuda_available() {
+        return;
+    }
+    try cuda_init();
+    const ctx: usize = try cuda_create_context(0);
+    if ctx == 0 {
+        return error.NumuyaExpectationFailed;
+    }
+    try cuda_destroy_context(ctx);
+}
+
+test "cuda_destroy_context returns error for null handle" {
+    if !backend_is_cuda_available() {
+        return;
+    }
+    const result: !void = cuda_destroy_context(0);
+    match result {
+        error.NumuyaInvalidArgument => {}
+        error.NumuyaCudaError => {}
+        else => { return error.NumuyaExpectationFailed; }
+    }
+}
+
+test "cuda_create_context returns error when cuda is unavailable" {
+    if backend_is_cuda_available() {
+        return;
+    }
+    const result: !usize = cuda_create_context(0);
+    match result {
+        error.NumuyaGpuUnavailable => {}
+        error.NumuyaCudaError => {}
+        else => { return error.NumuyaExpectationFailed; }
+    }
+}

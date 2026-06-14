@@ -35,7 +35,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 20: CUDA backend 基础
 
-- [ ] TDD: `cuda_create_context` / destroy。
 - [ ] TDD: `cuda_create_stream` / synchronize / destroy。
 - [ ] TDD: context current 规则。
   - 任意 Driver API wrapper 调用前设置正确 context。

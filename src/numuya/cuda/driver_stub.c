@@ -16,10 +16,14 @@
 typedef int CUresult;
 typedef int CUdevice;
 
+typedef void* CUcontext;
+
 typedef CUresult (*numuya_cuInit_t)(unsigned int);
 typedef CUresult (*numuya_cuDeviceGet_t)(CUdevice*, int);
 typedef CUresult (*numuya_cuDeviceGetAttribute_t)(int*, int, CUdevice);
 typedef CUresult (*numuya_cuDeviceTotalMem_t)(size_t*, CUdevice);
+typedef CUresult (*numuya_cuCtxCreate_t)(CUcontext*, unsigned int, CUdevice);
+typedef CUresult (*numuya_cuCtxDestroy_t)(CUcontext);
 
 #define NUMUYA_CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR 75
 #define NUMUYA_CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MINOR 76
@@ -29,6 +33,8 @@ static numuya_cuInit_t numuya_pfn_cuInit = NULL;
 static numuya_cuDeviceGet_t numuya_pfn_cuDeviceGet = NULL;
 static numuya_cuDeviceGetAttribute_t numuya_pfn_cuDeviceGetAttribute = NULL;
 static numuya_cuDeviceTotalMem_t numuya_pfn_cuDeviceTotalMem = NULL;
+static numuya_cuCtxCreate_t numuya_pfn_cuCtxCreate = NULL;
+static numuya_cuCtxDestroy_t numuya_pfn_cuCtxDestroy = NULL;
 
 static int numuya_cuda_load(void) {
     if (numuya_cuda_handle != NULL) {
@@ -50,11 +56,21 @@ static int numuya_cuda_load(void) {
     if (numuya_pfn_cuDeviceTotalMem == NULL) {
         numuya_pfn_cuDeviceTotalMem = (numuya_cuDeviceTotalMem_t)dlsym(numuya_cuda_handle, "cuDeviceTotalMem");
     }
+    numuya_pfn_cuCtxCreate = (numuya_cuCtxCreate_t)dlsym(numuya_cuda_handle, "cuCtxCreate_v2");
+    if (numuya_pfn_cuCtxCreate == NULL) {
+        numuya_pfn_cuCtxCreate = (numuya_cuCtxCreate_t)dlsym(numuya_cuda_handle, "cuCtxCreate");
+    }
+    numuya_pfn_cuCtxDestroy = (numuya_cuCtxDestroy_t)dlsym(numuya_cuda_handle, "cuCtxDestroy_v2");
+    if (numuya_pfn_cuCtxDestroy == NULL) {
+        numuya_pfn_cuCtxDestroy = (numuya_cuCtxDestroy_t)dlsym(numuya_cuda_handle, "cuCtxDestroy");
+    }
 
     if (numuya_pfn_cuInit == NULL ||
         numuya_pfn_cuDeviceGet == NULL ||
         numuya_pfn_cuDeviceGetAttribute == NULL ||
-        numuya_pfn_cuDeviceTotalMem == NULL) {
+        numuya_pfn_cuDeviceTotalMem == NULL ||
+        numuya_pfn_cuCtxCreate == NULL ||
+        numuya_pfn_cuCtxDestroy == NULL) {
         return NUMUYA_CUDA_UNAVAILABLE;
     }
 
@@ -106,5 +122,40 @@ int numuya_cuda_get_device(int ordinal, int* major, int* minor, size_t* total_me
     *major = major_value;
     *minor = minor_value;
     *total_memory_bytes = memory;
+    return NUMUYA_CUDA_OK;
+}
+
+int numuya_cuda_create_context(int ordinal, void** context) {
+    const int status = numuya_cuda_load();
+    if (status != NUMUYA_CUDA_OK) {
+        return status;
+    }
+
+    CUdevice device = 0;
+    CUresult res = numuya_pfn_cuDeviceGet(&device, ordinal);
+    if (res != 0) {
+        return NUMUYA_CUDA_ERROR;
+    }
+
+    CUcontext ctx = NULL;
+    res = numuya_pfn_cuCtxCreate(&ctx, 0, device);
+    if (res != 0) {
+        return NUMUYA_CUDA_ERROR;
+    }
+
+    *context = ctx;
+    return NUMUYA_CUDA_OK;
+}
+
+int numuya_cuda_destroy_context(void* context) {
+    const int status = numuya_cuda_load();
+    if (status != NUMUYA_CUDA_OK) {
+        return status;
+    }
+
+    const CUresult res = numuya_pfn_cuCtxDestroy((CUcontext)context);
+    if (res != 0) {
+        return NUMUYA_CUDA_ERROR;
+    }
     return NUMUYA_CUDA_OK;
 }

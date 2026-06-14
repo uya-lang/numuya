@@ -503,3 +503,9 @@
 
 - [x] TDD: `backend_init` / `backend_deinit`。
   - 验证：`TEST=src/numuya/_tests/test_cuda_driver.uya make test-one` 11/11 通过；`make test` 非 CUDA 测试全绿；`make test-cuda` RTX 3060 上 11/11 通过。
+
+## Phase 20: CUDA backend 基础
+
+- [x] TDD: `cuda_create_context` / destroy。
+  - 验证命令：`../uya/bin/uya test src/numuya/_tests/test_cuda_driver.uya --manifest-path uya.toml`
+  - 结果：14/14 测试通过，新增 `cuda_create_context(0) returns non-zero handle when cuda is available`、`cuda_destroy_context returns error for null handle`、`cuda_create_context returns error when cuda is unavailable` 均通过。
