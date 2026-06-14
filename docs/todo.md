@@ -33,7 +33,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 18: DType 与 type-erased ArrayAny
 
-- [ ] 写 `src/numuya/_tests/test_dtype.uya`。
 - [ ] 实现 `src/numuya/types.uya`。
 - [ ] TDD: `DType` size/name/endian helpers。
 - [ ] TDD: `ArrayAny` 包装 `Array<f64>`。

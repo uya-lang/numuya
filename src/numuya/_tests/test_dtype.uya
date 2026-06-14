@@ -1,0 +1,141 @@
+use array;
+use creation;
+use shape;
+use testing.expect_close_f64;
+use testing.expect_eq_usize;
+use testing.expect_shape_eq;
+use types;
+
+use std.mem.allocator.IAllocator;
+use std.mem.allocator.MallocAllocator;
+
+test "dtype test file imports types module" {
+}
+
+fn expect_cstr_eq(actual: &const byte, expected: &const byte) !void {
+    var i: usize = 0;
+    while true {
+        const a: byte = actual[i];
+        const e: byte = expected[i];
+        if a != e {
+            return error.NumuyaExpectationFailed;
+        }
+        if a == 0 {
+            return;
+        }
+        i = i + 1;
+    }
+}
+
+test "DType helpers report f64 size name endian and kind" {
+    const dt: DType = dtype_f64();
+    try expect_eq_usize(dtype_size(dt), 8);
+    try expect_cstr_eq(dtype_name(dt), "f64");
+    match dtype_kind(dt) {
+        DTypeKind.Float => {}
+        else => { return error.NumuyaExpectationFailed; }
+    }
+    if dtype_endian(dt) != Endian.Little {
+        return error.NumuyaExpectationFailed;
+    }
+}
+
+test "DType helpers report f32 size name endian and kind" {
+    const dt: DType = dtype_f32();
+    try expect_eq_usize(dtype_size(dt), 4);
+    try expect_cstr_eq(dtype_name(dt), "f32");
+    match dtype_kind(dt) {
+        DTypeKind.Float => {}
+        else => { return error.NumuyaExpectationFailed; }
+    }
+    if dtype_endian(dt) != Endian.Little {
+        return error.NumuyaExpectationFailed;
+    }
+}
+
+test "DType helpers report i64 size name endian and kind" {
+    const dt: DType = dtype_i64();
+    try expect_eq_usize(dtype_size(dt), 8);
+    try expect_cstr_eq(dtype_name(dt), "i64");
+    match dtype_kind(dt) {
+        DTypeKind.Signed => {}
+        else => { return error.NumuyaExpectationFailed; }
+    }
+    if dtype_endian(dt) != Endian.Little {
+        return error.NumuyaExpectationFailed;
+    }
+}
+
+test "DType helpers report i32 size name endian and kind" {
+    const dt: DType = dtype_i32();
+    try expect_eq_usize(dtype_size(dt), 4);
+    try expect_cstr_eq(dtype_name(dt), "i32");
+    match dtype_kind(dt) {
+        DTypeKind.Signed => {}
+        else => { return error.NumuyaExpectationFailed; }
+    }
+    if dtype_endian(dt) != Endian.Little {
+        return error.NumuyaExpectationFailed;
+    }
+}
+
+test "DType helpers report u8 size name endian and kind" {
+    const dt: DType = dtype_u8();
+    try expect_eq_usize(dtype_size(dt), 1);
+    try expect_cstr_eq(dtype_name(dt), "u8");
+    match dtype_kind(dt) {
+        DTypeKind.Unsigned => {}
+        else => { return error.NumuyaExpectationFailed; }
+    }
+    if dtype_endian(dt) != Endian.Little {
+        return error.NumuyaExpectationFailed;
+    }
+}
+
+test "ArrayAny wraps Array<f64> and preserves shape and data" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var source: [f64: 6] = [1.0, 2.5, 4.0, 8.25, 16.0, 32.0];
+    var f64_array_value: Array<f64> = try from_slice<f64>(allocator, source[0:6], shape2(2, 3));
+
+    var any_value: ArrayAny = array_any_from_f64(f64_array_value);
+
+    const any_shape: Shape = array_any_shape(&any_value);
+    try expect_shape_eq(any_shape.dims[0:any_shape.rank], shape2(2, 3).dims[0:2]);
+
+    const view: &Array<f64> = try array_any_try_as_f64(&any_value);
+    try expect_eq_usize(array_size<f64>(view), 6);
+    try expect_close_f64(view.storage.data[0], 1.0, 1e-12);
+    try expect_close_f64(view.storage.data[1], 2.5, 1e-12);
+    try expect_close_f64(view.storage.data[5], 32.0, 1e-12);
+}
+
+test "ArrayAny try_as_f32 on f64 array returns unsupported dtype" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var f32_source: [f64: 4] = [1.0, 1.0, 1.0, 1.0];
+    var f32_array_value: Array<f64> = try from_slice<f64>(allocator, f32_source[0:4], shape1(4));
+
+    var any_value: ArrayAny = array_any_from_f64(f32_array_value);
+
+    const result: !&Array<f32> = array_any_try_as_f32(&any_value);
+    match result {
+        error.NumuyaUnsupportedDType => {}
+        else => { return error.NumuyaExpectationFailed; }
+    }
+}
+
+test "ArrayAny try_as_i32 on f64 array returns unsupported dtype" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var i32_source: [f64: 2] = [1.0, 1.0];
+    var i32_array_value: Array<f64> = try from_slice<f64>(allocator, i32_source[0:2], shape1(2));
+
+    var any_value: ArrayAny = array_any_from_f64(i32_array_value);
+
+    const result: !&Array<i32> = array_any_try_as_i32(&any_value);
+    match result {
+        error.NumuyaUnsupportedDType => {}
+        else => { return error.NumuyaExpectationFailed; }
+    }
+}
