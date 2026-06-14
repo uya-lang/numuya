@@ -28,3 +28,11 @@
   - 尝试记录：先加 `empty<f64>` 失败测试，再分别尝试 `export fn empty<T>(...) !Array<T>` 直接构造和内联分配 `Storage<T>` 的规避写法，均在 codegen 后的宿主 C 编译阶段失败。
   - 回滚验证：`make test-one TEST=src/numuya/_tests/test_array_creation.uya` 通过；`make test` 仍因既有 `test_indexing.uya` 缺少 `set1_f64/get1_f64/...` 实现而失败，与本任务无关。
   - 重开条件：修复或规避 Uya C99 codegen，使导出泛型 `!Array<T>` 至少能为 `empty<f64>` 生成完整的 `Array_f64`、`Storage_f64` 和对应错误联合特化。
+
+## Phase 10: Statistics
+
+- [f] 写 `src/numuya/_tests/test_stats.uya`。
+  - 失败原因：先前执行轮次中已将本任务标为 `[f]`，但本轮为归档清理轮，未在 workspace 中找到原始失败日志（`loop.log` 不存在）；`src/numuya/_tests/test_stats.uya` 文件也尚未创建。
+  - 阻塞命令：无保留。
+  - 关键错误：无保留。
+  - 后续重开条件：重新评估 `test_stats.uya` 的最小测试集合（`var_all_f64`、`std_all_f64`、`percentile_f64` 等）与当前 Uya 编译器/包模式的兼容性，先尝试创建最小复现并记录具体编译/运行错误后再执行。

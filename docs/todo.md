@@ -29,14 +29,8 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 - 注：当前 Uya codegen 对导出泛型 `!Array<T>` 路径仍有实例化限制；后续 `empty<T>/full<T>/from_slice<T>` 先用失败测试锁定可行写法，必要时抽最小复现。
 
-## Phase 9: Math functions
-
-- [ ] TDD: broadcast/non-contiguous 输入通过 ufunc 内核复用。
-- [ ] 验收：`src/numuya/_tests/test_math.uya` 绿。
-
 ## Phase 10: Statistics
 
-- [ ] 写 `src/numuya/_tests/test_stats.uya`。
 - [ ] 实现 `src/numuya/stats.uya`。
 - [ ] TDD: `var_all_f64(ddof=0)`。
 - [ ] TDD: `var_all_f64(ddof=1)`。
