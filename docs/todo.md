@@ -31,10 +31,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 10: Statistics
 
-## Phase 13: Linear algebra advanced
-
-- [ ] 验收：advanced linalg tests 绿。
-
 ## Phase 14: Random
 
 - [ ] 写 `src/numuya/_tests/test_random.uya`。
