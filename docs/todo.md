@@ -31,7 +31,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 5: Slicing
 
-- [ ] 写 `src/numuya/_tests/test_slicing.uya`。
 - [ ] 实现 `SliceSpec`。
 - [ ] TDD: `slice_axis`.
   - `0:3:1`。

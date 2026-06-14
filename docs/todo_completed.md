@@ -431,3 +431,14 @@
   - 结果：通过，13 个测试全部 OK。
   - 验证命令：`make test`
   - 结果：通过，当前所有 6 个测试文件（test_array_creation.uya、test_indexing.uya、test_shape.uya、test_storage.uya、test_stride_views.uya、test_testing_helpers.uya）全部通过。
+
+## Phase 5: Slicing
+
+- [x] 写 `src/numuya/_tests/test_slicing.uya`。
+  验证命令：
+  - `../uya/bin/uya check src/numuya/_tests/test_slicing.uya --manifest-path uya.toml`
+  - `../uya/bin/uya test src/numuya/_tests/test_slicing.uya --manifest-path uya.toml`
+  结果：
+  - 新测试文件编译失败，原因是 `indexing.uya` 尚未导出 `SliceSpec` 与 `slice_axis`，符合 TDD 先写失败测试的预期。
+  - 失败信息（摘要）：`try 的操作数必须是错误联合类型 !T`（调用 `slice_axis` 处）。
+  - 回归测试全部通过：`test_shape.uya`、`test_storage.uya`、`test_array_creation.uya`、`test_indexing.uya`、`test_stride_views.uya`、`test_testing_helpers.uya`。
