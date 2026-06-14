@@ -35,11 +35,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 20: CUDA backend 基础
 
-- [x] 创建 CUDA 测试命令约定。
-  - `make test` 默认不要求 GPU，且依赖 `make bootstrap-upm`。
-  - `make test-cuda` 依赖 `make bootstrap-upm`，设置 `NUMUYA_CUDA_REQUIRED=1` 并链接 `-lcuda`。
-  - `make test-cuda-vendor` 依赖 `make bootstrap-upm`，额外链接 `-lcublasLt -lcublas -lcufft -lcurand`。
-  - 无 Makefile 时直接命令为 `test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm` 后执行 `LDFLAGS="-lcuda" NUMUYA_CUDA_REQUIRED=1 ../uya/bin/uya test src/numuya/_tests/test_cuda_driver.uya --manifest-path uya.toml`。
 - [ ] TDD: `backend_is_cuda_available()`。
   - 本机 RTX 3060 应返回 true。
   - 无 CUDA 环境时不能崩溃。
