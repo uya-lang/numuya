@@ -379,3 +379,11 @@
   - 验证：
     - `../uya/bin/uya test src/numuya/_tests/test_stride_views.uya --manifest-path uya.toml`
     - 结果：通过；`physical_index computes row-major offset for rank-2 shape` OK，返回 index 5。
+
+## NumUya TDD Todo / Phase 4: Stride、reshape、transpose、view
+
+- [x] TDD: `reshape`.
+  - `(2, 3)` reshape 到 `(3, 2)` 不复制，storage ref_count 增加。
+  - size 不同返回 `NumuyaShapeMismatch`。
+  - 验证：`../uya/bin/uya test src/numuya/_tests/test_stride_views.uya --manifest-path uya.toml` 通过（10/10 tests passed），其中 `reshape returns a view sharing storage when total size matches` 与 `reshape rejects mismatched total size` 覆盖上述两点。
+  - 回归：`../uya/bin/uya test src/numuya/_tests/test_shape.uya --manifest-path uya.toml`、`test_array_creation.uya`、`test_storage.uya`、`test_indexing.uya`、`test_stride_views.uya` 均通过。
