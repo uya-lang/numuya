@@ -441,3 +441,16 @@
     - `../uya/bin/uya test src/numuya/_tests/test_linalg.uya --manifest-path uya.toml` — 30/30 通过
     - `../uya/bin/uya test src/numuya/_tests/test_array_creation.uya --manifest-path uya.toml` — 6/6 通过
     - `LDFLAGS="-lcuda" NUMUYA_CUDA_REQUIRED=1 ../uya/bin/uya test src/numuya/_tests/test_cuda_driver.uya --manifest-path uya.toml` — 6/6 通过
+
+## Phase 20: CUDA backend 基础
+
+- [x] 创建 CUDA 测试命令约定。
+  - `make test` 默认不要求 GPU，且依赖 `make bootstrap-upm`。
+  - `make test-cuda` 依赖 `make bootstrap-upm`，设置 `NUMUYA_CUDA_REQUIRED=1` 并链接 `-lcuda`。
+  - `make test-cuda-vendor` 依赖 `make bootstrap-upm`，额外链接 `-lcublasLt -lcublas -lcufft -lcurand`。
+  - 无 Makefile 时直接命令为 `test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm` 后执行 `LDFLAGS="-lcuda" NUMUYA_CUDA_REQUIRED=1 ../uya/bin/uya test src/numuya/_tests/test_cuda_driver.uya --manifest-path uya.toml`。
+
+验证：
+- `make test` 通过且未运行 CUDA 测试（退出码 0）。
+- `make test-cuda` 在 RTX 3060 上通过 6/6 测试，链接 `-lcuda`。
+- `make test-cuda-vendor` 在 RTX 3060 上通过 6/6 测试，链接 `-lcublasLt -lcublas -lcufft -lcurand -lcuda`。

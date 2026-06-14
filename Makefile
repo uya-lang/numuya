@@ -8,7 +8,7 @@ TESTS := $(sort $(wildcard src/numuya/_tests/test_*.uya))
 BENCH ?= src/numuya/_benchmarks/bench_simd.uya
 BENCHES := $(sort $(wildcard src/numuya/_benchmarks/bench_*.uya))
 
-.PHONY: bootstrap-upm upm-install test-one test check-one verify-upm-consumer require-upm bench
+.PHONY: bootstrap-upm upm-install test-one test test-cuda test-cuda-vendor check-one verify-upm-consumer require-upm bench
 
 require-upm:
 	@test -x "$(UPM)" || { echo "missing executable $(UPM)"; exit 1; }
@@ -22,11 +22,28 @@ upm-install: require-upm
 test-one: require-upm
 	$(UYA) test "$(TEST)" --manifest-path $(MANIFEST)
 
-test: require-upm
-	@test -n "$(TESTS)" || { echo "no test files found"; exit 1; }
-	@for test in $(TESTS); do \
+CUDA_TESTS := $(sort $(wildcard src/numuya/_tests/test_cuda_*.uya))
+TESTS_NON_CUDA := $(filter-out $(CUDA_TESTS),$(TESTS))
+
+test: bootstrap-upm
+	@test -n "$(TESTS_NON_CUDA)" || { echo "no test files found"; exit 1; }
+	@for test in $(TESTS_NON_CUDA); do \
 		echo "$(UYA) test $$test --manifest-path $(MANIFEST)"; \
 		$(UYA) test "$$test" --manifest-path $(MANIFEST) || exit $$?; \
+	done
+
+test-cuda: bootstrap-upm
+	@test -n "$(CUDA_TESTS)" || { echo "no cuda test files found"; exit 1; }
+	@for test in $(CUDA_TESTS); do \
+		echo "NUMUYA_CUDA_REQUIRED=1 LDFLAGS=\"-lcuda\" $(UYA) test $$test --manifest-path $(MANIFEST)"; \
+		NUMUYA_CUDA_REQUIRED=1 LDFLAGS="-lcuda" $(UYA) test "$$test" --manifest-path $(MANIFEST) || exit $$?; \
+	done
+
+test-cuda-vendor: bootstrap-upm
+	@test -n "$(CUDA_TESTS)" || { echo "no cuda test files found"; exit 1; }
+	@for test in $(CUDA_TESTS); do \
+		echo "NUMUYA_CUDA_REQUIRED=1 LDFLAGS=\"-lcublasLt -lcublas -lcufft -lcurand -lcuda\" $(UYA) test $$test --manifest-path $(MANIFEST)"; \
+		NUMUYA_CUDA_REQUIRED=1 LDFLAGS="-lcublasLt -lcublas -lcufft -lcurand -lcuda" $(UYA) test "$$test" --manifest-path $(MANIFEST) || exit $$?; \
 	done
 
 check-one: require-upm

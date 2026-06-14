@@ -35,7 +35,7 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 20: CUDA backend 基础
 
-- [ ] 创建 CUDA 测试命令约定。
+- [x] 创建 CUDA 测试命令约定。
   - `make test` 默认不要求 GPU，且依赖 `make bootstrap-upm`。
   - `make test-cuda` 依赖 `make bootstrap-upm`，设置 `NUMUYA_CUDA_REQUIRED=1` 并链接 `-lcuda`。
   - `make test-cuda-vendor` 依赖 `make bootstrap-upm`，额外链接 `-lcublasLt -lcublas -lcufft -lcurand`。
