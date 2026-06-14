@@ -207,3 +207,39 @@ test "matmul_f64 handles non-contiguous matrix input" {
     try expect_close_f64(try get2<f64>(&result, 1, 0), 12.0, 1e-12);
     try expect_close_f64(try get2<f64>(&result, 2, 0), 15.0, 1e-12);
 }
+
+test "det_f64 computes 1x1 determinant" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var data: [f64: 1] = [5.0];
+    var a: Array<f64> = try from_slice<f64>(allocator, data[0:1], shape2(1, 1));
+
+    var result: Array<f64> = try det_f64(&a);
+
+    try expect_eq_usize(result.shape.rank, 0);
+    try expect_close_f64(try get0<f64>(&result), 5.0, 1e-12);
+}
+
+test "det_f64 computes 2x2 determinant" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var data: [f64: 4] = [1.0, 2.0, 3.0, 4.0];
+    var a: Array<f64> = try from_slice<f64>(allocator, data[0:4], shape2(2, 2));
+
+    var result: Array<f64> = try det_f64(&a);
+
+    try expect_eq_usize(result.shape.rank, 0);
+    try expect_close_f64(try get0<f64>(&result), -2.0, 1e-12);
+}
+
+test "det_f64 computes 3x3 determinant" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var data: [f64: 9] = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 10.0];
+    var a: Array<f64> = try from_slice<f64>(allocator, data[0:9], shape2(3, 3));
+
+    var result: Array<f64> = try det_f64(&a);
+
+    try expect_eq_usize(result.shape.rank, 0);
+    try expect_close_f64(try get0<f64>(&result), -3.0, 1e-12);
+}

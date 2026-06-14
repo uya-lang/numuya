@@ -33,7 +33,7 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 13: Linear algebra advanced
 
-- [ ] TDD: `det_f64` 1x1、2x2、3x3。
+- [x] TDD: `det_f64` 1x1、2x2、3x3。
 - [ ] TDD: `solve_f64`。
   - identity。
   - 2x2 known system。

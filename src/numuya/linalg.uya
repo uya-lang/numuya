@@ -244,3 +244,63 @@ export fn matmul_f64(a: &Array<f64>, b: &Array<f64>) !Array<f64> {
     result.storage = null;
     return Array<f64>{ storage: out_storage, offset: out_offset, shape: out_shape, strides: out_strides, flags: out_flags };
 }
+
+fn require_square_matrix(a: &Array<f64>) !void {
+    if a.shape.rank != 2 {
+        return error.NumuyaInvalidArgument;
+    }
+    if a.shape.dims[0] != a.shape.dims[1] {
+        return error.NumuyaShapeMismatch;
+    }
+}
+
+fn det_impl<T>(a: &Array<T>) !Array<T> {
+    try require_square_matrix(a);
+    const n: usize = a.shape.dims[0];
+
+    var result: Array<T> = try empty<T>(a.storage.allocator, shape_scalar());
+
+    if n == 1 {
+        result.storage.data[0] = try get2<T>(a, 0, 0);
+    } else if n == 2 {
+        const a00: T = try get2<T>(a, 0, 0);
+        const a01: T = try get2<T>(a, 0, 1);
+        const a10: T = try get2<T>(a, 1, 0);
+        const a11: T = try get2<T>(a, 1, 1);
+        result.storage.data[0] = a00 * a11 - a01 * a10;
+    } else if n == 3 {
+        const a00: T = try get2<T>(a, 0, 0);
+        const a01: T = try get2<T>(a, 0, 1);
+        const a02: T = try get2<T>(a, 0, 2);
+        const a10: T = try get2<T>(a, 1, 0);
+        const a11: T = try get2<T>(a, 1, 1);
+        const a12: T = try get2<T>(a, 1, 2);
+        const a20: T = try get2<T>(a, 2, 0);
+        const a21: T = try get2<T>(a, 2, 1);
+        const a22: T = try get2<T>(a, 2, 2);
+        result.storage.data[0] = a00 * (a11 * a22 - a12 * a21)
+                                 - a01 * (a10 * a22 - a12 * a20)
+                                 + a02 * (a10 * a21 - a11 * a20);
+    } else {
+        return error.NumuyaInvalidArgument;
+    }
+
+    const out_storage: &Storage<T> = result.storage;
+    const out_offset: isize = result.offset;
+    const out_shape: Shape = result.shape;
+    const out_strides: Strides = result.strides;
+    const out_flags: ArrayFlags = result.flags;
+    result.storage = null;
+    return Array<T>{ storage: out_storage, offset: out_offset, shape: out_shape, strides: out_strides, flags: out_flags };
+}
+
+export fn det_f64(a: &Array<f64>) !Array<f64> {
+    var result: Array<f64> = try det_impl<f64>(a);
+    const out_storage: &Storage<f64> = result.storage;
+    const out_offset: isize = result.offset;
+    const out_shape: Shape = result.shape;
+    const out_strides: Strides = result.strides;
+    const out_flags: ArrayFlags = result.flags;
+    result.storage = null;
+    return Array<f64>{ storage: out_storage, offset: out_offset, shape: out_shape, strides: out_strides, flags: out_flags };
+}

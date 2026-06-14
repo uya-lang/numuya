@@ -912,3 +912,15 @@ done
   - 验证命令：
     - `../uya/bin/uya test src/numuya/_tests/test_linalg.uya --manifest-path uya.toml`：12/12 通过。
     - 回跑全部现有包内测试确认无回归（`for t in src/numuya/_tests/test_*.uya; do ../uya/bin/uya test "$t" --manifest-path uya.toml; done`）：全部通过。
+
+## NumUya TDD Todo / Phase 13: Linear algebra advanced
+
+- [x] TDD: `det_f64` 1x1、2x2、3x3。
+  - 新增测试：
+    - `det_f64 computes 1x1 determinant`：`[[5]]` -> `5`。
+    - `det_f64 computes 2x2 determinant`：`[[1,2],[3,4]]` -> `-2`。
+    - `det_f64 computes 3x3 determinant`：`[[1,2,3],[4,5,6],[7,8,10]]` -> `-3`。
+  - 实现：`src/numuya/linalg.uya` 新增 `require_square_matrix`、`det_impl<T>`、`det_f64`；支持 1x1/2x2/3x3，使用 `get2<T>` 读取元素因此兼容 non-contiguous 输入，非 2D 或非方阵返回错误。
+  - 验证命令：
+    - `../uya/bin/uya test src/numuya/_tests/test_linalg.uya --manifest-path uya.toml`（15/15 通过，新增 3 个 det_f64 测试全部 OK）
+    - `make test`（全部 14 个测试文件通过，无回归）
