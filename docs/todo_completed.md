@@ -131,3 +131,8 @@
   - 验证命令：`../uya/bin/uya test src/numuya/_tests/test_fft.uya --manifest-path uya.toml`
   - 结果：9 tests passed, 0 failed（新增 `ifft inverts fft for complex input`）
   - 回归验证：`make test` 全绿
+
+## Phase 15: FFT
+
+- [x] TDD: 非 power-of-two 返回 `NumuyaInvalidArgument`，直到 fallback 实现完成。
+  - 验证：`../uya/bin/uya test src/numuya/_tests/test_fft.uya --manifest-path uya.toml` 通过 11/11；`make test` 全绿。

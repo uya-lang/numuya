@@ -156,3 +156,35 @@ test "fft_f64 rejects non power of two length" {
         else => { return error.NumuyaExpectationFailed; }
     }
 }
+
+test "fft rejects non power of two length" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var re_data3: [f64: 3] = [1.0, 2.0, 3.0];
+    var im_data3: [f64: 3] = [0.0, 0.0, 0.0];
+    var re_arr3: Array<f64> = try from_slice<f64>(allocator, re_data3[0:3], shape1(3));
+    var im_arr3: Array<f64> = try from_slice<f64>(allocator, im_data3[0:3], shape1(3));
+    var input3: ComplexArray = ComplexArray{ re: re_arr3, im: im_arr3 };
+
+    const result: !ComplexArray = fft(allocator, &input3);
+    match result {
+        error.NumuyaInvalidArgument => {}
+        else => { return error.NumuyaExpectationFailed; }
+    }
+}
+
+test "ifft rejects non power of two length" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var re_data_ifft: [f64: 3] = [1.0, 2.0, 3.0];
+    var im_data_ifft: [f64: 3] = [0.0, 0.0, 0.0];
+    var re_arr_ifft: Array<f64> = try from_slice<f64>(allocator, re_data_ifft[0:3], shape1(3));
+    var im_arr_ifft: Array<f64> = try from_slice<f64>(allocator, im_data_ifft[0:3], shape1(3));
+    var input_ifft: ComplexArray = ComplexArray{ re: re_arr_ifft, im: im_arr_ifft };
+
+    const result: !ComplexArray = ifft(allocator, &input_ifft);
+    match result {
+        error.NumuyaInvalidArgument => {}
+        else => { return error.NumuyaExpectationFailed; }
+    }
+}
