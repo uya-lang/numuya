@@ -315,3 +315,10 @@
   - 验证结果：9/9 测试通过，0 失败（含 3 个 ArrayAny 相关测试）。
   - 回归验证：`../uya/bin/uya test src/numuya/_tests/test_io_npy.uya --manifest-path uya.toml` — 9/9 通过。
   - 回归验证：`make test` 全量测试通过。
+
+## Phase 18: DType 与 type-erased ArrayAny
+
+- [x] TDD: `ArrayAny` 包装 `Array<f64>`。
+  - 验证命令：`../uya/bin/uya test src/numuya/_tests/test_dtype.uya --manifest-path uya.toml`
+  - 验证结果：9/9 测试通过，0 失败（含 3 个 ArrayAny 相关测试）。
+  - 回归验证：`../uya/bin/uya test src/numuya/_tests/test_io_npy.uya --manifest-path uya.toml` — 9/9 通过。
