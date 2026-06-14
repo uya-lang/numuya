@@ -234,3 +234,11 @@
   - 结果：7/7 tests passed。
   - 验证：`make test`
   - 结果：`test_shape.uya` 8/8、`test_storage.uya` 7/7、`test_testing_helpers.uya` 2/2 全部通过。
+
+## Phase 3: 创建数组与基础 get/set
+
+- [x] 写 `src/numuya/_tests/test_array_creation.uya`。
+  - 验证：`make test-one TEST=src/numuya/_tests/test_array_creation.uya`
+  - 结果：通过，1 个测试通过。
+  - 验证：`make test`
+  - 结果：通过，`test_array_creation.uya` 1/1、`test_shape.uya` 8/8、`test_storage.uya` 7/7、`test_testing_helpers.uya` 2/2 全绿；`test_shape.uya` 仍有既存 `const` qualifier warning，无新增失败。

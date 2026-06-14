@@ -1,0 +1,7 @@
+use creation;
+
+test "Array creation test file imports creation API" {
+    if zeros_f64() != 0 {
+        return error.NumuyaExpectationFailed;
+    }
+}

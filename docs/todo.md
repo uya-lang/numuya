@@ -27,7 +27,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 3: 创建数组与基础 get/set
 
-- [ ] 写 `src/numuya/_tests/test_array_creation.uya`。
 - [ ] 写 `src/numuya/_tests/test_indexing.uya`。
 - [ ] 实现 `src/numuya/creation.uya`。
 - [ ] TDD: `empty<T>`。
