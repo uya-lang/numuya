@@ -27,7 +27,7 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 0: 脚手架与测试基础
 
-- [ ] 创建目录结构：`src/numuya/`、`src/numuya/_tests/`、`tests/fixtures/`。
+- [x] 创建目录结构：`src/numuya/`、`src/numuya/_tests/`、`tests/fixtures/`。
 - [ ] 创建 `src/numuya/errors.uya`，只放 error 声明，不写业务逻辑。
 - [ ] 创建 `src/numuya/testing.uya`，写 `expect_close_f64`、`expect_eq_usize`、`expect_shape_eq` 的测试占位。
 - [ ] 新增 `src/numuya/_tests/test_testing_helpers.uya`。
