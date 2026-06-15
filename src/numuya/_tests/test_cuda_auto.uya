@@ -1,0 +1,134 @@
+use array;
+use backend;
+use creation;
+use cuda.auto;
+use cuda.device_array;
+use cuda.driver;
+use cuda.memory;
+use errors;
+use indexing;
+use reductions;
+use shape;
+use storage;
+use stride;
+use testing.expect_close_f64;
+use testing.expect_eq_usize;
+use ufunc;
+
+use std.mem.allocator.IAllocator;
+use std.mem.allocator.MallocAllocator;
+
+const NUMUYA_MIB: usize = 1024 * 1024;
+
+test "add_f64_auto returns correct host result" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+
+    var left_data: [f64: 6] = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
+    var right_data: [f64: 6] = [10.0, 20.0, 30.0, 40.0, 50.0, 60.0];
+    var host_left: Array<f64> = try from_slice<f64>(allocator, left_data[0:6], shape2(2, 3));
+    var host_right: Array<f64> = try from_slice<f64>(allocator, right_data[0:6], shape2(2, 3));
+
+    var auto_result: Array<f64> = try add_f64_auto(&host_left, &host_right);
+
+    try expect_eq_usize(auto_result.shape.rank, 2);
+    try expect_eq_usize(auto_result.shape.dims[0], 2);
+    try expect_eq_usize(auto_result.shape.dims[1], 3);
+    try expect_close_f64(try get2<f64>(&auto_result, 0, 0), 11.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&auto_result, 0, 1), 22.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&auto_result, 0, 2), 33.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&auto_result, 1, 0), 44.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&auto_result, 1, 1), 55.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&auto_result, 1, 2), 66.0, 1e-12);
+}
+
+test "add_f64_auto broadcasts row vector across matrix" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+
+    var matrix_data: [f64: 6] = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
+    var row_data: [f64: 3] = [10.0, 20.0, 30.0];
+    var host_matrix: Array<f64> = try from_slice<f64>(allocator, matrix_data[0:6], shape2(2, 3));
+    var host_row: Array<f64> = try from_slice<f64>(allocator, row_data[0:3], shape1(3));
+
+    var auto_result: Array<f64> = try add_f64_auto(&host_matrix, &host_row);
+
+    try expect_eq_usize(auto_result.shape.rank, 2);
+    try expect_eq_usize(auto_result.shape.dims[0], 2);
+    try expect_eq_usize(auto_result.shape.dims[1], 3);
+    try expect_close_f64(try get2<f64>(&auto_result, 0, 0), 11.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&auto_result, 0, 1), 22.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&auto_result, 0, 2), 33.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&auto_result, 1, 0), 14.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&auto_result, 1, 1), 25.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&auto_result, 1, 2), 36.0, 1e-12);
+}
+
+test "sum_all_f64_auto returns correct host scalar" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+
+    var source: [f64: 6] = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
+    var host: Array<f64> = try from_slice<f64>(allocator, source[0:6], shape2(2, 3));
+
+    const auto_result: f64 = try sum_all_f64_auto(&host);
+
+    try expect_close_f64(auto_result, 21.0, 1e-12);
+}
+
+test "sum_axis_f64_auto returns correct host array" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+
+    var source: [f64: 6] = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
+    var host: Array<f64> = try from_slice<f64>(allocator, source[0:6], shape2(2, 3));
+
+    var auto_result: Array<f64> = try sum_axis_f64_auto(&host, 0, false);
+
+    try expect_eq_usize(auto_result.shape.rank, 1);
+    try expect_eq_usize(auto_result.shape.dims[0], 3);
+    try expect_close_f64(try get1<f64>(&auto_result, 0), 5.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&auto_result, 1), 7.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&auto_result, 2), 9.0, 1e-12);
+}
+
+test "add_f64_auto output is a new owner" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+
+    var left_data: [f64: 3] = [1.0, 2.0, 3.0];
+    var right_data: [f64: 3] = [4.0, 5.0, 6.0];
+    var host_left: Array<f64> = try from_slice<f64>(allocator, left_data[0:3], shape1(3));
+    var host_right: Array<f64> = try from_slice<f64>(allocator, right_data[0:3], shape1(3));
+
+    var auto_result: Array<f64> = try add_f64_auto(&host_left, &host_right);
+
+    try expect_eq_usize(auto_result.storage.ref_count, 1);
+    if auto_result.flags.owns_data != true {
+        return error.NumuyaExpectationFailed;
+    }
+}
+
+test "add_f64_auto returns GPU out-of-memory error when pool budget is exhausted" {
+    if !backend_is_cuda_available() {
+        return;
+    }
+
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+
+    var left_data: [f64: 6] = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
+    var right_data: [f64: 6] = [10.0, 20.0, 30.0, 40.0, 50.0, 60.0];
+    var host_left: Array<f64> = try from_slice<f64>(allocator, left_data[0:6], shape2(2, 3));
+    var host_right: Array<f64> = try from_slice<f64>(allocator, right_data[0:6], shape2(2, 3));
+
+    var auto_result: Array<f64> = add_f64_auto_with_pool(&host_left, &host_right, 1) catch |err| {
+        if err == error.NumuyaGpuOutOfMemory {
+            return;
+        }
+        return error.NumuyaExpectationFailed;
+    };
+
+    _ = auto_result;
+    return error.NumuyaExpectationFailed;
+}

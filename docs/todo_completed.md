@@ -846,3 +846,33 @@
     - `../uya/bin/uya test src/numuya/_tests/test_reductions.uya --manifest-path uya.toml` — 23/23 通过（CPU regression）
     - `../uya/bin/uya test src/numuya/_tests/test_cuda_ufunc.uya --manifest-path uya.toml` — 5/5 通过（CUDA ufunc regression）
     - `../uya/bin/uya test src/numuya/_tests/test_cuda_device_array.uya --manifest-path uya.toml` — 16/16 通过（DeviceArray regression）
+
+- [x] TDD: location-preserving API。
+  - `add_f64_on(ArrayF64.Device, ArrayF64.Device)` 返回 `ArrayF64.Device`。
+  - `add_f64_auto(Array<f64>, Array<f64>)` 返回 host `Array<f64>`，内部走 GPU 时同步并拷回。
+  - 混合 Host/Device 输入按设计拷贝或返回明确错误，不能静默使用错误 device。
+  - 实现：
+    - 新增 `src/numuya/cuda/array_union.uya`，导出 `ArrayF64` union（`Host: Array<f64>` / `Device: DeviceArray<f64>`）。
+    - 在 `src/numuya/cuda/auto.uya` 中导出 `add_f64_on(allocator, state, left, right) !ArrayF64`：双 Host 输入走 CPU `add_f64` 并返回 `ArrayF64.Host`；双 Device 输入走 `gpu_add_f64` 并返回 `ArrayF64.Device`；混合输入返回 `NumuyaDeviceMismatch`。
+    - 修复 `add_f64_auto_with_pool` / `add_f64_cuda_with_pool` / `sum_axis_f64_auto_with_pool` / `sum_axis_f64_cuda_with_pool` 中的 double-free：返回前对内部 result 的 storage 做 `storage_retain`，避免复制字段到返回 Array 后局部变量 drop 释放底层 storage。
+    - 为 `ArrayF64` union 构造需要的 `storage_release<f64>` 实例化，在 `src/numuya/storage.uya` 增加 `_force_storage_release_instantiations`。
+  - 验证命令：
+    - `../uya/bin/uya test src/numuya/_tests/test_cuda_location_preserving.uya --manifest-path uya.toml` — 4/4 通过
+    - `../uya/bin/uya test src/numuya/_tests/test_cuda_auto.uya --manifest-path uya.toml` — 6/6 通过
+    - `../uya/bin/uya test src/numuya/_tests/test_cuda_ufunc.uya --manifest-path uya.toml` — 5/5 通过
+    - `../uya/bin/uya test src/numuya/_tests/test_ufunc.uya --manifest-path uya.toml` — 20/20 通过（CPU ufunc regression）
+    - `../uya/bin/uya test src/numuya/_tests/test_reductions.uya --manifest-path uya.toml` — 23/23 通过（CPU reduction regression）
+    - `make test-cuda` — 全部通过（无 GPU 时 CUDA 相关测试跳过）
+    - `make test` — 全部通过
+
+## Phase 22: CUDA ufunc 与 reduction
+
+- [x] 验收：CUDA ufunc/reduction tests 绿，并回跑 CPU ufunc/reduction tests。
+  - 验证命令：
+    - `NUMUYA_CUDA_REQUIRED=1 LDFLAGS="-lcuda" ../uya/bin/uya test src/numuya/_tests/test_cuda_ufunc.uya --manifest-path uya.toml` — 5/5 通过
+    - `NUMUYA_CUDA_REQUIRED=1 LDFLAGS="-lcuda" ../uya/bin/uya test src/numuya/_tests/test_cuda_reductions.uya --manifest-path uya.toml` — 12/12 通过
+    - `../uya/bin/uya test src/numuya/_tests/test_ufunc.uya --manifest-path uya.toml` — 20/20 通过（CPU regression）
+    - `../uya/bin/uya test src/numuya/_tests/test_reductions.uya --manifest-path uya.toml` — 23/23 通过（CPU regression）
+    - `make test-cuda` — 全部 CUDA 测试文件通过，exit code 0（无 GPU 时 CUDA 相关测试跳过）
+    - `make test` — 全部非 CUDA 测试文件通过，exit code 0
+  - 验证结果：CUDA ufunc / reduction 测试全绿；CPU ufunc / reduction 回归测试全绿； broader correctness tests 无失败。

@@ -1,0 +1,139 @@
+use array;
+use backend;
+use cuda.array_union;
+use cuda.auto;
+use cuda.device_array;
+use cuda.memory;
+use errors;
+use indexing;
+use shape;
+use testing.expect_close_f64;
+use testing.expect_eq_usize;
+use ufunc;
+
+use std.mem.allocator.IAllocator;
+use std.mem.allocator.MallocAllocator;
+
+const NUMUYA_MIB: usize = 1024 * 1024;
+
+test "add_f64_on with two host arrays returns host result" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+
+    var left_data: [f64: 3] = [1.0, 2.0, 3.0];
+    var right_data: [f64: 3] = [4.0, 5.0, 6.0];
+    var host_left: Array<f64> = try from_slice<f64>(allocator, left_data[0:3], shape1(3));
+    var host_right: Array<f64> = try from_slice<f64>(allocator, right_data[0:3], shape1(3));
+
+    var left_union: ArrayF64 = ArrayF64.Host(host_left);
+    var right_union: ArrayF64 = ArrayF64.Host(host_right);
+
+    var state: BackendState = try backend_init(BackendKind.Cpu);
+    defer backend_deinit(&state) catch {};
+
+    var result: ArrayF64 = try add_f64_on(allocator, &state, left_union, right_union);
+
+    match result {
+        .Host(r) => {
+            try expect_eq_usize(r.shape.rank, 1);
+            try expect_eq_usize(r.shape.dims[0], 3);
+            try expect_close_f64(try get1<f64>(&r, 0), 5.0, 1e-12);
+            try expect_close_f64(try get1<f64>(&r, 1), 7.0, 1e-12);
+            try expect_close_f64(try get1<f64>(&r, 2), 9.0, 1e-12);
+        }
+        .Device(_) => {
+            return error.NumuyaExpectationFailed;
+        }
+    }
+}
+
+test "add_f64_on with two device arrays returns device result" {
+    if !backend_is_cuda_available() {
+        return;
+    }
+
+    var state: BackendState = try backend_init(BackendKind.Cuda);
+    defer backend_deinit(&state) catch {};
+
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var pool: MemoryPool = memory_pool_new(4 * NUMUYA_MIB);
+
+    var left_data: [f64: 3] = [1.0, 2.0, 3.0];
+    var right_data: [f64: 3] = [4.0, 5.0, 6.0];
+    var host_left: Array<f64> = try from_slice<f64>(allocator, left_data[0:3], shape1(3));
+    var host_right: Array<f64> = try from_slice<f64>(allocator, right_data[0:3], shape1(3));
+
+    var device_left: DeviceArray<f64> = try device_array_from_host<f64>(&pool, &host_left, state.context, state.stream);
+    var device_right: DeviceArray<f64> = try device_array_from_host<f64>(&pool, &host_right, state.context, state.stream);
+
+    var left_union: ArrayF64 = ArrayF64.Device(device_left);
+    var right_union: ArrayF64 = ArrayF64.Device(device_right);
+
+    var result: ArrayF64 = try add_f64_on(allocator, &state, left_union, right_union);
+
+    match result {
+        .Host(_) => {
+            return error.NumuyaExpectationFailed;
+        }
+        .Device(r) => {
+            var host_result: Array<f64> = try device_array_to_host<f64>(allocator, &r);
+            try expect_eq_usize(host_result.shape.rank, 1);
+            try expect_eq_usize(host_result.shape.dims[0], 3);
+            try expect_close_f64(try get1<f64>(&host_result, 0), 5.0, 1e-12);
+            try expect_close_f64(try get1<f64>(&host_result, 1), 7.0, 1e-12);
+            try expect_close_f64(try get1<f64>(&host_result, 2), 9.0, 1e-12);
+        }
+    }
+}
+
+test "add_f64_on with mixed host and device returns explicit error" {
+    if !backend_is_cuda_available() {
+        return;
+    }
+
+    var state: BackendState = try backend_init(BackendKind.Cuda);
+    defer backend_deinit(&state) catch {};
+
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var pool: MemoryPool = memory_pool_new(4 * NUMUYA_MIB);
+
+    var left_data: [f64: 3] = [1.0, 2.0, 3.0];
+    var right_data: [f64: 3] = [4.0, 5.0, 6.0];
+    var host_left: Array<f64> = try from_slice<f64>(allocator, left_data[0:3], shape1(3));
+    var host_right: Array<f64> = try from_slice<f64>(allocator, right_data[0:3], shape1(3));
+
+    var device_right: DeviceArray<f64> = try device_array_from_host<f64>(&pool, &host_right, state.context, state.stream);
+
+    var left_union: ArrayF64 = ArrayF64.Host(host_left);
+    var right_union: ArrayF64 = ArrayF64.Device(device_right);
+
+    var result: ArrayF64 = add_f64_on(allocator, &state, left_union, right_union) catch |err| {
+        if err == error.NumuyaDeviceMismatch {
+            return;
+        }
+        return error.NumuyaExpectationFailed;
+    };
+
+    _ = result;
+    return error.NumuyaExpectationFailed;
+}
+
+test "add_f64_auto returns host result" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+
+    var left_data: [f64: 3] = [1.0, 2.0, 3.0];
+    var right_data: [f64: 3] = [4.0, 5.0, 6.0];
+    var host_left: Array<f64> = try from_slice<f64>(allocator, left_data[0:3], shape1(3));
+    var host_right: Array<f64> = try from_slice<f64>(allocator, right_data[0:3], shape1(3));
+
+    var result: Array<f64> = try add_f64_auto(&host_left, &host_right);
+
+    try expect_eq_usize(result.shape.rank, 1);
+    try expect_eq_usize(result.shape.dims[0], 3);
+    try expect_close_f64(try get1<f64>(&result, 0), 5.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&result, 1), 7.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&result, 2), 9.0, 1e-12);
+}

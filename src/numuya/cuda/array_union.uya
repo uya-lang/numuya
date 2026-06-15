@@ -1,0 +1,7 @@
+use array;
+use cuda.device_array;
+
+export union ArrayF64 {
+    Host: Array<f64>,
+    Device: DeviceArray<f64>,
+}

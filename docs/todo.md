@@ -35,11 +35,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 22: CUDA ufunc 与 reduction
 
-- [ ] TDD: location-preserving API。
-  - `add_f64_on(ArrayF64.Device, ArrayF64.Device)` 返回 `ArrayF64.Device`。
-  - `add_f64_auto(Array<f64>, Array<f64>)` 返回 host `Array<f64>`，内部走 GPU 时同步并拷回。
-  - 混合 Host/Device 输入按设计拷贝或返回明确错误，不能静默使用错误 device。
-- [ ] 验收：CUDA ufunc/reduction tests 绿，并回跑 CPU ufunc/reduction tests。
 
 ## Phase 23: CUDA linalg、random、benchmark
 

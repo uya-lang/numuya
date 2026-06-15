@@ -1,0 +1,230 @@
+use array;
+use backend;
+use broadcast;
+use cuda.array_union;
+use cuda.device_array;
+use cuda.driver;
+use cuda.memory;
+use cuda.reductions;
+use cuda.ufunc;
+use errors;
+use reductions;
+use shape;
+use storage;
+use stride;
+use ufunc;
+
+use std.mem.allocator.IAllocator;
+use std.mem.allocator.MallocAllocator;
+
+const AUTO_F64_ELEMENT_SIZE: usize = 8;
+const DEFAULT_POOL_BUDGET_BYTES: usize = 64 * 1024 * 1024;
+
+fn estimate_add_pool_budget(left: &Array<f64>, right: &Array<f64>) usize {
+    const left_bytes: usize = left.storage.len * AUTO_F64_ELEMENT_SIZE;
+    const right_bytes: usize = right.storage.len * AUTO_F64_ELEMENT_SIZE;
+    const result_shape: Shape = broadcast_shapes(left.shape, right.shape) catch {
+        return DEFAULT_POOL_BUDGET_BYTES;
+    };
+    const result_size: usize = shape_size(result_shape) catch {
+        return DEFAULT_POOL_BUDGET_BYTES;
+    };
+    const result_bytes: usize = result_size * AUTO_F64_ELEMENT_SIZE;
+    const extra_bytes: usize = 1024;
+    const total: usize = left_bytes + right_bytes + result_bytes + extra_bytes;
+    if total < DEFAULT_POOL_BUDGET_BYTES {
+        return DEFAULT_POOL_BUDGET_BYTES;
+    }
+    return total;
+}
+
+fn add_f64_cuda_with_pool(
+    left: &Array<f64>,
+    right: &Array<f64>,
+    pool_budget_bytes: usize,
+) !Array<f64> {
+    var state: BackendState = try backend_init(BackendKind.Cuda);
+    defer backend_deinit(&state) catch {};
+
+    var pool: MemoryPool = memory_pool_new(pool_budget_bytes);
+
+    var device_left: DeviceArray<f64> = try device_array_from_host<f64>(&pool, left, state.context, state.stream);
+    var device_right: DeviceArray<f64> = try device_array_from_host<f64>(&pool, right, state.context, state.stream);
+
+    var device_result: DeviceArray<f64> = try gpu_add_f64(&state, &device_left, &device_right);
+
+    var host_result: Array<f64> = try device_array_to_host<f64>(left.storage.allocator, &device_result);
+    storage_retain<f64>(host_result.storage);
+    return Array<f64>{
+        storage: host_result.storage,
+        offset: host_result.offset,
+        shape: host_result.shape,
+        strides: host_result.strides,
+        flags: host_result.flags,
+    };
+}
+
+export fn add_f64_auto_with_pool(
+    left: &Array<f64>,
+    right: &Array<f64>,
+    pool_budget_bytes: usize,
+) !Array<f64> {
+    if !backend_is_cuda_available() {
+        var result: Array<f64> = try add_f64(left, right);
+        storage_retain<f64>(result.storage);
+        return Array<f64>{
+            storage: result.storage,
+            offset: result.offset,
+            shape: result.shape,
+            strides: result.strides,
+            flags: result.flags,
+        };
+    }
+    var result: Array<f64> = try add_f64_cuda_with_pool(left, right, pool_budget_bytes);
+    storage_retain<f64>(result.storage);
+    return Array<f64>{
+        storage: result.storage,
+        offset: result.offset,
+        shape: result.shape,
+        strides: result.strides,
+        flags: result.flags,
+    };
+}
+
+export fn add_f64_auto(left: &Array<f64>, right: &Array<f64>) !Array<f64> {
+    const budget: usize = estimate_add_pool_budget(left, right);
+    return add_f64_auto_with_pool(left, right, budget);
+}
+
+export fn add_f64_on(
+    allocator: IAllocator,
+    state: &BackendState,
+    left: ArrayF64,
+    right: ArrayF64,
+) !ArrayF64 {
+    _ = allocator;
+    match left {
+        .Host(l) => {
+            match right {
+                .Host(r) => {
+                    var result: Array<f64> = try add_f64(&l, &r);
+                    storage_retain<f64>(result.storage);
+                    return ArrayF64.Host(result);
+                }
+                .Device(_) => {
+                    return error.NumuyaDeviceMismatch;
+                }
+            }
+        }
+        .Device(l) => {
+            match right {
+                .Host(_) => {
+                    return error.NumuyaDeviceMismatch;
+                }
+                .Device(r) => {
+                    var result: DeviceArray<f64> = try gpu_add_f64(state, &l, &r);
+                    device_storage_retain<f64>(result.storage);
+                    return ArrayF64.Device(result);
+                }
+            }
+        }
+    }
+}
+
+fn estimate_reduction_pool_budget(array_value: &Array<f64>) usize {
+    const input_bytes: usize = array_value.storage.len * AUTO_F64_ELEMENT_SIZE;
+    const extra_bytes: usize = 1024;
+    const total: usize = input_bytes + extra_bytes;
+    if total < DEFAULT_POOL_BUDGET_BYTES {
+        return DEFAULT_POOL_BUDGET_BYTES;
+    }
+    return total;
+}
+
+fn sum_all_f64_cuda_with_pool(
+    array_value: &Array<f64>,
+    pool_budget_bytes: usize,
+) !f64 {
+    var state: BackendState = try backend_init(BackendKind.Cuda);
+    defer backend_deinit(&state) catch {};
+
+    var pool: MemoryPool = memory_pool_new(pool_budget_bytes);
+
+    var device_array: DeviceArray<f64> = try device_array_from_host<f64>(&pool, array_value, state.context, state.stream);
+
+    return gpu_sum_all_f64(&state, &device_array);
+}
+
+export fn sum_all_f64_auto_with_pool(
+    array_value: &Array<f64>,
+    pool_budget_bytes: usize,
+) !f64 {
+    if !backend_is_cuda_available() {
+        return sum_all_f64(array_value);
+    }
+    return sum_all_f64_cuda_with_pool(array_value, pool_budget_bytes);
+}
+
+export fn sum_all_f64_auto(array_value: &Array<f64>) !f64 {
+    const budget: usize = estimate_reduction_pool_budget(array_value);
+    return sum_all_f64_auto_with_pool(array_value, budget);
+}
+
+fn sum_axis_f64_cuda_with_pool(
+    array_value: &Array<f64>,
+    axis: i32,
+    keepdims: bool,
+    pool_budget_bytes: usize,
+) !Array<f64> {
+    var state: BackendState = try backend_init(BackendKind.Cuda);
+    defer backend_deinit(&state) catch {};
+
+    var pool: MemoryPool = memory_pool_new(pool_budget_bytes);
+
+    var device_array: DeviceArray<f64> = try device_array_from_host<f64>(&pool, array_value, state.context, state.stream);
+
+    var device_result: DeviceArray<f64> = try gpu_sum_axis_f64(&state, &device_array, axis, keepdims);
+
+    var host_result: Array<f64> = try device_array_to_host<f64>(array_value.storage.allocator, &device_result);
+    storage_retain<f64>(host_result.storage);
+    return Array<f64>{
+        storage: host_result.storage,
+        offset: host_result.offset,
+        shape: host_result.shape,
+        strides: host_result.strides,
+        flags: host_result.flags,
+    };
+}
+
+export fn sum_axis_f64_auto_with_pool(
+    array_value: &Array<f64>,
+    axis: i32,
+    keepdims: bool,
+    pool_budget_bytes: usize,
+) !Array<f64> {
+    if !backend_is_cuda_available() {
+        var result: Array<f64> = try sum_axis_f64(array_value, axis, keepdims);
+        storage_retain<f64>(result.storage);
+        return Array<f64>{
+            storage: result.storage,
+            offset: result.offset,
+            shape: result.shape,
+            strides: result.strides,
+            flags: result.flags,
+        };
+    }
+    var result: Array<f64> = try sum_axis_f64_cuda_with_pool(array_value, axis, keepdims, pool_budget_bytes);
+    storage_retain<f64>(result.storage);
+    return Array<f64>{
+        storage: result.storage,
+        offset: result.offset,
+        shape: result.shape,
+        strides: result.strides,
+        flags: result.flags,
+    };
+}
+
+export fn sum_axis_f64_auto(array_value: &Array<f64>, axis: i32, keepdims: bool) !Array<f64> {
+    const budget: usize = estimate_reduction_pool_budget(array_value);
+    return sum_axis_f64_auto_with_pool(array_value, axis, keepdims, budget);
+}
