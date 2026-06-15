@@ -35,9 +35,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 22: CUDA ufunc 与 reduction
 
-- [ ] TDD: broadcast add。
-  - `(3,) + (2, 3)`。
-  - stride 0 正确。
 - [ ] TDD: non-contiguous input。
   - transpose view 输入正确。
 - [ ] TDD: `gpu_sum_f64`。

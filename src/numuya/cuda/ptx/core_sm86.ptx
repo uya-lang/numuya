@@ -107,6 +107,93 @@ END:
     ret;
 }
 
+.visible .entry numuya_add_f64_strided(
+    .param .u64 numuya_add_f64_strided_param_0,
+    .param .u64 numuya_add_f64_strided_param_1,
+    .param .u64 numuya_add_f64_strided_param_2,
+    .param .u64 numuya_add_f64_strided_param_3,
+    .param .u64 numuya_add_f64_strided_param_4
+)
+{
+    .reg .u32   r32_t, r32_b, r32_nt;
+    .reg .u64   r64_res, r64_left, r64_right, r64_n, r64_params;
+    .reg .u64   r64_linear, r64_remaining, r64_axis, r64_rank;
+    .reg .u64   r64_coord, r64_dim, r64_tmp, r64_addr;
+    .reg .u64   r64_left_off, r64_right_off, r64_res_off;
+    .reg .f64   f64_l, f64_r, f64_o;
+    .reg .pred  p;
+
+    ld.param.u64    r64_res, [numuya_add_f64_strided_param_0];
+    ld.param.u64    r64_left, [numuya_add_f64_strided_param_1];
+    ld.param.u64    r64_right, [numuya_add_f64_strided_param_2];
+    ld.param.u64    r64_n, [numuya_add_f64_strided_param_3];
+    ld.param.u64    r64_params, [numuya_add_f64_strided_param_4];
+
+    mov.u32         r32_t, %tid.x;
+    cvt.u64.u32     r64_linear, r32_t;
+    mov.u32         r32_b, %ctaid.x;
+    cvt.u64.u32     r64_tmp, r32_b;
+    mov.u32         r32_nt, %ntid.x;
+    cvt.u64.u32     r64_addr, r32_nt;
+    mad.lo.u64      r64_linear, r64_tmp, r64_addr, r64_linear;
+
+    setp.ge.u64     p, r64_linear, r64_n;
+    @p bra          END;
+
+    ld.u64          r64_rank, [r64_params];
+    mov.u64         r64_axis, 0;
+    mov.u64         r64_left_off, 0;
+    mov.u64         r64_right_off, 0;
+    mov.u64         r64_res_off, 0;
+    mov.u64         r64_remaining, r64_linear;
+
+AXIS_LOOP:
+    setp.ge.u64     p, r64_axis, r64_rank;
+    @p bra          AXIS_DONE;
+
+    add.u64         r64_tmp, r64_axis, 1;
+    shl.b64         r64_tmp, r64_tmp, 3;
+    add.u64         r64_addr, r64_params, r64_tmp;
+    ld.u64          r64_dim, [r64_addr];
+
+    div.u64         r64_tmp, r64_remaining, r64_dim;
+    rem.u64         r64_coord, r64_remaining, r64_dim;
+    mov.u64         r64_remaining, r64_tmp;
+
+    add.u64         r64_tmp, r64_axis, 17;
+    shl.b64         r64_tmp, r64_tmp, 3;
+    add.u64         r64_addr, r64_params, r64_tmp;
+    ld.u64          r64_tmp, [r64_addr];
+    mad.lo.u64      r64_left_off, r64_coord, r64_tmp, r64_left_off;
+
+    add.u64         r64_tmp, r64_axis, 33;
+    shl.b64         r64_tmp, r64_tmp, 3;
+    add.u64         r64_addr, r64_params, r64_tmp;
+    ld.u64          r64_tmp, [r64_addr];
+    mad.lo.u64      r64_right_off, r64_coord, r64_tmp, r64_right_off;
+
+    add.u64         r64_tmp, r64_axis, 49;
+    shl.b64         r64_tmp, r64_tmp, 3;
+    add.u64         r64_addr, r64_params, r64_tmp;
+    ld.u64          r64_tmp, [r64_addr];
+    mad.lo.u64      r64_res_off, r64_coord, r64_tmp, r64_res_off;
+
+    add.u64         r64_axis, r64_axis, 1;
+    bra             AXIS_LOOP;
+
+AXIS_DONE:
+    add.u64         r64_addr, r64_left, r64_left_off;
+    ld.f64          f64_l, [r64_addr];
+    add.u64         r64_addr, r64_right, r64_right_off;
+    ld.f64          f64_r, [r64_addr];
+    add.f64         f64_o, f64_l, f64_r;
+    add.u64         r64_addr, r64_res, r64_res_off;
+    st.f64          [r64_addr], f64_o;
+
+END:
+    ret;
+}
+
 .visible .entry numuya_sum_all_f64(
     .param .u64 numuya_sum_all_f64_param_0,
     .param .u64 numuya_sum_all_f64_param_1,

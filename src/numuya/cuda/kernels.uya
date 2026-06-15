@@ -3,6 +3,7 @@ use cuda.kernels_ptx;
 use cuda.module;
 
 export const ADD_F64_KERNEL: &const byte = "numuya_add_f64" as &const byte;
+export const ADD_F64_STRIDED_KERNEL: &const byte = "numuya_add_f64_strided" as &const byte;
 export const MUL_F64_KERNEL: &const byte = "numuya_mul_f64" as &const byte;
 export const SUM_ALL_F64_KERNEL: &const byte = "numuya_sum_all_f64" as &const byte;
 

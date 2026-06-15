@@ -808,3 +808,13 @@
 - [x] TDD: `gpu_mul_f64` contiguous。
   - 验证命令：`NUMUYA_CUDA_REQUIRED=1 LDFLAGS="-lcuda" ../uya/bin/uya test src/numuya/_tests/test_cuda_ufunc.uya --manifest-path uya.toml`
   - 结果：`gpu_mul_f64 contiguous matches CPU mul_f64 ... OK`
+
+## Phase 22: CUDA ufunc 与 reduction
+
+- [x] TDD: broadcast add。
+  - `(3,) + (2, 3)`。
+  - stride 0 正确。
+  - 验证：
+    - `../uya/bin/uya test src/numuya/_tests/test_broadcast.uya --manifest-path uya.toml` → 7/7 通过。
+    - `../uya/bin/uya test src/numuya/_tests/test_ufunc.uya --manifest-path uya.toml` → 20/20 通过。
+    - `NUMUYA_CUDA_REQUIRED=1 LDFLAGS="-lcuda" ../uya/bin/uya test src/numuya/_tests/test_cuda_ufunc.uya --manifest-path uya.toml` → broadcast 与 contiguous 测试通过；同文件中的 transpose 测试仍失败，原因为 `device_array_from_host` 尚未按 strides 上传非连续视图，属于后续 L41 任务。
