@@ -35,10 +35,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 22: CUDA ufunc 与 reduction
 
-- [ ] TDD: auto backend。
-  - 显式 `cuda` 走 GPU。
-  - `auto` 在 GPU 可用时走 GPU。
-  - 显存不足或 GPU unavailable 时按设计返回错误或回退 CPU。
 - [ ] TDD: location-preserving API。
   - `add_f64_on(ArrayF64.Device, ArrayF64.Device)` 返回 `ArrayF64.Device`。
   - `add_f64_auto(Array<f64>, Array<f64>)` 返回 host `Array<f64>`，内部走 GPU 时同步并拷回。
