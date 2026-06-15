@@ -90,13 +90,13 @@ fn write_cubin_array(stream: &FILE, buf: &byte, size: usize) bool {
         if !write_all(stream, as_byte, strlen(as_byte)) {
             return false;
         }
-        if i + 1 < size {
-            const comma: &const byte = ", " as &const byte;
+        i = i + 1;
+        if i < size {
+            const comma: &const byte = "," as &const byte;
             if !write_all(stream, comma, strlen(comma)) {
                 return false;
             }
         }
-        i = i + 1;
         if i % 16 as usize == 0 || i == size {
             const newline: &const byte = "\n" as &const byte;
             if !write_all(stream, newline, strlen(newline)) {

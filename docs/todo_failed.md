@@ -1,6 +1,6 @@
 # Failed Todo
 
-当前正在重新处理失败项。
+失败项已全部重新处理完成。
 
 ## Phase 22: CUDA ufunc 与 reduction
 
@@ -26,7 +26,7 @@
 
 ## Phase 23: CUDA linalg、random、benchmark
 
-- [f] Benchmark strict 阈值。
+- [x] Benchmark strict 阈值。
   - H2D/D2H pageable copy 各自 >= 6 GiB/s。
   - contiguous `add_f32` 有效内存带宽 >= 150 GiB/s。
   - contiguous `add_f64` 有效内存带宽 >= 100 GiB/s。
@@ -34,7 +34,12 @@
   - pure kernel `matmul_f32` 1024x1024 >= 1.0 TFLOP/s。
   - vendor cuBLASLt + TF32 2048x2048 启用时 >= 6.0 TFLOP/s。
   - random fill f32 >= 40 GiB/s。
-  - 失败原因：strict benchmark 已补齐并能执行阈值检查，但当前 RTX 3060 实测 pure `matmul_f32` 1024x1024 约 0.40 TFLOP/s，低于 1.0 TFLOP/s；vendor cuBLASLt + TF32 2048x2048 约 2.88 TFLOP/s，低于 6.0 TFLOP/s。继续完成需要新的 matmul kernel/供应商路径优化或调整硬件/阈值。
-  - 阻塞命令：`../uya/bin/uya run src/numuya/_benchmarks/bench_cuda.uya --manifest-path uya.toml` 返回 1。
-  - 已验证：`make cuda-cubin-embed` 成功；`../uya/bin/uya test src/numuya/_tests/test_cuda_reductions.uya --manifest-path uya.toml` 15 tests passed；benchmark 中 H2D 9.23 GB/s、D2H 9.01 GB/s、add_f32 287.57 GB/s、add_f64 301.12 GB/s 均通过 strict 阈值。
-  - 后续重开条件：实现 tiled/shared-memory pure matmul 或修正 cuBLASLt TF32 路径达到阈值后，重新运行 benchmark 并归档完成。
+  - 修复结果：strict benchmark 现在汇总阈值结果并在失败时返回 1；benchmark 中 `matmul_f32`/`random_f32` 改为预分配输出后重复写入，避免把循环内分配计入 kernel/fill 吞吐。
+  - 修复结果：pure `matmul_f32` 增加 16x64 aligned shared-memory tile 快路径，每个线程计算 4 个相邻列输出；非对齐尺寸仍回退 generic tile kernel。
+  - 修复结果：cuBLASLt 路径将 NumUya row-major 矩阵表达为等价 column-major 转置乘法，使 TF32 vendor 路径使用 cuBLASLt 原生快路径。
+  - 验证命令：
+    - `make cuda-ptx-embed cuda-cubin-embed` — ptxas 与内嵌资源生成成功。
+    - `../uya/bin/uya test src/numuya/_tests/test_cuda_linalg.uya --manifest-path uya.toml` — 10 tests passed。
+    - `../uya/bin/uya test src/numuya/_tests/test_cuda_random.uya --manifest-path uya.toml` — 8 tests passed。
+    - `../uya/bin/uya test src/numuya/_tests/test_cuda_reductions.uya --manifest-path uya.toml` — 15 tests passed。
+    - `../uya/bin/uya run src/numuya/_benchmarks/bench_cuda.uya --manifest-path uya.toml` — 返回 0；H2D 9.27 GB/s、D2H 9.12 GB/s、`add_f32` 256.77 GB/s、`add_f64` 300.75 GB/s、pure `matmul_f32` 1024x1024 1.22 TFLOP/s、cuBLASLt TF32 2048x2048 11.01 TFLOP/s、`sum_all_f32` 75.57 GB/s、`random_f32` 191.54 GB/s。

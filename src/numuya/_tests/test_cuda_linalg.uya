@@ -209,6 +209,33 @@ test "gpu_matmul_f32 multiplies 2x2 matrices" {
     try expect_matrix_close_f32(&host_result, expected[0:4], F32_TOL);
 }
 
+test "gpu_matmul_f32_into writes into preallocated output" {
+    if !backend_is_cuda_available() {
+        return;
+    }
+    var state: BackendState = try backend_init(BackendKind.Cuda);
+    defer backend_deinit(&state) catch {};
+
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var pool: MemoryPool = memory_pool_new(4 * NUMUYA_MIB);
+
+    var a_data: [f32: 4] = [1.0, 2.0, 3.0, 4.0];
+    var b_data: [f32: 4] = [5.0, 6.0, 7.0, 8.0];
+    var host_a: Array<f32> = try from_slice<f32>(allocator, a_data[0:4], shape2(2, 2));
+    var host_b: Array<f32> = try from_slice<f32>(allocator, b_data[0:4], shape2(2, 2));
+
+    var device_a: DeviceArray<f32> = try device_array_from_host<f32>(&pool, &host_a, state.context, state.stream);
+    var device_b: DeviceArray<f32> = try device_array_from_host<f32>(&pool, &host_b, state.context, state.stream);
+    var device_result: DeviceArray<f32> = try device_array_new<f32>(&pool, shape2(2, 2), state.context, state.stream);
+
+    try gpu_matmul_f32_into(&state, &device_a, &device_b, &device_result);
+
+    var host_result: Array<f32> = try device_array_to_host<f32>(allocator, &device_result);
+    var expected: [f32: 4] = [19.0, 22.0, 43.0, 50.0];
+    try expect_matrix_close_f32(&host_result, expected[0:4], F32_TOL);
+}
+
 test "gpu_matmul_f32 multiplies 16x16 matrices" {
     if !backend_is_cuda_available() {
         return;

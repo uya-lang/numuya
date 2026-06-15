@@ -40,7 +40,6 @@ static cublasStatus_t (*pfn_cublasLtMatmulDescDestroy)(cublasLtMatmulDesc_t) = N
 static cublasStatus_t (*pfn_cublasLtMatmulDescSetAttribute)(cublasLtMatmulDesc_t, cublasLtMatmulDescAttributes_t, const void*, size_t) = NULL;
 static cublasStatus_t (*pfn_cublasLtMatrixLayoutCreate)(cublasLtMatrixLayout_t*, cudaDataType_t, uint64_t, uint64_t, int64_t) = NULL;
 static cublasStatus_t (*pfn_cublasLtMatrixLayoutDestroy)(cublasLtMatrixLayout_t) = NULL;
-static cublasStatus_t (*pfn_cublasLtMatrixLayoutSetAttribute)(cublasLtMatrixLayout_t, cublasLtMatrixLayoutAttribute_t, const void*, size_t) = NULL;
 static cublasStatus_t (*pfn_cublasLtMatmul)(
     cublasLtHandle_t,
     cublasLtMatmulDesc_t,
@@ -77,7 +76,6 @@ static int numuya_cublaslt_load(void) {
     pfn_cublasLtMatmulDescSetAttribute = (cublasStatus_t (*)(cublasLtMatmulDesc_t, cublasLtMatmulDescAttributes_t, const void*, size_t))dlsym(numuya_cublaslt_handle, "cublasLtMatmulDescSetAttribute");
     pfn_cublasLtMatrixLayoutCreate = (cublasStatus_t (*)(cublasLtMatrixLayout_t*, cudaDataType_t, uint64_t, uint64_t, int64_t))dlsym(numuya_cublaslt_handle, "cublasLtMatrixLayoutCreate");
     pfn_cublasLtMatrixLayoutDestroy = (cublasStatus_t (*)(cublasLtMatrixLayout_t))dlsym(numuya_cublaslt_handle, "cublasLtMatrixLayoutDestroy");
-    pfn_cublasLtMatrixLayoutSetAttribute = (cublasStatus_t (*)(cublasLtMatrixLayout_t, cublasLtMatrixLayoutAttribute_t, const void*, size_t))dlsym(numuya_cublaslt_handle, "cublasLtMatrixLayoutSetAttribute");
     pfn_cublasLtMatmul = (cublasStatus_t (*)(
         cublasLtHandle_t,
         cublasLtMatmulDesc_t,
@@ -98,7 +96,6 @@ static int numuya_cublaslt_load(void) {
         pfn_cublasLtMatmulDescSetAttribute == NULL ||
         pfn_cublasLtMatrixLayoutCreate == NULL ||
         pfn_cublasLtMatrixLayoutDestroy == NULL ||
-        pfn_cublasLtMatrixLayoutSetAttribute == NULL ||
         pfn_cublasLtMatmul == NULL) {
         return NUMUYA_CUBLASLT_UNAVAILABLE;
     }
@@ -179,30 +176,32 @@ int numuya_cublaslt_matmul_f32(
     cublasLtMatrixLayout_t b_layout = NULL;
     cublasLtMatrixLayout_t c_layout = NULL;
 
-    status = pfn_cublasLtMatrixLayoutCreate(&a_layout, CUDA_R_32F, (uint64_t)m, (uint64_t)k, (int64_t)k);
+    /* NumUya matrices are row-major.  Present them to cuBLASLt as the
+     * equivalent column-major transposed multiplication:
+     *
+     *   C_row(m,n) = A_row(m,k) * B_row(k,n)
+     *   C_col(n,m) = B_col(n,k) * A_col(k,m)
+     *
+     * This keeps the public row-major result while letting cuBLASLt use its
+     * native column-major fast paths.
+     */
+    status = pfn_cublasLtMatrixLayoutCreate(&a_layout, CUDA_R_32F, (uint64_t)n, (uint64_t)k, (int64_t)n);
     if (status != 0) {
         pfn_cublasLtMatmulDescDestroy(desc);
         return NUMUYA_CUBLASLT_ERROR;
     }
-    status = pfn_cublasLtMatrixLayoutCreate(&b_layout, CUDA_R_32F, (uint64_t)k, (uint64_t)n, (int64_t)n);
+    status = pfn_cublasLtMatrixLayoutCreate(&b_layout, CUDA_R_32F, (uint64_t)k, (uint64_t)m, (int64_t)k);
     if (status != 0) {
         pfn_cublasLtMatrixLayoutDestroy(a_layout);
         pfn_cublasLtMatmulDescDestroy(desc);
         return NUMUYA_CUBLASLT_ERROR;
     }
-    status = pfn_cublasLtMatrixLayoutCreate(&c_layout, CUDA_R_32F, (uint64_t)m, (uint64_t)n, (int64_t)n);
+    status = pfn_cublasLtMatrixLayoutCreate(&c_layout, CUDA_R_32F, (uint64_t)n, (uint64_t)m, (int64_t)n);
     if (status != 0) {
         pfn_cublasLtMatrixLayoutDestroy(b_layout);
         pfn_cublasLtMatrixLayoutDestroy(a_layout);
         pfn_cublasLtMatmulDescDestroy(desc);
         return NUMUYA_CUBLASLT_ERROR;
-    }
-
-    cublasLtOrder_t order = CUBLASLT_ORDER_ROW;
-    status = pfn_cublasLtMatrixLayoutSetAttribute(a_layout, CUBLASLT_MATRIX_LAYOUT_ORDER, &order, sizeof(order));
-    if (status == 0) {
-        pfn_cublasLtMatrixLayoutSetAttribute(b_layout, CUBLASLT_MATRIX_LAYOUT_ORDER, &order, sizeof(order));
-        pfn_cublasLtMatrixLayoutSetAttribute(c_layout, CUBLASLT_MATRIX_LAYOUT_ORDER, &order, sizeof(order));
     }
 
     const float alpha = 1.0f;
@@ -212,8 +211,8 @@ int numuya_cublaslt_matmul_f32(
         (cublasLtHandle_t)handle,
         desc,
         &alpha,
-        a_ptr, a_layout,
-        b_ptr, b_layout,
+        b_ptr, a_layout,
+        a_ptr, b_layout,
         &beta,
         c_ptr, c_layout,
         c_ptr, c_layout,

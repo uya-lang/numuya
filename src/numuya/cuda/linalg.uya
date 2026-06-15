@@ -33,32 +33,38 @@ fn require_matmul_device_args(left: &DeviceArray<f32>, right: &DeviceArray<f32>)
     }
 }
 
-export fn gpu_matmul_f32(state: &BackendState, left: &DeviceArray<f32>, right: &DeviceArray<f32>) !DeviceArray<f32> {
+fn require_matmul_output_args(result: &DeviceArray<f32>, m: usize, n: usize) !void {
+    if result.shape.rank != 2 {
+        return error.NumuyaInvalidArgument;
+    }
+    if result.shape.dims[0] != m || result.shape.dims[1] != n {
+        return error.NumuyaShapeMismatch;
+    }
+    if !result.flags.c_contiguous {
+        return error.NumuyaNotContiguous;
+    }
+}
+
+export fn gpu_matmul_f32_into(
+    state: &BackendState,
+    left: &DeviceArray<f32>,
+    right: &DeviceArray<f32>,
+    result: &DeviceArray<f32>,
+) !void {
     try require_matmul_device_args(left, right);
 
     const m: usize = left.shape.dims[0];
     const k: usize = left.shape.dims[1];
     const n: usize = right.shape.dims[1];
-
-    const result_shape: Shape = shape2(m, n);
-    var result: DeviceArray<f32> = try device_array_new<f32>(left.storage.pool, result_shape, state.context, state.stream);
+    try require_matmul_output_args(result, m, n);
 
     if m == 0 || n == 0 {
-        device_storage_retain<f32>(result.storage);
-        return DeviceArray<f32>{
-            storage: result.storage,
-            offset: result.offset,
-            shape: result.shape,
-            strides: result.strides,
-            flags: result.flags,
-            context: result.context,
-            stream: result.stream,
-        };
+        return;
     }
 
     const left_ptr: usize = device_ptr_with_offset_f32(left);
     const right_ptr: usize = device_ptr_with_offset_f32(right);
-    const result_ptr: usize = device_ptr_with_offset_f32(&result);
+    const result_ptr: usize = device_ptr_with_offset_f32(result);
 
     if state.prefer_vendor_libs && cublaslt_is_available() {
         try cuda_set_current_context(state.context);
@@ -84,16 +90,7 @@ export fn gpu_matmul_f32(state: &BackendState, left: &DeviceArray<f32>, right: &
                 else => {
                     try vendor_result;
                     try cuda_synchronize_stream(state.context, state.stream);
-                    device_storage_retain<f32>(result.storage);
-                    return DeviceArray<f32>{
-                        storage: result.storage,
-                        offset: result.offset,
-                        shape: result.shape,
-                        strides: result.strides,
-                        flags: result.flags,
-                        context: result.context,
-                        stream: result.stream,
-                    };
+                    return;
                 }
             }
         }
@@ -103,14 +100,26 @@ export fn gpu_matmul_f32(state: &BackendState, left: &DeviceArray<f32>, right: &
         state.module = try cuda_kernels_load(state.context);
     }
 
-    const func: usize = try cuda_module_get_function(state.module, MATMUL_F32_KERNEL);
+    const tile_size: u32 = 16;
+    const aligned_tile_rows: usize = 16;
+    const aligned_tile_cols: usize = 64;
+    const use_aligned_kernel: bool = m % aligned_tile_rows == 0 && n % aligned_tile_cols == 0 && k % aligned_tile_rows == 0;
+    const kernel_name: &const byte = if use_aligned_kernel {
+        MATMUL_F32_ALIGNED_KERNEL
+    } else {
+        MATMUL_F32_KERNEL
+    };
+    const func: usize = try cuda_module_get_function(state.module, kernel_name);
     if func == 0 {
         return error.NumuyaCudaError;
     }
 
-    const total_elements: usize = m * n;
-    const block_size: u32 = 256;
-    const grid_size: u32 = ceil_div_u32(total_elements, block_size as usize);
+    var output_tile_cols: usize = tile_size as usize;
+    if use_aligned_kernel {
+        output_tile_cols = aligned_tile_cols;
+    }
+    const grid_size_x: u32 = ceil_div_u32(n, output_tile_cols);
+    const grid_size_y: u32 = ceil_div_u32(m, tile_size as usize);
 
     var arg_result_ptr: usize = result_ptr;
     var arg_left_ptr: usize = left_ptr;
@@ -130,14 +139,25 @@ export fn gpu_matmul_f32(state: &BackendState, left: &DeviceArray<f32>, right: &
 
     try cuda_launch_kernel(
         func,
-        grid_size, 1, 1,
-        block_size, 1, 1,
+        grid_size_x, grid_size_y, 1,
+        tile_size, tile_size, 1,
         0,
         state.stream,
         &args[0]
     );
 
     try cuda_synchronize_stream(state.context, state.stream);
+}
+
+export fn gpu_matmul_f32(state: &BackendState, left: &DeviceArray<f32>, right: &DeviceArray<f32>) !DeviceArray<f32> {
+    try require_matmul_device_args(left, right);
+
+    const m: usize = left.shape.dims[0];
+    const n: usize = right.shape.dims[1];
+
+    const result_shape: Shape = shape2(m, n);
+    var result: DeviceArray<f32> = try device_array_new<f32>(left.storage.pool, result_shape, state.context, state.stream);
+    try gpu_matmul_f32_into(state, left, right, &result);
 
     device_storage_retain<f32>(result.storage);
     return DeviceArray<f32>{

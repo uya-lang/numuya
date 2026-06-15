@@ -468,10 +468,14 @@ fn bench_matmul_f32(
     right: &DeviceArray<f32>,
     iterations: usize,
 ) !u64 {
+    const m: usize = left.shape.dims[0];
+    const n: usize = right.shape.dims[1];
+    var result: DeviceArray<f32> = try device_array_new<f32>(left.storage.pool, shape2(m, n), state.context, state.stream);
+    try gpu_matmul_f32_into(state, left, right, &result);
     const start: u64 = monotonic_ns();
     var i: usize = 0;
     while i < iterations {
-        var result: DeviceArray<f32> = try gpu_matmul_f32(state, left, right);
+        try gpu_matmul_f32_into(state, left, right, &result);
         i = i + 1;
     }
     const end: u64 = monotonic_ns();
@@ -485,11 +489,11 @@ fn bench_random_f32(
     seed: u64,
     iterations: usize,
 ) !u64 {
+    var result: DeviceArray<f32> = try device_array_new<f32>(pool, shape1(elements), state.context, state.stream);
     const start: u64 = monotonic_ns();
     var i: usize = 0;
     while i < iterations {
-        var result: DeviceArray<f32> = try gpu_random_f32(state, pool, shape1(elements), seed + (i as u64));
-        _ = result;
+        try gpu_random_f32_into(state, &result, seed + (i as u64));
         i = i + 1;
     }
     const end: u64 = monotonic_ns();
@@ -747,8 +751,8 @@ export fn main() i32 {
         write_str("error: gpu_sum_all_f32 correctness check failed\n");
         return 1;
     };
-    var check_buf: [byte: 64] = [];
-    _ = snprintf(&check_buf[0], 64, "sum_f32 correctness check: %f (expected %f)\n", (sum_check as f64), (size as f64) * 1.5);
+    var check_buf: [byte: 128] = [];
+    _ = snprintf(&check_buf[0], 128, "sum_f32 correctness check: %f (expected %f)\n", (sum_check as f64), (size as f64) * 1.5);
     _ = sys_write(1, &check_buf[0], strlen(&check_buf[0])) catch { return 1; };
 
     const sum_f32_ns: u64 = bench_sum_all_f32(&state, &device_left_f32, iterations) catch {
@@ -776,6 +780,32 @@ export fn main() i32 {
     const random_ok: bool = check_bandwidth("random_f32", random_bw, MIN_RANDOM_F32_GBPS);
     if !random_ok {
         write_str("\nrandom_f32 benchmark below strict threshold; continuing benchmark run\n");
+    }
+
+    var strict_ok: bool = true;
+    if !h2d_ok {
+        strict_ok = false;
+    }
+    if !d2h_ok {
+        strict_ok = false;
+    }
+    if !add_f32_ok {
+        strict_ok = false;
+    }
+    if !add_f64_ok {
+        strict_ok = false;
+    }
+    if !matmul_1_ok {
+        strict_ok = false;
+    }
+    if !vendor_matmul_2_ok {
+        strict_ok = false;
+    }
+    if !sum_f32_ok {
+        strict_ok = false;
+    }
+    if !random_ok {
+        strict_ok = false;
     }
 
     write_newline();
@@ -807,5 +837,8 @@ export fn main() i32 {
     write_f64(random_bw, 2);
     write_str(" GB/s\n");
     write_str("Done.\n");
+    if !strict_ok {
+        return 1;
+    }
     return 0;
 }

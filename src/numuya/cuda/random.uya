@@ -32,39 +32,18 @@ fn clone_shape(shape_value: &Shape) Shape {
     return cloned;
 }
 
-export fn gpu_random_f32(state: &BackendState, pool: &MemoryPool, shape_value: Shape, seed: u64) !DeviceArray<f32> {
-    const shape_copy: Shape = clone_shape(&shape_value);
-    const n: usize = try shape_size(shape_value);
-    var result: DeviceArray<f32> = try device_array_new<f32>(pool, shape_copy, state.context, state.stream);
+export fn gpu_random_f32_into(state: &BackendState, result: &DeviceArray<f32>, seed: u64) !void {
+    const n: usize = try shape_size(result.shape);
     if n == 0 {
-        device_storage_retain<f32>(result.storage);
-        return DeviceArray<f32>{
-            storage: result.storage,
-            offset: result.offset,
-            shape: result.shape,
-            strides: result.strides,
-            flags: result.flags,
-            context: result.context,
-            stream: result.stream,
-        };
+        return;
     }
 
-    const result_ptr: usize = device_ptr_with_offset_f32(&result);
+    const result_ptr: usize = device_ptr_with_offset_f32(result);
 
     if state.prefer_vendor_libs && curand_is_available() {
         try curand_random_f32(state.stream, result_ptr, n, seed);
         try cuda_synchronize_stream(state.context, state.stream);
-
-        device_storage_retain<f32>(result.storage);
-        return DeviceArray<f32>{
-            storage: result.storage,
-            offset: result.offset,
-            shape: result.shape,
-            strides: result.strides,
-            flags: result.flags,
-            context: result.context,
-            stream: result.stream,
-        };
+        return;
     }
 
     if state.module == 0 {
@@ -99,6 +78,12 @@ export fn gpu_random_f32(state: &BackendState, pool: &MemoryPool, shape_value: S
     );
 
     try cuda_synchronize_stream(state.context, state.stream);
+}
+
+export fn gpu_random_f32(state: &BackendState, pool: &MemoryPool, shape_value: Shape, seed: u64) !DeviceArray<f32> {
+    const shape_copy: Shape = clone_shape(&shape_value);
+    var result: DeviceArray<f32> = try device_array_new<f32>(pool, shape_copy, state.context, state.stream);
+    try gpu_random_f32_into(state, &result, seed);
 
     device_storage_retain<f32>(result.storage);
     return DeviceArray<f32>{

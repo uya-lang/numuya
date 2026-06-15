@@ -57,6 +57,168 @@ END:
     ret;
 }
 
+.visible .entry numuya_matmul_f32_aligned(
+    .param .u64 numuya_matmul_f32_aligned_param_0,
+    .param .u64 numuya_matmul_f32_aligned_param_1,
+    .param .u64 numuya_matmul_f32_aligned_param_2,
+    .param .u64 numuya_matmul_f32_aligned_param_3,
+    .param .u64 numuya_matmul_f32_aligned_param_4,
+    .param .u64 numuya_matmul_f32_aligned_param_5
+)
+{
+    .shared .f32 s_a[256];
+    .shared .f32 s_b[1024];
+
+    .reg .u32   r32_tx, r32_ty, r32_bx, r32_by, r32_kk;
+    .reg .u64   r64_res, r64_left, r64_right, r64_m, r64_k, r64_n;
+    .reg .u64   r64_tx, r64_ty, r64_bx, r64_by, r64_row, r64_col0, r64_col1, r64_col2, r64_col3, r64_tile, r64_kk;
+    .reg .u64   r64_a_col, r64_b_row, r64_tmp, r64_addr, r64_sbase_a, r64_sbase_b, r64_sidx, r64_saddr;
+    .reg .f32   f32_sum0, f32_sum1, f32_sum2, f32_sum3, f32_a, f32_b0, f32_b1, f32_b2, f32_b3;
+    .reg .pred  p;
+
+    ld.param.u64    r64_res, [numuya_matmul_f32_aligned_param_0];
+    ld.param.u64    r64_left, [numuya_matmul_f32_aligned_param_1];
+    ld.param.u64    r64_right, [numuya_matmul_f32_aligned_param_2];
+    ld.param.u64    r64_m, [numuya_matmul_f32_aligned_param_3];
+    ld.param.u64    r64_k, [numuya_matmul_f32_aligned_param_4];
+    ld.param.u64    r64_n, [numuya_matmul_f32_aligned_param_5];
+
+    mov.u32         r32_tx, %tid.x;
+    mov.u32         r32_ty, %tid.y;
+    mov.u32         r32_bx, %ctaid.x;
+    mov.u32         r32_by, %ctaid.y;
+
+    cvt.u64.u32     r64_tx, r32_tx;
+    cvt.u64.u32     r64_ty, r32_ty;
+    cvt.u64.u32     r64_bx, r32_bx;
+    cvt.u64.u32     r64_by, r32_by;
+
+    mad.lo.u64      r64_row, r64_by, 16, r64_ty;
+    mad.lo.u64      r64_col0, r64_bx, 64, r64_tx;
+    add.u64         r64_col1, r64_col0, 16;
+    add.u64         r64_col2, r64_col0, 32;
+    add.u64         r64_col3, r64_col0, 48;
+
+    mov.u64         r64_sbase_a, s_a;
+    mov.u64         r64_sbase_b, s_b;
+    mov.f32         f32_sum0, 0F00000000;
+    mov.f32         f32_sum1, 0F00000000;
+    mov.f32         f32_sum2, 0F00000000;
+    mov.f32         f32_sum3, 0F00000000;
+    mov.u64         r64_tile, 0;
+
+ALIGNED_TILE_LOOP:
+    setp.ge.u64     p, r64_tile, r64_k;
+    @p bra          ALIGNED_TILE_DONE;
+
+    add.u64         r64_a_col, r64_tile, r64_tx;
+    mad.lo.u64      r64_tmp, r64_row, r64_k, r64_a_col;
+    mul.lo.u64      r64_tmp, r64_tmp, 4;
+    add.u64         r64_addr, r64_left, r64_tmp;
+    ld.f32          f32_a, [r64_addr];
+
+    mad.lo.u64      r64_sidx, r64_ty, 16, r64_tx;
+    mul.lo.u64      r64_saddr, r64_sidx, 4;
+    add.u64         r64_saddr, r64_sbase_a, r64_saddr;
+    st.shared.f32   [r64_saddr], f32_a;
+
+    add.u64         r64_b_row, r64_tile, r64_ty;
+    mad.lo.u64      r64_tmp, r64_b_row, r64_n, r64_col0;
+    mul.lo.u64      r64_tmp, r64_tmp, 4;
+    add.u64         r64_addr, r64_right, r64_tmp;
+    ld.f32          f32_b0, [r64_addr];
+
+    mad.lo.u64      r64_sidx, r64_ty, 64, r64_tx;
+    mul.lo.u64      r64_saddr, r64_sidx, 4;
+    add.u64         r64_saddr, r64_sbase_b, r64_saddr;
+    st.shared.f32   [r64_saddr], f32_b0;
+
+    mad.lo.u64      r64_tmp, r64_b_row, r64_n, r64_col1;
+    mul.lo.u64      r64_tmp, r64_tmp, 4;
+    add.u64         r64_addr, r64_right, r64_tmp;
+    ld.f32          f32_b1, [r64_addr];
+
+    add.u64         r64_saddr, r64_saddr, 64;
+    st.shared.f32   [r64_saddr], f32_b1;
+
+    mad.lo.u64      r64_tmp, r64_b_row, r64_n, r64_col2;
+    mul.lo.u64      r64_tmp, r64_tmp, 4;
+    add.u64         r64_addr, r64_right, r64_tmp;
+    ld.f32          f32_b2, [r64_addr];
+
+    add.u64         r64_saddr, r64_saddr, 64;
+    st.shared.f32   [r64_saddr], f32_b2;
+
+    mad.lo.u64      r64_tmp, r64_b_row, r64_n, r64_col3;
+    mul.lo.u64      r64_tmp, r64_tmp, 4;
+    add.u64         r64_addr, r64_right, r64_tmp;
+    ld.f32          f32_b3, [r64_addr];
+
+    add.u64         r64_saddr, r64_saddr, 64;
+    st.shared.f32   [r64_saddr], f32_b3;
+
+    bar.sync        0;
+
+    mul.lo.u64      r64_saddr, r64_ty, 64;
+    add.u64         r64_saddr, r64_sbase_a, r64_saddr;
+    mul.lo.u64      r64_addr, r64_tx, 4;
+    add.u64         r64_addr, r64_sbase_b, r64_addr;
+    mov.u32         r32_kk, 0;
+
+ALIGNED_MUL_LOOP:
+    setp.ge.u32     p, r32_kk, 16;
+    @p bra          ALIGNED_MUL_DONE;
+    cvt.u64.u32     r64_kk, r32_kk;
+
+    mul.lo.u64      r64_tmp, r64_kk, 4;
+    add.u64         r64_tmp, r64_saddr, r64_tmp;
+    ld.shared.f32   f32_a, [r64_tmp];
+
+    mul.lo.u64      r64_tmp, r64_kk, 256;
+    add.u64         r64_tmp, r64_addr, r64_tmp;
+    ld.shared.f32   f32_b0, [r64_tmp];
+    ld.shared.f32   f32_b1, [r64_tmp+64];
+    ld.shared.f32   f32_b2, [r64_tmp+128];
+    ld.shared.f32   f32_b3, [r64_tmp+192];
+    fma.rn.f32      f32_sum0, f32_a, f32_b0, f32_sum0;
+    fma.rn.f32      f32_sum1, f32_a, f32_b1, f32_sum1;
+    fma.rn.f32      f32_sum2, f32_a, f32_b2, f32_sum2;
+    fma.rn.f32      f32_sum3, f32_a, f32_b3, f32_sum3;
+
+    add.u32         r32_kk, r32_kk, 1;
+    bra             ALIGNED_MUL_LOOP;
+
+ALIGNED_MUL_DONE:
+
+    bar.sync        0;
+    add.u64         r64_tile, r64_tile, 16;
+    bra             ALIGNED_TILE_LOOP;
+
+ALIGNED_TILE_DONE:
+    mad.lo.u64      r64_tmp, r64_row, r64_n, r64_col0;
+    mul.lo.u64      r64_tmp, r64_tmp, 4;
+    add.u64         r64_addr, r64_res, r64_tmp;
+    st.f32          [r64_addr], f32_sum0;
+
+    mad.lo.u64      r64_tmp, r64_row, r64_n, r64_col1;
+    mul.lo.u64      r64_tmp, r64_tmp, 4;
+    add.u64         r64_addr, r64_res, r64_tmp;
+    st.f32          [r64_addr], f32_sum1;
+
+    mad.lo.u64      r64_tmp, r64_row, r64_n, r64_col2;
+    mul.lo.u64      r64_tmp, r64_tmp, 4;
+    add.u64         r64_addr, r64_res, r64_tmp;
+    st.f32          [r64_addr], f32_sum2;
+
+    mad.lo.u64      r64_tmp, r64_row, r64_n, r64_col3;
+    mul.lo.u64      r64_tmp, r64_tmp, 4;
+    add.u64         r64_addr, r64_res, r64_tmp;
+    st.f32          [r64_addr], f32_sum3;
+
+ALIGNED_END:
+    ret;
+}
+
 .visible .entry numuya_add_f32(
     .param .u64 numuya_add_f32_param_0,
     .param .u64 numuya_add_f32_param_1,
@@ -572,8 +734,7 @@ END:
 {
     .reg .u32   r32_tid, r32_bid, r32_ntid, r32_state, r32_tmp;
     .reg .u64   r64_out, r64_n, r64_seed, r64_idx, r64_ntid, r64_tmp;
-    .reg .f64   f64_val, f64_scale;
-    .reg .f32   f32_val;
+    .reg .f32   f32_val, f32_scale;
     .reg .pred  p;
 
     ld.param.u64    r64_out, [numuya_random_f32_param_0];
@@ -603,10 +764,9 @@ END:
 
     mad.lo.u32      r32_state, r32_state, 1664525, 1013904223;
 
-    cvt.rn.f64.u32  f64_val, r32_state;
-    mov.f64         f64_scale, 0D3DF0000000000000;
-    mul.f64         f64_val, f64_val, f64_scale;
-    cvt.rn.f32.f64  f32_val, f64_val;
+    cvt.rn.f32.u32  f32_val, r32_state;
+    mov.f32         f32_scale, 0F2F800000;
+    mul.rn.f32      f32_val, f32_val, f32_scale;
 
     mul.lo.u64      r64_tmp, r64_idx, 4;
     add.u64         r64_tmp, r64_out, r64_tmp;
@@ -625,9 +785,13 @@ END:
     .param .u64 numuya_matmul_f32_param_5
 )
 {
-    .reg .u32   r32_tid, r32_bid, r32_ntid;
+    .shared .f32 s_a[256];
+    .shared .f32 s_b[256];
+
+    .reg .u32   r32_tx, r32_ty, r32_bx, r32_by, r32_kk;
     .reg .u64   r64_res, r64_left, r64_right, r64_m, r64_k, r64_n;
-    .reg .u64   r64_idx, r64_i, r64_j, r64_kk, r64_tmp, r64_addr;
+    .reg .u64   r64_tx, r64_ty, r64_bx, r64_by, r64_row, r64_col, r64_tile, r64_kk;
+    .reg .u64   r64_a_col, r64_b_row, r64_tmp, r64_addr, r64_sbase_a, r64_sbase_b, r64_sidx, r64_saddr;
     .reg .f32   f32_sum, f32_a, f32_b;
     .reg .pred  p;
 
@@ -638,48 +802,98 @@ END:
     ld.param.u64    r64_k, [numuya_matmul_f32_param_4];
     ld.param.u64    r64_n, [numuya_matmul_f32_param_5];
 
-    mov.u32         r32_tid, %tid.x;
-    cvt.u64.u32     r64_idx, r32_tid;
-    mov.u32         r32_bid, %ctaid.x;
-    cvt.u64.u32     r64_tmp, r32_bid;
-    mov.u32         r32_ntid, %ntid.x;
-    cvt.u64.u32     r64_addr, r32_ntid;
-    mad.lo.u64      r64_idx, r64_tmp, r64_addr, r64_idx;
+    mov.u32         r32_tx, %tid.x;
+    mov.u32         r32_ty, %tid.y;
+    mov.u32         r32_bx, %ctaid.x;
+    mov.u32         r32_by, %ctaid.y;
 
-    mul.lo.u64      r64_tmp, r64_m, r64_n;
-    setp.ge.u64     p, r64_idx, r64_tmp;
-    @p bra          END;
+    cvt.u64.u32     r64_tx, r32_tx;
+    cvt.u64.u32     r64_ty, r32_ty;
+    cvt.u64.u32     r64_bx, r32_bx;
+    cvt.u64.u32     r64_by, r32_by;
 
-    div.u64         r64_i, r64_idx, r64_n;
-    rem.u64         r64_j, r64_idx, r64_n;
+    mad.lo.u64      r64_row, r64_by, 16, r64_ty;
+    mad.lo.u64      r64_col, r64_bx, 16, r64_tx;
 
     mov.f32         f32_sum, 0F00000000;
-    mov.u64         r64_kk, 0;
+    mov.u64         r64_tile, 0;
 
-MUL_LOOP:
-    setp.ge.u64     p, r64_kk, r64_k;
-    @p bra          MUL_DONE;
+TILE_LOOP:
+    setp.ge.u64     p, r64_tile, r64_k;
+    @p bra          TILE_DONE;
 
-    mul.lo.u64      r64_tmp, r64_i, r64_k;
-    add.u64         r64_tmp, r64_tmp, r64_kk;
+    mov.f32         f32_a, 0F00000000;
+    add.u64         r64_a_col, r64_tile, r64_tx;
+    setp.ge.u64     p, r64_row, r64_m;
+    @p bra          LOAD_A_DONE;
+    setp.ge.u64     p, r64_a_col, r64_k;
+    @p bra          LOAD_A_DONE;
+    mad.lo.u64      r64_tmp, r64_row, r64_k, r64_a_col;
     mul.lo.u64      r64_tmp, r64_tmp, 4;
     add.u64         r64_addr, r64_left, r64_tmp;
     ld.f32          f32_a, [r64_addr];
 
-    mul.lo.u64      r64_tmp, r64_kk, r64_n;
-    add.u64         r64_tmp, r64_tmp, r64_j;
+LOAD_A_DONE:
+    mov.u64         r64_sbase_a, s_a;
+    mad.lo.u64      r64_sidx, r64_ty, 16, r64_tx;
+    mul.lo.u64      r64_saddr, r64_sidx, 4;
+    add.u64         r64_saddr, r64_sbase_a, r64_saddr;
+    st.shared.f32   [r64_saddr], f32_a;
+
+    mov.f32         f32_b, 0F00000000;
+    add.u64         r64_b_row, r64_tile, r64_ty;
+    setp.ge.u64     p, r64_b_row, r64_k;
+    @p bra          LOAD_B_DONE;
+    setp.ge.u64     p, r64_col, r64_n;
+    @p bra          LOAD_B_DONE;
+    mad.lo.u64      r64_tmp, r64_b_row, r64_n, r64_col;
     mul.lo.u64      r64_tmp, r64_tmp, 4;
     add.u64         r64_addr, r64_right, r64_tmp;
     ld.f32          f32_b, [r64_addr];
 
+LOAD_B_DONE:
+    mov.u64         r64_sbase_b, s_b;
+    mad.lo.u64      r64_sidx, r64_ty, 16, r64_tx;
+    mul.lo.u64      r64_saddr, r64_sidx, 4;
+    add.u64         r64_saddr, r64_sbase_b, r64_saddr;
+    st.shared.f32   [r64_saddr], f32_b;
+
+    bar.sync        0;
+
+    mov.u32         r32_kk, 0;
+
+MUL_LOOP:
+    setp.ge.u32     p, r32_kk, 16;
+    @p bra          MUL_DONE;
+    cvt.u64.u32     r64_kk, r32_kk;
+
+    mad.lo.u64      r64_sidx, r64_ty, 16, r64_kk;
+    mul.lo.u64      r64_saddr, r64_sidx, 4;
+    add.u64         r64_saddr, r64_sbase_a, r64_saddr;
+    ld.shared.f32   f32_a, [r64_saddr];
+
+    mad.lo.u64      r64_sidx, r64_kk, 16, r64_tx;
+    mul.lo.u64      r64_saddr, r64_sidx, 4;
+    add.u64         r64_saddr, r64_sbase_b, r64_saddr;
+    ld.shared.f32   f32_b, [r64_saddr];
+
     fma.rn.f32      f32_sum, f32_a, f32_b, f32_sum;
 
-    add.u64         r64_kk, r64_kk, 1;
+    add.u32         r32_kk, r32_kk, 1;
     bra             MUL_LOOP;
 
 MUL_DONE:
-    mul.lo.u64      r64_tmp, r64_i, r64_n;
-    add.u64         r64_tmp, r64_tmp, r64_j;
+    bar.sync        0;
+    add.u64         r64_tile, r64_tile, 16;
+    bra             TILE_LOOP;
+
+TILE_DONE:
+    setp.ge.u64     p, r64_row, r64_m;
+    @p bra          END;
+    setp.ge.u64     p, r64_col, r64_n;
+    @p bra          END;
+
+    mad.lo.u64      r64_tmp, r64_row, r64_n, r64_col;
     mul.lo.u64      r64_tmp, r64_tmp, 4;
     add.u64         r64_addr, r64_res, r64_tmp;
     st.f32          [r64_addr], f32_sum;

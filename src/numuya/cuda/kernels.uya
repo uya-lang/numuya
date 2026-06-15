@@ -12,6 +12,7 @@ export const SUM_ALL_F64_KERNEL: &const byte = "numuya_sum_all_f64" as &const by
 export const SUM_ALL_F64_FINALIZE_KERNEL: &const byte = "numuya_sum_all_f64_finalize" as &const byte;
 export const RANDOM_F32_KERNEL: &const byte = "numuya_random_f32" as &const byte;
 export const MATMUL_F32_KERNEL: &const byte = "numuya_matmul_f32" as &const byte;
+export const MATMUL_F32_ALIGNED_KERNEL: &const byte = "numuya_matmul_f32_aligned" as &const byte;
 
 // Re-export the embedded PTX source-of-truth generated from
 // src/numuya/cuda/ptx/core_sm86.ptx by src/numuya/_tools/embed_ptx.uya.
