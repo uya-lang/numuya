@@ -1096,3 +1096,25 @@ NUMUYA_CUDA_REQUIRED=1 LDFLAGS="-lcublasLt -lcublas -lcufft -lcurand -lcuda" ../
 ## Phase 23: CUDA linalg、random、benchmark
 
 - [x] Benchmark: `matmul_f32` 1024x1024、2048x2048。
+
+## Phase 23: CUDA linalg、random、benchmark
+
+- [x] Benchmark 输出 RTX 3060、driver、CUDA、显存、backend 路径。
+  - 实现：
+    - `src/numuya/cuda/driver_stub.c` 新增 `cuDeviceGetName` / `cuDriverGetVersion` 运行时动态加载与查询。
+    - `src/numuya/cuda/driver.uya` 新增导出 `cuda_get_device_name(ordinal, name, max_len)` 与 `cuda_get_driver_version()`。
+    - `src/numuya/_tests/test_cuda_driver.uya` 新增 2 个测试验证上述 API。
+    - `src/numuya/_benchmarks/bench_cuda.uya` 新增 `write_device_info()` 与 `write_backend_path()`，在 header 后输出设备名、compute capability、显存、驱动版本、backend 配置与 vendor 库可用性。
+  - 验证命令：
+    - `../uya/bin/uya check src/numuya/_benchmarks/bench_cuda.uya --manifest-path uya.toml` — checker 通过
+    - `../uya/bin/uya run src/numuya/_benchmarks/bench_cuda.uya --manifest-path uya.toml` — 输出示例：
+      ```
+      device: NVIDIA GeForce RTX 3060
+        compute capability: sm_86
+        total memory: 11.63 GiB
+        driver version: 13000 (CUDA 13.0)
+      backend path: Cuda, vendor_libs=off, tf32=off, cublaslt=available, curand=available
+      ```
+    - `../uya/bin/uya test src/numuya/_tests/test_cuda_driver.uya --manifest-path uya.toml` — 23/23 通过
+    - `make test` — 全部非 CUDA 测试文件通过
+    - `make test-cuda` — test_cuda_driver/test_cuda_device_array/test_cuda_linalg/test_cuda_random/test_cuda_module/test_cuda_auto/test_cuda_location_preserving 全通过；test_cuda_reductions 有 2 个失败来自工作区内既有未提交改动，与本次任务无关

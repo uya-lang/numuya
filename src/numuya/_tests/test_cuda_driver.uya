@@ -252,3 +252,26 @@ test "cross backend stream use returns NumuyaDeviceMismatch" {
         else => { return error.NumuyaExpectationFailed; }
     }
 }
+
+test "cuda_get_device_name returns non-empty name on available cuda" {
+    if !backend_is_cuda_available() {
+        return;
+    }
+    try cuda_init();
+    var name_buf: [byte: 256] = [];
+    try cuda_get_device_name(0, &name_buf[0], 256);
+    if name_buf[0] == 0 {
+        return error.NumuyaExpectationFailed;
+    }
+}
+
+test "cuda_get_driver_version returns positive version on available cuda" {
+    if !backend_is_cuda_available() {
+        return;
+    }
+    try cuda_init();
+    const version: i32 = try cuda_get_driver_version();
+    if version <= 0 {
+        return error.NumuyaExpectationFailed;
+    }
+}

@@ -38,7 +38,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 23: CUDA linalg、random、benchmark
 
-- [ ] Benchmark 输出 RTX 3060、driver、CUDA、显存、backend 路径。
 - [ ] Benchmark strict 阈值。
   - H2D/D2H pageable copy 各自 >= 6 GiB/s。
   - contiguous `add_f32` 有效内存带宽 >= 150 GiB/s。

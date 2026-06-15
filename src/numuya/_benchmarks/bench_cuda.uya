@@ -11,6 +11,8 @@
 use array;
 use backend;
 use creation;
+use cuda.cublaslt;
+use cuda.curand;
 use cuda.device_array;
 use cuda.driver;
 use cuda.linalg;
@@ -102,6 +104,74 @@ fn print_header() void {
     write_str("======================\n");
     write_str("This benchmark measures wall-clock time including kernel launch and stream sync.\n");
     write_str("For correctness, run `make test-cuda`.\n\n");
+}
+
+fn write_driver_version(version: i32) void {
+    const major: i32 = version / 1000;
+    const minor: i32 = (version % 1000) / 10;
+    write_str("driver version: ");
+    write_usize(version as usize);
+    write_str(" (CUDA ");
+    write_usize(major as usize);
+    write_str(".");
+    write_usize(minor as usize);
+    write_str(")");
+}
+
+fn write_device_info() void {
+    var name_buf: [byte: 256] = [];
+    _ = cuda_get_device_name(0, &name_buf[0], 256) catch {
+        write_str("device: unknown\n");
+        return;
+    };
+    const device: CudaDevice = cuda_get_device(0) catch {
+        write_str("device: ");
+        write_str(&name_buf[0]);
+        write_newline();
+        return;
+    };
+    write_str("device: ");
+    write_str(&name_buf[0]);
+    write_newline();
+    write_str("  compute capability: sm_");
+    write_usize(device.major);
+    write_usize(device.minor);
+    write_newline();
+    const total_gib: f64 = (device.total_memory_bytes as f64) / (1024.0 * 1024.0 * 1024.0);
+    write_str("  total memory: ");
+    write_f64(total_gib, 2);
+    write_str(" GiB\n");
+    const version: i32 = cuda_get_driver_version() catch {
+        return;
+    };
+    write_str("  ");
+    write_driver_version(version);
+    write_newline();
+}
+
+fn write_backend_path(state: &BackendState) void {
+    write_str("backend path: Cuda");
+    if state.prefer_vendor_libs {
+        write_str(", vendor_libs=on");
+    } else {
+        write_str(", vendor_libs=off");
+    }
+    if state.allow_tf32 {
+        write_str(", tf32=on");
+    } else {
+        write_str(", tf32=off");
+    }
+    if cublaslt_is_available() {
+        write_str(", cublaslt=available");
+    } else {
+        write_str(", cublaslt=unavailable");
+    }
+    if curand_is_available() {
+        write_str(", curand=available");
+    } else {
+        write_str(", curand=unavailable");
+    }
+    write_newline();
 }
 
 const MIN_H2D_GBPS: f64 = 6.0;
@@ -417,6 +487,9 @@ export fn main() i32 {
     };
 
     print_header();
+    write_device_info();
+    write_backend_path(&state);
+    write_newline();
     write_str("array size: ");
     write_usize(size);
     write_str(" elements (");
