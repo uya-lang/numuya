@@ -1,0 +1,12 @@
+use array;
+use backend;
+use cuda.device_array;
+use errors;
+use shape;
+
+export fn gpu_matmul_f32(state: &BackendState, left: &DeviceArray<f32>, right: &DeviceArray<f32>) !DeviceArray<f32> {
+    _ = state;
+    _ = left;
+    _ = right;
+    return error.NumuyaCudaError;
+}

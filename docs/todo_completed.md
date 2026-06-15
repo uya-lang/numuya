@@ -876,3 +876,15 @@
     - `make test-cuda` — 全部 CUDA 测试文件通过，exit code 0（无 GPU 时 CUDA 相关测试跳过）
     - `make test` — 全部非 CUDA 测试文件通过，exit code 0
   - 验证结果：CUDA ufunc / reduction 测试全绿；CPU ufunc / reduction 回归测试全绿； broader correctness tests 无失败。
+
+## Phase 23: CUDA linalg、random、benchmark
+
+- [x] 写 `src/numuya/_tests/test_cuda_linalg.uya`。
+  - 交付物：`src/numuya/_tests/test_cuda_linalg.uya`（含 6 个测试）
+  - 为使其可编译，同步新增占位模块 `src/numuya/cuda/linalg.uya`，`gpu_matmul_f32` 当前返回 `error.NumuyaCudaError`。
+  - 验证命令：
+    - `make test-one TEST=src/numuya/_tests/test_cuda_linalg.uya`
+    - `make test-one TEST=src/numuya/_tests/test_linalg.uya`
+  - 验证结果：
+    - `test_cuda_linalg.uya` 编译通过；6 个测试中 1 个通过（导入测试），5 个因占位实现失败，符合 TDD 预期。
+    - `test_linalg.uya` 全部 30 个测试通过，未受新模块影响。

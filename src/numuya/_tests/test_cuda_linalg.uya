@@ -1,0 +1,257 @@
+use array;
+use backend;
+use creation;
+use cuda.device_array;
+use cuda.driver;
+use cuda.linalg;
+use cuda.memory;
+use errors;
+use indexing;
+use linalg;
+use shape;
+use storage;
+use stride;
+use testing.expect_eq_usize;
+use testing.expect_shape_eq;
+
+use std.mem.allocator.IAllocator;
+use std.mem.allocator.MallocAllocator;
+
+const NUMUYA_MIB: usize = 1024 * 1024;
+const F32_TOL: f32 = 1e-4;
+
+fn expect_eq_f32(actual: f32, expected: f32, tolerance: f32) !void {
+    var diff: f32 = actual - expected;
+    if diff < 0.0 {
+        diff = 0.0 - diff;
+    }
+    if diff > tolerance {
+        return error.NumuyaExpectationFailed;
+    }
+}
+
+fn expect_matrix_close_f32(actual: &Array<f32>, expected: &[f32], tolerance: f32) !void {
+    const rows: usize = actual.shape.dims[0];
+    const cols: usize = actual.shape.dims[1];
+    try expect_eq_usize(actual.shape.rank, 2);
+    try expect_eq_usize(rows * cols, expected.len);
+
+    var i: usize = 0;
+    while i < rows {
+        var j: usize = 0;
+        while j < cols {
+            try expect_eq_f32(try get2<f32>(actual, i, j), expected[i * cols + j], tolerance);
+            j = j + 1;
+        }
+        i = i + 1;
+    }
+}
+
+fn cpu_matmul_f32(a: &Array<f32>, b: &Array<f32>, allocator: IAllocator) !Array<f32> {
+    const a_rows: usize = a.shape.dims[0];
+    const a_cols: usize = a.shape.dims[1];
+    const b_cols: usize = b.shape.dims[1];
+
+    var result: Array<f32> = try empty<f32>(allocator, shape2(a_rows, b_cols));
+    var i: usize = 0;
+    while i < a_rows {
+        var j: usize = 0;
+        while j < b_cols {
+            var sum: f32 = 0.0;
+            var k: usize = 0;
+            while k < a_cols {
+                sum = sum + (try get2<f32>(a, i, k)) * (try get2<f32>(b, k, j));
+                k = k + 1;
+            }
+            result.storage.data[i * b_cols + j] = sum;
+            j = j + 1;
+        }
+        i = i + 1;
+    }
+
+    const out_storage: &Storage<f32> = result.storage;
+    const out_offset: isize = result.offset;
+    const out_shape: Shape = result.shape;
+    const out_strides: Strides = result.strides;
+    const out_flags: ArrayFlags = result.flags;
+    result.storage = null;
+    return Array<f32>{ storage: out_storage, offset: out_offset, shape: out_shape, strides: out_strides, flags: out_flags };
+}
+
+test "cuda linalg test file imports cuda.linalg module" {
+}
+
+test "gpu_matmul_f32 multiplies 2x2 matrices" {
+    if !backend_is_cuda_available() {
+        return;
+    }
+    var state: BackendState = try backend_init(BackendKind.Cuda);
+    defer backend_deinit(&state) catch {};
+
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var pool: MemoryPool = memory_pool_new(4 * NUMUYA_MIB);
+
+    var a_data: [f32: 4] = [1.0, 2.0, 3.0, 4.0];
+    var b_data: [f32: 4] = [5.0, 6.0, 7.0, 8.0];
+    var host_a: Array<f32> = try from_slice<f32>(allocator, a_data[0:4], shape2(2, 2));
+    var host_b: Array<f32> = try from_slice<f32>(allocator, b_data[0:4], shape2(2, 2));
+
+    var device_a: DeviceArray<f32> = try device_array_from_host<f32>(&pool, &host_a, state.context, state.stream);
+    var device_b: DeviceArray<f32> = try device_array_from_host<f32>(&pool, &host_b, state.context, state.stream);
+
+    var device_result: DeviceArray<f32> = try gpu_matmul_f32(&state, &device_a, &device_b);
+    var host_result: Array<f32> = try device_array_to_host<f32>(allocator, &device_result);
+
+    var expected: [f32: 4] = [19.0, 22.0, 43.0, 50.0];
+    try expect_matrix_close_f32(&host_result, expected[0:4], F32_TOL);
+}
+
+test "gpu_matmul_f32 multiplies 16x16 matrices" {
+    if !backend_is_cuda_available() {
+        return;
+    }
+    var state: BackendState = try backend_init(BackendKind.Cuda);
+    defer backend_deinit(&state) catch {};
+
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var pool: MemoryPool = memory_pool_new(16 * NUMUYA_MIB);
+
+    var host_a: Array<f32> = try empty<f32>(allocator, shape2(16, 16));
+    var host_b: Array<f32> = try empty<f32>(allocator, shape2(16, 16));
+
+    var i: usize = 0;
+    while i < 16 {
+        var j: usize = 0;
+        while j < 16 {
+            host_a.storage.data[i * 16 + j] = ((i * 16 + j) as f32) * 0.01 + 0.1;
+            host_b.storage.data[i * 16 + j] = ((j * 16 + i) as f32) * 0.01 + 0.1;
+            j = j + 1;
+        }
+        i = i + 1;
+    }
+
+    var expected: Array<f32> = try cpu_matmul_f32(&host_a, &host_b, allocator);
+
+    var device_a: DeviceArray<f32> = try device_array_from_host<f32>(&pool, &host_a, state.context, state.stream);
+    var device_b: DeviceArray<f32> = try device_array_from_host<f32>(&pool, &host_b, state.context, state.stream);
+
+    var device_result: DeviceArray<f32> = try gpu_matmul_f32(&state, &device_a, &device_b);
+    var host_result: Array<f32> = try device_array_to_host<f32>(allocator, &device_result);
+
+    try expect_eq_usize(host_result.shape.rank, 2);
+    try expect_eq_usize(host_result.shape.dims[0], 16);
+    try expect_eq_usize(host_result.shape.dims[1], 16);
+
+    i = 0;
+    while i < 16 {
+        var j: usize = 0;
+        while j < 16 {
+            try expect_eq_f32(try get2<f32>(&host_result, i, j), try get2<f32>(&expected, i, j), F32_TOL);
+            j = j + 1;
+        }
+        i = i + 1;
+    }
+}
+
+test "gpu_matmul_f32 128x128 matches CPU result" {
+    if !backend_is_cuda_available() {
+        return;
+    }
+    var state: BackendState = try backend_init(BackendKind.Cuda);
+    defer backend_deinit(&state) catch {};
+
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var pool: MemoryPool = memory_pool_new(128 * NUMUYA_MIB);
+
+    var host_a: Array<f32> = try empty<f32>(allocator, shape2(128, 128));
+    var host_b: Array<f32> = try empty<f32>(allocator, shape2(128, 128));
+
+    var i: usize = 0;
+    while i < 128 {
+        var j: usize = 0;
+        while j < 128 {
+            host_a.storage.data[i * 128 + j] = ((i * 128 + j) as f32) * 0.001 + 0.01;
+            host_b.storage.data[i * 128 + j] = ((j * 128 + i) as f32) * 0.001 + 0.01;
+            j = j + 1;
+        }
+        i = i + 1;
+    }
+
+    var expected: Array<f32> = try cpu_matmul_f32(&host_a, &host_b, allocator);
+
+    var device_a: DeviceArray<f32> = try device_array_from_host<f32>(&pool, &host_a, state.context, state.stream);
+    var device_b: DeviceArray<f32> = try device_array_from_host<f32>(&pool, &host_b, state.context, state.stream);
+
+    var device_result: DeviceArray<f32> = try gpu_matmul_f32(&state, &device_a, &device_b);
+    var host_result: Array<f32> = try device_array_to_host<f32>(allocator, &device_result);
+
+    try expect_eq_usize(host_result.shape.rank, 2);
+    try expect_eq_usize(host_result.shape.dims[0], 128);
+    try expect_eq_usize(host_result.shape.dims[1], 128);
+
+    i = 0;
+    while i < 128 {
+        var j: usize = 0;
+        while j < 128 {
+            try expect_eq_f32(try get2<f32>(&host_result, i, j), try get2<f32>(&expected, i, j), F32_TOL);
+            j = j + 1;
+        }
+        i = i + 1;
+    }
+}
+
+test "gpu_matmul_f32 rejects incompatible inner dimensions" {
+    if !backend_is_cuda_available() {
+        return;
+    }
+    var state: BackendState = try backend_init(BackendKind.Cuda);
+    defer backend_deinit(&state) catch {};
+
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var pool: MemoryPool = memory_pool_new(4 * NUMUYA_MIB);
+
+    var a_data: [f32: 6] = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
+    var b_data: [f32: 4] = [1.0, 2.0, 3.0, 4.0];
+    var host_a: Array<f32> = try from_slice<f32>(allocator, a_data[0:6], shape2(2, 3));
+    var host_b: Array<f32> = try from_slice<f32>(allocator, b_data[0:4], shape2(2, 2));
+
+    var device_a: DeviceArray<f32> = try device_array_from_host<f32>(&pool, &host_a, state.context, state.stream);
+    var device_b: DeviceArray<f32> = try device_array_from_host<f32>(&pool, &host_b, state.context, state.stream);
+
+    const result: !DeviceArray<f32> = gpu_matmul_f32(&state, &device_a, &device_b);
+    match result {
+        error.NumuyaShapeMismatch => {}
+        else => { return error.NumuyaExpectationFailed; }
+    }
+}
+
+test "gpu_matmul_f32 output is a new owner independent of inputs" {
+    if !backend_is_cuda_available() {
+        return;
+    }
+    var state: BackendState = try backend_init(BackendKind.Cuda);
+    defer backend_deinit(&state) catch {};
+
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var pool: MemoryPool = memory_pool_new(4 * NUMUYA_MIB);
+
+    var a_data: [f32: 4] = [1.0, 2.0, 3.0, 4.0];
+    var b_data: [f32: 4] = [5.0, 6.0, 7.0, 8.0];
+    var host_a: Array<f32> = try from_slice<f32>(allocator, a_data[0:4], shape2(2, 2));
+    var host_b: Array<f32> = try from_slice<f32>(allocator, b_data[0:4], shape2(2, 2));
+
+    var device_a: DeviceArray<f32> = try device_array_from_host<f32>(&pool, &host_a, state.context, state.stream);
+    var device_b: DeviceArray<f32> = try device_array_from_host<f32>(&pool, &host_b, state.context, state.stream);
+
+    var device_result: DeviceArray<f32> = try gpu_matmul_f32(&state, &device_a, &device_b);
+
+    try expect_eq_usize(device_result.storage.ref_count, 1);
+    if device_result.flags.owns_data != true {
+        return error.NumuyaExpectationFailed;
+    }
+}
