@@ -790,3 +790,15 @@
   - PTX JIT fallback 可用。
   - 修复：`cuda_kernels_load` 优先尝试 embedded sm_86 cubin cache，失败或缺失时回退到 embedded PTX；`cuda.module` 新增 `cuda_module_load_data`，底层 Driver shim 统一走 `cuModuleLoadData`。
   - 验证：`make test-one TEST=src/numuya/_tests/test_cuda_module.uya` 通过。
+
+# NumUya TDD Todo
+## Phase 22: CUDA ufunc 与 reduction
+
+- [x] TDD: `gpu_add_f64` contiguous。
+  - 与 CPU `add_f64` 完全同 shape，容差一致。
+  - 验证：
+    - `../uya/bin/uya test src/numuya/_tests/test_cuda_ufunc.uya --manifest-path uya.toml`（聚焦运行：临时注释掉 gpu_mul_f64、broadcast、non-contiguous 测试）→ gpu_add_f64 相关 2 测试通过
+    - `../uya/bin/uya test src/numuya/_tests/test_ufunc.uya --manifest-path uya.toml` → 20 passed, 0 failed
+    - `../uya/bin/uya test src/numuya/_tests/test_cuda_module.uya --manifest-path uya.toml` → 5 passed, 0 failed
+    - `../uya/bin/uya test src/numuya/_tests/test_cuda_device_array.uya --manifest-path uya.toml` → 16 passed, 0 failed
+  - 实现要点：新增 `src/numuya/cuda/ufunc.uya`，实现同 shape contiguous 路径；通过 `device_storage_retain` 绕过 Uya 返回时自动 drop 导致的 double free；CUDA kernel 参数按 driver API `void**` 约定传各参数变量的地址。

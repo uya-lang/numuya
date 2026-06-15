@@ -35,8 +35,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 22: CUDA ufunc 与 reduction
 
-- [ ] TDD: `gpu_add_f64` contiguous。
-  - 与 CPU `add_f64` 完全同 shape，容差一致。
 - [ ] TDD: `gpu_mul_f64` contiguous。
 - [ ] TDD: broadcast add。
   - `(3,) + (2, 3)`。
