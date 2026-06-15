@@ -923,3 +923,19 @@
   - 实现：新增 `src/numuya/_benchmarks/bench_cuda.uya`，测量 CUDA 路径 H2D/D2H 带宽、`add_f64` 元素级运算与 `sum_all_f64` 归约的 wall-clock 耗时。
   - 验证命令：
     - `../uya/bin/uya run src/numuya/_benchmarks/bench_cuda.uya --manifest-path uya.toml` — exit 0，输出包含 `Benchmark: CUDA f64 arrays`、H2D/D2H 带宽、`add_f64` throughput 与 `sum_all_f64` throughput。
+
+## Phase 23: CUDA linalg、random、benchmark
+
+- [x] TDD: `gpu_matmul_f32` baseline。
+  - 2x2。
+  - 16x16。
+  - 128x128 与 CPU 结果 close。
+  - 新增 PTX kernel：`src/numuya/cuda/ptx/core_sm86.ptx` 添加 `numuya_matmul_f32`，每个线程计算输出矩阵一个元素，使用 `fma.rn.f32` 累加。
+  - 注册 kernel：`src/numuya/cuda/kernels.uya` 导出 `MATMUL_F32_KERNEL`。
+  - 实现：`src/numuya/cuda/linalg.uya` 新增 `gpu_matmul_f32`，检查 rank/形状/contiguity，分配输出 `DeviceArray<f32>`，启动 kernel 并同步。
+  - 测试调整：`src/numuya/_tests/test_cuda_linalg.uya` 中 `cpu_matmul_f32` 改用 f64 累加以获得更精确的参考值；`expect_eq_f32` 对大数值回退到相对容差，避免 128x128 大数值下 f32 累加顺序差异导致误失败。
+  - 验证命令：
+    - `NUMUYA_CUDA_REQUIRED=1 LDFLAGS="-lcuda" ../uya/bin/uya test src/numuya/_tests/test_cuda_linalg.uya --manifest-path uya.toml` — 6/6 通过
+    - `make test-cuda` — 全部 CUDA 测试文件通过
+    - `make test` — 全部非 CUDA 测试文件通过
+

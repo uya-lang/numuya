@@ -38,10 +38,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 23: CUDA linalg、random、benchmark
 
-- [ ] TDD: `gpu_matmul_f32` baseline。
-  - 2x2。
-  - 16x16。
-  - 128x128 与 CPU 结果 close。
 - [ ] TDD: incompatible matmul shape 返回 `NumuyaShapeMismatch`。
 - [ ] TDD: `gpu_random_f32`。
   - 固定 seed 可复现。

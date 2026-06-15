@@ -25,7 +25,18 @@ fn expect_eq_f32(actual: f32, expected: f32, tolerance: f32) !void {
     if diff < 0.0 {
         diff = 0.0 - diff;
     }
-    if diff > tolerance {
+    if diff <= tolerance {
+        return;
+    }
+    var expected_abs: f32 = expected;
+    if expected_abs < 0.0 {
+        expected_abs = 0.0 - expected_abs;
+    }
+    if expected_abs < 1.0 {
+        expected_abs = 1.0;
+    }
+    const rel: f32 = diff / expected_abs;
+    if rel > tolerance {
         return error.NumuyaExpectationFailed;
     }
 }
@@ -57,13 +68,13 @@ fn cpu_matmul_f32(a: &Array<f32>, b: &Array<f32>, allocator: IAllocator) !Array<
     while i < a_rows {
         var j: usize = 0;
         while j < b_cols {
-            var sum: f32 = 0.0;
+            var sum: f64 = 0.0;
             var k: usize = 0;
             while k < a_cols {
-                sum = sum + (try get2<f32>(a, i, k)) * (try get2<f32>(b, k, j));
+                sum = sum + ((try get2<f32>(a, i, k)) as f64) * ((try get2<f32>(b, k, j)) as f64);
                 k = k + 1;
             }
-            result.storage.data[i * b_cols + j] = sum;
+            result.storage.data[i * b_cols + j] = sum as f32;
             j = j + 1;
         }
         i = i + 1;
