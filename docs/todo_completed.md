@@ -802,3 +802,9 @@
     - `../uya/bin/uya test src/numuya/_tests/test_cuda_module.uya --manifest-path uya.toml` → 5 passed, 0 failed
     - `../uya/bin/uya test src/numuya/_tests/test_cuda_device_array.uya --manifest-path uya.toml` → 16 passed, 0 failed
   - 实现要点：新增 `src/numuya/cuda/ufunc.uya`，实现同 shape contiguous 路径；通过 `device_storage_retain` 绕过 Uya 返回时自动 drop 导致的 double free；CUDA kernel 参数按 driver API `void**` 约定传各参数变量的地址。
+
+## Phase 22: CUDA ufunc 与 reduction
+
+- [x] TDD: `gpu_mul_f64` contiguous。
+  - 验证命令：`NUMUYA_CUDA_REQUIRED=1 LDFLAGS="-lcuda" ../uya/bin/uya test src/numuya/_tests/test_cuda_ufunc.uya --manifest-path uya.toml`
+  - 结果：`gpu_mul_f64 contiguous matches CPU mul_f64 ... OK`
