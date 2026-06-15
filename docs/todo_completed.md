@@ -1344,3 +1344,13 @@ NUMUYA_CUDA_REQUIRED=1 LDFLAGS="-lcublasLt -lcublas -lcufft -lcurand -lcuda" ../
     - `rfft_f64`：对 2 的幂次长度实数序列调用完整 FFT，返回前 `n/2 + 1` 个非负频率复数分量（`ComplexArray`）。
     - `irfft_f64`：从 `m = n/2 + 1` 个频率分量推断原序列长度 `n = 2*(m-1)`（含 `m=1` 退化情形），按实数序列共轭对称性补全负频率分量后做 IFFT，返回实数数组。
   - 测试覆盖：长度 1/2/4/8 的 impulse、实数序列 roundtrip、非 2 的幂次拒绝。
+
+## 每次提交前检查
+
+- [x] 新功能有失败测试记录或 commit 顺序能看出 test-first。
+  - 验证命令：
+    - `git log --oneline --decorate -n 20`
+    - `git show --stat --format=medium 385897e 74ba779`
+    - `git show --unified=3 --format=medium 3d9121d -- docs/todo_failed.md docs/todo.md`
+    - `git show --unified=2 --format=medium 7f247c2 -- docs/todo_completed.md docs/todo_failed.md`
+  - 验证结果：通过；`385897e` 先添加 `squeeze/expand_dims` failing tests，`74ba779` 后实现；`.npz` 先由 `3d9121d` 记录失败任务块，后由 `7f247c2` 完成实现并记录 `test_io_npz.uya`、`test_io_npy.uya`、`make test` 通过。

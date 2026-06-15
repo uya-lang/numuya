@@ -44,7 +44,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## 每次提交前检查
 
-- [ ] 新功能有失败测试记录或 commit 顺序能看出 test-first。
 - [ ] 单个相关测试绿。
 - [ ] 已完成阶段全部测试绿。
 - [ ] 没有把实现写进测试 helper 绕过 public API。
