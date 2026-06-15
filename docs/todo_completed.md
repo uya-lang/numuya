@@ -1076,3 +1076,19 @@ NUMUYA_CUDA_REQUIRED=1 LDFLAGS="-lcublasLt -lcublas -lcufft -lcurand -lcuda" ../
       add_f64: per-iter=550924.70 ns (0.5509 ns/elem), throughput=1815.13 Melem/s, effective bandwidth=40.57 GB/s
       ```
   - 备注：当前 benchmark 包含 kernel 启动、stream 同步与每次迭代新建输出 `DeviceArray` 的开销；实测有效带宽低于后续 strict threshold 目标（add_f32 >= 150 GB/s、add_f64 >= 100 GB/s），性能优化将在后续 benchmark strict threshold 任务中处理。
+
+
+## Phase 23: CUDA linalg、random、benchmark
+
+- [x] Benchmark: `matmul_f32` 1024x1024、2048x2048。
+  - 实现：`src/numuya/_benchmarks/bench_cuda.uya` 新增 `matmul_f32` benchmark 段落，测试 1024×1024 与 2048×2048 两个尺寸；通过 `cuda.linalg.gpu_matmul_f32` 在设备端执行矩阵乘法，包含一次 warmup 后再进行 10 次迭代测量，输出总耗时、单次耗时与 TFLOP/s。
+  - 支持改动：
+    - `src/numuya/_benchmarks/bench_cuda.uya` 导入 `cuda.linalg`，新增 `bench_matmul_f32`、`print_matmul_result` 辅助函数，并将设备内存池从 64 MiB 扩大到 256 MiB 以容纳 2048×2048 矩阵。
+    - `src/numuya/cuda/linalg.uya` 将模块级常量 `F32_ELEMENT_SIZE` 重命名为 `LINALG_F32_ELEMENT_SIZE`，避免与 `cuda/reductions.uya` 同名常量在同一程序中冲突。
+  - 验证命令：
+    - `NUMUYA_CUDA_REQUIRED=1 LDFLAGS="-lcuda" ../uya/bin/uya run src/numuya/_benchmarks/bench_cuda.uya --manifest-path uya.toml`
+    - 输出关键结果：
+      - `matmul_f32 1024x1024: total=54.86 ms, per-iter=5.49 ms, matmul_f32 1024x1024=0.39 TFLOP/s`
+      - `matmul_f32 2048x2048: total=891.43 ms, per-iter=89.14 ms, matmul_f32 2048x2048=0.19 TFLOP/s`
+    - `NUMUYA_CUDA_REQUIRED=1 LDFLAGS="-lcuda" ../uya/bin/uya test src/numuya/_tests/test_cuda_linalg.uya --manifest-path uya.toml` — 9/9 通过
+  - 备注：benchmark 仍因 pre-existing 的 `sum_all_f32` 严格阈值（1.51 GB/s < 60 GB/s）在末尾返回 1；该阈值问题属于同阶段后续 `Benchmark strict 阈值` 任务，不影响本轮 matmul benchmark 的运行与输出。

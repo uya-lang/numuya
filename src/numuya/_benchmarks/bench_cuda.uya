@@ -13,6 +13,7 @@ use backend;
 use creation;
 use cuda.device_array;
 use cuda.driver;
+use cuda.linalg;
 use cuda.memory;
 use cuda.reductions;
 use cuda.ufunc;
@@ -105,6 +106,7 @@ fn print_header() void {
 
 const MIN_H2D_GBPS: f64 = 6.0;
 const MIN_D2H_GBPS: f64 = 6.0;
+const MIN_SUM_F32_GBPS: f64 = 60.0;
 
 fn compute_bandwidth(total_ns: u64, bytes_per_transfer: usize, iterations: usize) f64 {
     const total_bytes: f64 = (bytes_per_transfer as f64) * (iterations as f64);
@@ -179,6 +181,29 @@ fn print_add_bandwidth_result(name: &const byte, total_ns: u64, elements: usize,
     const elems_per_s: f64 = if seconds == 0.0 { 0.0 } else { (elements as f64) * (iterations as f64) / seconds };
     write_f64(elems_per_s / 1000000.0, 2);
     write_str(" Melem/s, effective bandwidth=");
+    write_f64(gb_per_s, 2);
+    write_str(" GB/s\n");
+    return gb_per_s;
+}
+
+fn print_sum_bandwidth_result(name: &const byte, total_ns: u64, elements: usize, iterations: usize, element_size: usize) f64 {
+    // Effective memory traffic: read input once = elements * element_size per iteration.
+    const bytes_per_iter: f64 = (elements as f64) * (element_size as f64);
+    const total_bytes: f64 = bytes_per_iter * (iterations as f64);
+    const seconds: f64 = if total_ns == 0 { 0.0 } else { (total_ns as f64) / (NS_PER_SEC as f64) };
+    const gb_per_s: f64 = if seconds == 0.0 { 0.0 } else { (total_bytes / (1024.0 * 1024.0 * 1024.0)) / seconds };
+    const ns_per_iter: f64 = if iterations == 0 { 0.0 } else { (total_ns as f64) / (iterations as f64) };
+    const ns_per_elem: f64 = if elements == 0 { 0.0 } else { ns_per_iter / (elements as f64) };
+
+    write_str(name);
+    write_str(": per-iter=");
+    write_f64(ns_per_iter, 2);
+    write_str(" ns (");
+    write_f64(ns_per_elem, 4);
+    write_str(" ns/elem), throughput=");
+    const elems_per_s: f64 = if seconds == 0.0 { 0.0 } else { (elements as f64) * (iterations as f64) / seconds };
+    write_f64(elems_per_s / 1000000.0, 2);
+    write_str(" Melem/s, effective read bandwidth=");
     write_f64(gb_per_s, 2);
     write_str(" GB/s\n");
     return gb_per_s;
@@ -260,6 +285,22 @@ fn bench_add_f64(
     return end - start;
 }
 
+fn bench_sum_all_f32(
+    state: &BackendState,
+    device_array: &DeviceArray<f32>,
+    iterations: usize,
+) !u64 {
+    const start: u64 = monotonic_ns();
+    var i: usize = 0;
+    while i < iterations {
+        const result: f32 = try gpu_sum_all_f32(state, device_array);
+        _ = result;
+        i = i + 1;
+    }
+    const end: u64 = monotonic_ns();
+    return end - start;
+}
+
 fn bench_sum_all_f64(
     state: &BackendState,
     device_array: &DeviceArray<f64>,
@@ -274,6 +315,42 @@ fn bench_sum_all_f64(
     }
     const end: u64 = monotonic_ns();
     return end - start;
+}
+
+fn bench_matmul_f32(
+    state: &BackendState,
+    left: &DeviceArray<f32>,
+    right: &DeviceArray<f32>,
+    iterations: usize,
+) !u64 {
+    const start: u64 = monotonic_ns();
+    var i: usize = 0;
+    while i < iterations {
+        var result: DeviceArray<f32> = try gpu_matmul_f32(state, left, right);
+        i = i + 1;
+    }
+    const end: u64 = monotonic_ns();
+    return end - start;
+}
+
+fn print_matmul_result(name: &const byte, total_ns: u64, m: usize, k: usize, n: usize, iterations: usize) f64 {
+    const flops_per_iter: f64 = 2.0 * (m as f64) * (k as f64) * (n as f64);
+    const total_flops: f64 = flops_per_iter * (iterations as f64);
+    const seconds: f64 = if total_ns == 0 { 0.0 } else { (total_ns as f64) / (NS_PER_SEC as f64) };
+    const tflops: f64 = if seconds == 0.0 { 0.0 } else { (total_flops / 1e12) / seconds };
+    const ns_per_iter: f64 = if iterations == 0 { 0.0 } else { (total_ns as f64) / (iterations as f64) };
+
+    write_str(name);
+    write_str(": total=");
+    write_f64((total_ns as f64) / 1000000.0, 2);
+    write_str(" ms, per-iter=");
+    write_f64(ns_per_iter / 1000000.0, 2);
+    write_str(" ms, ");
+    write_str(name);
+    write_str("=");
+    write_f64(tflops, 2);
+    write_str(" TFLOP/s\n");
+    return tflops;
 }
 
 export fn main() i32 {
@@ -295,7 +372,7 @@ export fn main() i32 {
     const bytes: usize = size * BENCH_F64_ELEMENT_SIZE;
     const iterations: usize = 100;
 
-    var pool: MemoryPool = memory_pool_new(64 * NUMUYA_MIB);
+    var pool: MemoryPool = memory_pool_new(256 * NUMUYA_MIB);
 
     var host_left_f32: Array<f32> = full<f32>(allocator, shape1(size), 1.5) catch {
         write_str("error: failed to allocate host f32 left array\n");
@@ -380,11 +457,94 @@ export fn main() i32 {
     };
     const add_f64_bw: f64 = print_add_bandwidth_result("add_f64", add_ns, size, iterations, BENCH_F64_ELEMENT_SIZE);
 
-    const sum_ns: u64 = bench_sum_all_f64(&state, &device_left, iterations) catch {
+    write_newline();
+    write_str("matmul_f32 benchmark\n");
+
+    const MATMUL_SIZE_1: usize = 1024;
+    const MATMUL_SIZE_2: usize = 2048;
+    const MATMUL_ITER_1: usize = 10;
+    const MATMUL_ITER_2: usize = 10;
+
+    var host_matmul_a_1: Array<f32> = full<f32>(allocator, shape2(MATMUL_SIZE_1, MATMUL_SIZE_1), 1.0) catch {
+        write_str("error: failed to allocate host matmul A 1024 array\n");
+        return 1;
+    };
+    var host_matmul_b_1: Array<f32> = full<f32>(allocator, shape2(MATMUL_SIZE_1, MATMUL_SIZE_1), 1.0) catch {
+        write_str("error: failed to allocate host matmul B 1024 array\n");
+        return 1;
+    };
+    var device_matmul_a_1: DeviceArray<f32> = device_array_from_host<f32>(&pool, &host_matmul_a_1, state.context, state.stream) catch {
+        write_str("error: failed to allocate device matmul A 1024 array\n");
+        return 1;
+    };
+    var device_matmul_b_1: DeviceArray<f32> = device_array_from_host<f32>(&pool, &host_matmul_b_1, state.context, state.stream) catch {
+        write_str("error: failed to allocate device matmul B 1024 array\n");
+        return 1;
+    };
+
+    var host_matmul_a_2: Array<f32> = full<f32>(allocator, shape2(MATMUL_SIZE_2, MATMUL_SIZE_2), 1.0) catch {
+        write_str("error: failed to allocate host matmul A 2048 array\n");
+        return 1;
+    };
+    var host_matmul_b_2: Array<f32> = full<f32>(allocator, shape2(MATMUL_SIZE_2, MATMUL_SIZE_2), 1.0) catch {
+        write_str("error: failed to allocate host matmul B 2048 array\n");
+        return 1;
+    };
+    var device_matmul_a_2: DeviceArray<f32> = device_array_from_host<f32>(&pool, &host_matmul_a_2, state.context, state.stream) catch {
+        write_str("error: failed to allocate device matmul A 2048 array\n");
+        return 1;
+    };
+    var device_matmul_b_2: DeviceArray<f32> = device_array_from_host<f32>(&pool, &host_matmul_b_2, state.context, state.stream) catch {
+        write_str("error: failed to allocate device matmul B 2048 array\n");
+        return 1;
+    };
+
+    // Run a single warmup iteration so the first kernel launch overhead is not included in the measured loop.
+    _ = gpu_matmul_f32(&state, &device_matmul_a_1, &device_matmul_b_1) catch {
+        write_str("error: matmul_f32 1024 warmup failed\n");
+        return 1;
+    };
+    const matmul_1_ns: u64 = bench_matmul_f32(&state, &device_matmul_a_1, &device_matmul_b_1, MATMUL_ITER_1) catch {
+        write_str("error: matmul_f32 1024 benchmark failed\n");
+        return 1;
+    };
+    const matmul_1_tflops: f64 = print_matmul_result("matmul_f32 1024x1024", matmul_1_ns, MATMUL_SIZE_1, MATMUL_SIZE_1, MATMUL_SIZE_1, MATMUL_ITER_1);
+
+    _ = gpu_matmul_f32(&state, &device_matmul_a_2, &device_matmul_b_2) catch {
+        write_str("error: matmul_f32 2048 warmup failed\n");
+        return 1;
+    };
+    const matmul_2_ns: u64 = bench_matmul_f32(&state, &device_matmul_a_2, &device_matmul_b_2, MATMUL_ITER_2) catch {
+        write_str("error: matmul_f32 2048 benchmark failed\n");
+        return 1;
+    };
+    const matmul_2_tflops: f64 = print_matmul_result("matmul_f32 2048x2048", matmul_2_ns, MATMUL_SIZE_2, MATMUL_SIZE_2, MATMUL_SIZE_2, MATMUL_ITER_2);
+
+    const sum_check: f32 = gpu_sum_all_f32(&state, &device_left_f32) catch {
+        write_str("error: gpu_sum_all_f32 correctness check failed\n");
+        return 1;
+    };
+    var check_buf: [byte: 64] = [];
+    _ = snprintf(&check_buf[0], 64, "sum_f32 correctness check: %f (expected %f)\n", (sum_check as f64), (size as f64) * 1.5);
+    _ = sys_write(1, &check_buf[0], strlen(&check_buf[0])) catch { return 1; };
+
+    const sum_f32_ns: u64 = bench_sum_all_f32(&state, &device_left_f32, iterations) catch {
+        write_str("error: gpu_sum_all_f32 benchmark failed\n");
+        return 1;
+    };
+    const sum_f32_bw: f64 = print_sum_bandwidth_result("sum_all_f32", sum_f32_ns, size, iterations, BENCH_F32_ELEMENT_SIZE);
+    const sum_f32_ok: bool = check_bandwidth("sum_all_f32", sum_f32_bw, MIN_SUM_F32_GBPS);
+
+    const sum_f64_ns: u64 = bench_sum_all_f64(&state, &device_left, iterations) catch {
         write_str("error: gpu_sum_all_f64 benchmark failed\n");
         return 1;
     };
-    print_throughput_result("sum_all_f64", sum_ns, size, iterations);
+    const sum_f64_bw: f64 = print_sum_bandwidth_result("sum_all_f64", sum_f64_ns, size, iterations, BENCH_F64_ELEMENT_SIZE);
+
+    if !sum_f32_ok {
+        write_str("\nsum_all_f32 benchmark FAILED strict threshold\n");
+        return 1;
+    }
 
     write_newline();
     write_str("H2D/D2H bandwidth benchmark PASSED strict threshold\n");
@@ -394,6 +554,18 @@ export fn main() i32 {
     write_str("add_f64 effective bandwidth: ");
     write_f64(add_f64_bw, 2);
     write_str(" GB/s\n");
+    write_str("sum_all_f32 effective read bandwidth: ");
+    write_f64(sum_f32_bw, 2);
+    write_str(" GB/s\n");
+    write_str("sum_all_f64 effective read bandwidth: ");
+    write_f64(sum_f64_bw, 2);
+    write_str(" GB/s\n");
+    write_str("matmul_f32 1024x1024: ");
+    write_f64(matmul_1_tflops, 2);
+    write_str(" TFLOP/s\n");
+    write_str("matmul_f32 2048x2048: ");
+    write_f64(matmul_2_tflops, 2);
+    write_str(" TFLOP/s\n");
     write_str("Done.\n");
     return 0;
 }

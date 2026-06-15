@@ -9,11 +9,11 @@ use cuda.module;
 use errors;
 use shape;
 
-const F32_ELEMENT_SIZE: usize = 4;
+const LINALG_F32_ELEMENT_SIZE: usize = 4;
 
 fn device_ptr_with_offset_f32(array_value: &DeviceArray<f32>) usize {
     const base: usize = array_value.storage.ptr as usize;
-    const offset_bytes: usize = array_value.offset * F32_ELEMENT_SIZE;
+    const offset_bytes: usize = array_value.offset * LINALG_F32_ELEMENT_SIZE;
     return base + offset_bytes;
 }
 
