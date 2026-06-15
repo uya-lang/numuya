@@ -89,7 +89,7 @@ fn is_f_contiguous_ref(shape_value: &Shape, strides_value: &Strides) bool {
     return true;
 }
 
-fn make_flags_ref(shape_value: &Shape, strides_value: &Strides, writeable: bool, owns_data: bool) ArrayFlags {
+export fn make_flags_ref(shape_value: &Shape, strides_value: &Strides, writeable: bool, owns_data: bool) ArrayFlags {
     return ArrayFlags{
         c_contiguous: is_c_contiguous_ref(shape_value, strides_value),
         f_contiguous: is_f_contiguous_ref(shape_value, strides_value),

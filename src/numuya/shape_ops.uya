@@ -314,3 +314,140 @@ export fn hstack2<T>(allocator: IAllocator, a: &Array<T>, b: &Array<T>) !Array<T
     return concatenate2<T>(allocator, a, b, 1);
 }
 
+export fn expand_dims<T>(array_value: &Array<T>, axis: i32) !Array<T> {
+    try validate_array_metadata<T>(array_value);
+    const rank: usize = array_value.shape.rank;
+    const output_rank: usize = rank + 1;
+    if output_rank > NUMUYA_MAX_DIMS {
+        return error.NumuyaRankTooLarge;
+    }
+
+    const normalized_axis: usize = try normalize_axis(axis, output_rank);
+    if normalized_axis >= NUMUYA_MAX_DIMS {
+        return error.NumuyaAxisOutOfBounds;
+    }
+
+    var new_shape: Shape = shape_scalar();
+    new_shape.rank = output_rank;
+
+    var new_strides: Strides = Strides{ rank: output_rank, steps: [0: NUMUYA_MAX_DIMS] };
+
+    var src_axis: usize = 0;
+    var dst_axis: usize = 0;
+    while dst_axis < output_rank {
+        if dst_axis >= NUMUYA_MAX_DIMS {
+            return error.NumuyaRankTooLarge;
+        }
+        if dst_axis == normalized_axis {
+            new_shape.dims[dst_axis] = 1;
+            if src_axis < rank {
+                new_strides.steps[dst_axis] = array_value.strides.steps[src_axis];
+            } else {
+                new_strides.steps[dst_axis] = 1;
+            }
+        } else {
+            if src_axis >= NUMUYA_MAX_DIMS {
+                return error.NumuyaRankTooLarge;
+            }
+            new_shape.dims[dst_axis] = array_value.shape.dims[src_axis];
+            new_strides.steps[dst_axis] = array_value.strides.steps[src_axis];
+            src_axis = src_axis + 1;
+        }
+        dst_axis = dst_axis + 1;
+    }
+
+    storage_retain<T>(array_value.storage);
+
+    return Array<T>{
+        storage: array_value.storage,
+        offset: array_value.offset,
+        shape: new_shape,
+        strides: new_strides,
+        flags: make_flags_ref(&new_shape, &new_strides, array_value.flags.writeable, false),
+    };
+}
+
+export fn squeeze<T>(array_value: &Array<T>) !Array<T> {
+    try validate_array_metadata<T>(array_value);
+    const rank: usize = array_value.shape.rank;
+
+    var new_shape: Shape = shape_scalar();
+    var new_strides: Strides = Strides{ rank: 0, steps: [0: NUMUYA_MAX_DIMS] };
+
+    var src_axis: usize = 0;
+    var dst_axis: usize = 0;
+    while src_axis < rank {
+        if src_axis >= NUMUYA_MAX_DIMS {
+            return error.NumuyaRankTooLarge;
+        }
+        if array_value.shape.dims[src_axis] != 1 {
+            if dst_axis >= NUMUYA_MAX_DIMS {
+                return error.NumuyaRankTooLarge;
+            }
+            new_shape.dims[dst_axis] = array_value.shape.dims[src_axis];
+            new_strides.steps[dst_axis] = array_value.strides.steps[src_axis];
+            dst_axis = dst_axis + 1;
+        }
+        src_axis = src_axis + 1;
+    }
+
+    new_shape.rank = dst_axis;
+    new_strides.rank = dst_axis;
+
+    storage_retain<T>(array_value.storage);
+
+    return Array<T>{
+        storage: array_value.storage,
+        offset: array_value.offset,
+        shape: new_shape,
+        strides: new_strides,
+        flags: make_flags_ref(&new_shape, &new_strides, array_value.flags.writeable, false),
+    };
+}
+
+export fn squeeze_axis<T>(array_value: &Array<T>, axis: i32) !Array<T> {
+    try validate_array_metadata<T>(array_value);
+    const rank: usize = array_value.shape.rank;
+
+    const normalized_axis: usize = try normalize_axis(axis, rank);
+    if normalized_axis >= NUMUYA_MAX_DIMS {
+        return error.NumuyaAxisOutOfBounds;
+    }
+    if array_value.shape.dims[normalized_axis] != 1 {
+        return error.NumuyaInvalidArgument;
+    }
+
+    var new_shape: Shape = shape_scalar();
+    var new_strides: Strides = Strides{ rank: 0, steps: [0: NUMUYA_MAX_DIMS] };
+
+    var src_axis: usize = 0;
+    var dst_axis: usize = 0;
+    while src_axis < rank {
+        if src_axis >= NUMUYA_MAX_DIMS {
+            return error.NumuyaRankTooLarge;
+        }
+        if src_axis != normalized_axis {
+            if dst_axis >= NUMUYA_MAX_DIMS {
+                return error.NumuyaRankTooLarge;
+            }
+            new_shape.dims[dst_axis] = array_value.shape.dims[src_axis];
+            new_strides.steps[dst_axis] = array_value.strides.steps[src_axis];
+            dst_axis = dst_axis + 1;
+        }
+        src_axis = src_axis + 1;
+    }
+
+    new_shape.rank = dst_axis;
+    new_strides.rank = dst_axis;
+
+    storage_retain<T>(array_value.storage);
+
+    return Array<T>{
+        storage: array_value.storage,
+        offset: array_value.offset,
+        shape: new_shape,
+        strides: new_strides,
+        flags: make_flags_ref(&new_shape, &new_strides, array_value.flags.writeable, false),
+    };
+}
+

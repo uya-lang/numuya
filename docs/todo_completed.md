@@ -1256,3 +1256,17 @@ NUMUYA_CUDA_REQUIRED=1 LDFLAGS="-lcublasLt -lcublas -lcufft -lcurand -lcuda" ../
 实现文件：
 - `src/numuya/shape_ops.uya`：新增 `concatenate2`、`concatenate3`、`stack2`、`vstack2`、`hstack2`
 - `src/numuya/_tests/test_shape_ops.uya`：对应 TDD 测试
+
+## Phase 24: NumPy 兼容面扩展
+
+- [x] `squeeze/expand_dims`。
+  - 实现：在 `src/numuya/shape_ops.uya` 新增 `expand_dims<T>`、`squeeze<T>`、`squeeze_axis<T>` 三个导出函数；在 `src/numuya/stride.uya` 导出 `make_flags_ref` 供视图构造使用。
+  - 测试：在 `src/numuya/_tests/test_shape_ops.uya` 新增 4 个测试用例。
+  - 验证命令：
+    ```
+    make test-one TEST=src/numuya/_tests/test_shape_ops.uya
+    make test
+    ```
+  - 验证结果：
+    - `test_shape_ops.uya`：11 tests passed, 0 failed。
+    - `make test`（非 CUDA 全量）：22 个测试文件全部通过，无失败。
