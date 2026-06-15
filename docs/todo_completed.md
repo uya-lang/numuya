@@ -1176,3 +1176,17 @@ NUMUYA_CUDA_REQUIRED=1 LDFLAGS="-lcublasLt -lcublas -lcufft -lcurand -lcuda" ../
   - 验证命令与结果：
     - `make test-one TEST=src/numuya/_tests/test_ufunc.uya` => 24 tests passed, 0 failed。
     - `make test` => 所有非 CUDA 测试通过（exit 0）。
+
+## Phase 24: NumPy 兼容面扩展
+
+- [x] `clip`。
+  - 新增测试：`src/numuya/_tests/test_math.uya` 添加 4 个测试：
+    - `clip_f64 clamps values between min and max`
+    - `clip_f64 handles rank-2 contiguous arrays`
+    - `clip_f64 handles non-contiguous transpose input`
+    - `clip_f64 output is a new owner independent of input`
+  - 实现：`src/numuya/math.uya` 新增 `apply_clip` 辅助与导出 `clip_f64(input: &Array<f64>, min_val: f64, max_val: f64) !Array<f64>`， contiguous 输入直接遍历，非 contiguous 输入通过 `unary_stride_indices` 按 strides 访问，返回拥有独立 storage 的新数组。
+  - 验证命令：
+    - `../uya/bin/uya test src/numuya/_tests/test_math.uya --manifest-path uya.toml` — 19/19 通过
+    - `make test` — 全部非 CUDA 测试文件通过，exit code 0
+

@@ -210,3 +210,45 @@ export fn cos_f64(input: &Array<f64>) !Array<f64> {
         flags: result.flags,
     };
 }
+
+fn apply_clip(x: f64, min_val: f64, max_val: f64) f64 {
+    if x < min_val {
+        return min_val;
+    }
+    if x > max_val {
+        return max_val;
+    }
+    return x;
+}
+
+export fn clip_f64(input: &Array<f64>, min_val: f64, max_val: f64) !Array<f64> {
+    var result: Array<f64> = try empty<f64>(input.storage.allocator, clone_shape(&input.shape));
+
+    if unary_op_use_contiguous_path<f64>(input, &result) {
+        const input_base: usize = try offset_as_usize(input.offset);
+        const result_base: usize = try offset_as_usize(result.offset);
+        const size: usize = array_size<f64>(&result);
+        var i: usize = 0;
+        while i < size {
+            result.storage.data[result_base + i] = apply_clip(input.storage.data[input_base + i], min_val, max_val);
+            i = i + 1;
+        }
+    } else {
+        const size: usize = array_size<f64>(&result);
+        var linear: usize = 0;
+        while linear < size {
+            const idx: UnaryIndices = try unary_stride_indices<f64>(input, &result, linear);
+            result.storage.data[idx.result_idx] = apply_clip(input.storage.data[idx.input_idx], min_val, max_val);
+            linear = linear + 1;
+        }
+    }
+
+    storage_retain<f64>(result.storage);
+    return Array<f64>{
+        storage: result.storage,
+        offset: result.offset,
+        shape: result.shape,
+        strides: result.strides,
+        flags: result.flags,
+    };
+}

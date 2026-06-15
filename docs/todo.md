@@ -40,7 +40,7 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 24: NumPy 兼容面扩展
 
-- [ ] `clip`。
+- [x] `clip`。
 - [ ] `maximum/minimum`。
 - [ ] `cumsum/cumprod`。
 - [ ] `concatenate/stack/vstack/hstack`。
