@@ -1,3 +1,4 @@
+use backend;
 use cuda.driver;
 use cuda.kernels;
 use cuda.module;
@@ -37,5 +38,33 @@ test "cuda_module_get_function returns unavailable or error when cuda is absent"
         error.NumuyaGpuUnavailable => {}
         error.NumuyaCudaError => {}
         else => { return error.NumuyaExpectationFailed; }
+    }
+}
+
+test "cuda_kernels_load loads embedded PTX and resolves kernel functions on sm_86" {
+    if !backend_is_cuda_available() {
+        return;
+    }
+    try cuda_init();
+    const ctx: usize = try cuda_create_context(0);
+    defer cuda_destroy_context(ctx) catch {};
+
+    const module: usize = try cuda_kernels_load(ctx);
+    if module == 0 {
+        return error.NumuyaExpectationFailed;
+    }
+    defer cuda_module_unload(module) catch {};
+
+    const add_func: usize = try cuda_module_get_function(module, ADD_F64_KERNEL);
+    if add_func == 0 {
+        return error.NumuyaExpectationFailed;
+    }
+    const mul_func: usize = try cuda_module_get_function(module, MUL_F64_KERNEL);
+    if mul_func == 0 {
+        return error.NumuyaExpectationFailed;
+    }
+    const sum_func: usize = try cuda_module_get_function(module, SUM_ALL_F64_KERNEL);
+    if sum_func == 0 {
+        return error.NumuyaExpectationFailed;
     }
 }

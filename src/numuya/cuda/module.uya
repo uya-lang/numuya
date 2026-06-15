@@ -3,6 +3,7 @@ use errors;
 export error NumuyaCudaModuleError;
 
 extern fn numuya_cuda_module_load_ptx(context: usize, ptx: &const byte, module: &usize) i32;
+extern fn numuya_cuda_module_load_data(context: usize, image: &const byte, module: &usize) i32;
 extern fn numuya_cuda_module_get_function(module: usize, name: &const byte, func: &usize) i32;
 extern fn numuya_cuda_module_unload(module: usize) i32;
 extern fn numuya_cuda_launch_kernel(
@@ -15,8 +16,12 @@ extern fn numuya_cuda_launch_kernel(
 ) i32;
 
 export fn cuda_module_load_ptx(context: usize, ptx: &const byte) !usize {
+    return cuda_module_load_data(context, ptx);
+}
+
+export fn cuda_module_load_data(context: usize, image: &const byte) !usize {
     var module: usize = 0;
-    const status: i32 = numuya_cuda_module_load_ptx(context, ptx, &module);
+    const status: i32 = numuya_cuda_module_load_data(context, image, &module);
     if status == 0 {
         return module;
     } else if status == 1 {

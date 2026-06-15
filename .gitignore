@@ -1,1 +1,2 @@
 .uyacache/
+src/numuya/cuda/ptx/*.cubin

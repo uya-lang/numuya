@@ -7,6 +7,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <dlfcn.h>
 
 #define NUMUYA_CUDA_OK 0
@@ -14,12 +15,14 @@
 #define NUMUYA_CUDA_ERROR 2
 #define NUMUYA_CUDA_DEVICE_MISMATCH 3
 
-typedef int CUresult;
+typedef enum CUresult_enum {
+    CUDA_SUCCESS = 0
+} CUresult;
 typedef int CUdevice;
 
-typedef void* CUcontext;
+typedef struct CUctx_st* CUcontext;
 
-typedef void* CUstream;
+typedef struct CUstream_st* CUstream;
 
 typedef CUresult (*numuya_cuInit_t)(unsigned int);
 typedef CUresult (*numuya_cuDeviceGet_t)(CUdevice*, int);
@@ -38,8 +41,8 @@ typedef CUresult (*numuya_cuMemcpyDtoH_t)(void*, size_t, size_t);
 typedef CUresult (*numuya_cuMemcpyHtoDAsync_t)(size_t, const void*, size_t, CUstream);
 typedef CUresult (*numuya_cuMemcpyDtoHAsync_t)(void*, size_t, size_t, CUstream);
 
-typedef void* CUmodule;
-typedef void* CUfunction;
+typedef struct CUmod_st* CUmodule;
+typedef struct CUfunc_st* CUfunction;
 
 typedef CUresult (*numuya_cuModuleLoadData_t)(CUmodule*, const void*);
 typedef CUresult (*numuya_cuModuleGetFunction_t)(CUfunction*, CUmodule, const char*);
@@ -72,7 +75,7 @@ static numuya_cuModuleGetFunction_t numuya_pfn_cuModuleGetFunction = NULL;
 static numuya_cuModuleUnload_t numuya_pfn_cuModuleUnload = NULL;
 static numuya_cuLaunchKernel_t numuya_pfn_cuLaunchKernel = NULL;
 
-static void* numuya_current_context = NULL;
+static CUcontext numuya_current_context = NULL;
 
 #define NUMUYA_MAX_STREAMS 256
 typedef struct {
@@ -516,7 +519,7 @@ int numuya_cuda_memcpy_dtoh_async(void* dst, size_t src, size_t size, size_t str
     return NUMUYA_CUDA_OK;
 }
 
-int numuya_cuda_module_load_ptx(void* context, const char* ptx, void** module) {
+int numuya_cuda_module_load_data(void* context, const void* image, void** module) {
     const int status = numuya_cuda_load();
     if (status != NUMUYA_CUDA_OK) {
         return status;
@@ -529,13 +532,17 @@ int numuya_cuda_module_load_ptx(void* context, const char* ptx, void** module) {
     numuya_current_context = context;
 
     CUmodule mod = NULL;
-    const CUresult res = numuya_pfn_cuModuleLoadData(&mod, ptx);
+    const CUresult res = numuya_pfn_cuModuleLoadData(&mod, image);
     if (res != 0) {
         return NUMUYA_CUDA_ERROR;
     }
 
     *module = mod;
     return NUMUYA_CUDA_OK;
+}
+
+int numuya_cuda_module_load_ptx(void* context, const char* ptx, void** module) {
+    return numuya_cuda_module_load_data(context, ptx, module);
 }
 
 int numuya_cuda_module_get_function(void* module, const char* name, void** func) {
