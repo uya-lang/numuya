@@ -74,7 +74,7 @@ fn cpu_matmul_f32(a: &Array<f32>, b: &Array<f32>, allocator: IAllocator) !Array<
                 sum = sum + ((try get2<f32>(a, i, k)) as f64) * ((try get2<f32>(b, k, j)) as f64);
                 k = k + 1;
             }
-            result.storage.data[i * b_cols + j] = sum as f32;
+            try set2<f32>(&result, i, j, sum as f32);
             j = j + 1;
         }
         i = i + 1;

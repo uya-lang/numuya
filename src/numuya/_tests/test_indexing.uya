@@ -1,73 +1,25 @@
 use array;
+use creation;
 use indexing;
 use shape;
-use storage;
 use testing.expect_close_f64;
 
 use std.mem.allocator.IAllocator;
 use std.mem.allocator.MallocAllocator;
 
-fn make_flags() ArrayFlags {
-    return ArrayFlags{
-        c_contiguous: true,
-        f_contiguous: false,
-        writeable: true,
-        owns_data: true,
-    };
-}
-
-fn make_strides1() Strides {
-    var stride_values: [isize: NUMUYA_MAX_DIMS] = [0: NUMUYA_MAX_DIMS];
-    stride_values[0] = 1;
-    return Strides{ rank: 1, steps: stride_values };
-}
-
-fn make_strides2(dim1: usize) Strides {
-    var stride_values: [isize: NUMUYA_MAX_DIMS] = [0: NUMUYA_MAX_DIMS];
-    stride_values[0] = (dim1 as! isize).value;
-    stride_values[1] = 1;
-    return Strides{ rank: 2, steps: stride_values };
-}
-
-fn make_strides3(dim1: usize, dim2: usize) Strides {
-    var stride_values: [isize: NUMUYA_MAX_DIMS] = [0: NUMUYA_MAX_DIMS];
-    stride_values[0] = ((dim1 * dim2) as! isize).value;
-    stride_values[1] = (dim2 as! isize).value;
-    stride_values[2] = 1;
-    return Strides{ rank: 3, steps: stride_values };
-}
-
 fn make_array1(allocator: IAllocator, dim0: usize) !Array<f64> {
-    const storage_value: &Storage<f64> = try storage_new<f64>(allocator, dim0);
-    return Array<f64>{
-        storage: storage_value,
-        offset: 0,
-        shape: shape1(dim0),
-        strides: make_strides1(),
-        flags: make_flags(),
-    };
+    const array_value: Array<f64> = try empty<f64>(allocator, shape1(dim0));
+    return array_value;
 }
 
 fn make_array2(allocator: IAllocator, dim0: usize, dim1: usize) !Array<f64> {
-    const storage_value: &Storage<f64> = try storage_new<f64>(allocator, dim0 * dim1);
-    return Array<f64>{
-        storage: storage_value,
-        offset: 0,
-        shape: shape2(dim0, dim1),
-        strides: make_strides2(dim1),
-        flags: make_flags(),
-    };
+    const array_value: Array<f64> = try empty<f64>(allocator, shape2(dim0, dim1));
+    return array_value;
 }
 
 fn make_array3(allocator: IAllocator, dim0: usize, dim1: usize, dim2: usize) !Array<f64> {
-    const storage_value: &Storage<f64> = try storage_new<f64>(allocator, dim0 * dim1 * dim2);
-    return Array<f64>{
-        storage: storage_value,
-        offset: 0,
-        shape: shape3(dim0, dim1, dim2),
-        strides: make_strides3(dim1, dim2),
-        flags: make_flags(),
-    };
+    const array_value: Array<f64> = try empty<f64>(allocator, shape3(dim0, dim1, dim2));
+    return array_value;
 }
 
 test "set1 and get1 read back rank-one elements" {

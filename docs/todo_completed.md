@@ -1366,3 +1366,12 @@ NUMUYA_CUDA_REQUIRED=1 LDFLAGS="-lcublasLt -lcublas -lcufft -lcurand -lcuda" ../
   - 验证: `make test` 通过。
   - 验证: `make test-cuda` 通过。
   - 验证: `make test-cuda-vendor` 通过，链接 `-lcublasLt -lcublas -lcufft -lcurand -lcuda`。
+
+## 每次提交前检查
+
+- [x] 没有把实现写进测试 helper 绕过 public API。
+  - 变更：`test_cuda_linalg.uya` 的 `cpu_matmul_f32` 参考 helper 改用 `set2<f32>` 写入结果；`test_indexing.uya` 的 `make_array*` helper 改用 `empty<f64>`，不再手写 storage/strides/flags。
+  - 验证：`rg -n 'fn make_|fn cpu_matmul_f32|storage_new|make_strides|make_flags|storage\.data\[[^\]]+\]\s*=' src/numuya/_tests src/numuya/testing -g '*.uya'` -> 仅剩 storage/device_storage 自测正文、fixture 填充正文，以及已走 public API 的 helper；未发现测试 helper 绕过 public API 写实现。
+  - 验证：`make test-one TEST=src/numuya/_tests/test_indexing.uya` -> PASS，6/6 tests passed。
+  - 验证：`make test-one TEST=src/numuya/_tests/test_cuda_linalg.uya` -> PASS，10/10 tests passed。
+  - 验证：`make test` -> PASS，退出码 0。
