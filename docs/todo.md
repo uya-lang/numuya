@@ -38,8 +38,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 23: CUDA linalg、random、benchmark
 
-- [ ] 验收：correctness tests 绿；benchmark 可单独运行，不进入普通测试。
-
 ## Phase 24: NumPy 兼容面扩展
 
 - [ ] `where`。

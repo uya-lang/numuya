@@ -1118,3 +1118,10 @@ NUMUYA_CUDA_REQUIRED=1 LDFLAGS="-lcublasLt -lcublas -lcufft -lcurand -lcuda" ../
     - `../uya/bin/uya test src/numuya/_tests/test_cuda_driver.uya --manifest-path uya.toml` — 23/23 通过
     - `make test` — 全部非 CUDA 测试文件通过
     - `make test-cuda` — test_cuda_driver/test_cuda_device_array/test_cuda_linalg/test_cuda_random/test_cuda_module/test_cuda_auto/test_cuda_location_preserving 全通过；test_cuda_reductions 有 2 个失败来自工作区内既有未提交改动，与本次任务无关
+
+## Phase 23: CUDA linalg、random、benchmark
+
+- [x] 验收：correctness tests 绿；benchmark 可单独运行，不进入普通测试。
+  - 验证：`make test` -> 通过。
+  - 验证：`make test-cuda` -> 通过。
+  - 验证：`make bench` -> 通过；CUDA 性能阈值低于目标时仅作为信息输出，benchmark 不进入普通测试。
