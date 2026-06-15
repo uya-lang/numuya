@@ -1092,3 +1092,7 @@ NUMUYA_CUDA_REQUIRED=1 LDFLAGS="-lcublasLt -lcublas -lcufft -lcurand -lcuda" ../
       - `matmul_f32 2048x2048: total=891.43 ms, per-iter=89.14 ms, matmul_f32 2048x2048=0.19 TFLOP/s`
     - `NUMUYA_CUDA_REQUIRED=1 LDFLAGS="-lcuda" ../uya/bin/uya test src/numuya/_tests/test_cuda_linalg.uya --manifest-path uya.toml` — 9/9 通过
   - 备注：benchmark 仍因 pre-existing 的 `sum_all_f32` 严格阈值（1.51 GB/s < 60 GB/s）在末尾返回 1；该阈值问题属于同阶段后续 `Benchmark strict 阈值` 任务，不影响本轮 matmul benchmark 的运行与输出。
+
+## Phase 23: CUDA linalg、random、benchmark
+
+- [x] Benchmark: `matmul_f32` 1024x1024、2048x2048。
