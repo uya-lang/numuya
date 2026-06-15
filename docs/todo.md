@@ -44,7 +44,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## 每次提交前检查
 
-- [ ] 已完成阶段全部测试绿。
 - [ ] 没有把实现写进测试 helper 绕过 public API。
 - [ ] CPU core 没有 runtime 依赖 Python/NumPy/BLAS/LAPACK/libm/C helper。
 - [ ] CUDA backend 没有 Python/NumPy/PyTorch/C helper 依赖；CUDA Driver API 绑定和可选 cuBLAS/cuFFT/cuRAND backend 必须在文档与配置中显式开启。

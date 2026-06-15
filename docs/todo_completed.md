@@ -1359,3 +1359,10 @@ NUMUYA_CUDA_REQUIRED=1 LDFLAGS="-lcublasLt -lcublas -lcufft -lcurand -lcuda" ../
 
 - [x] 单个相关测试绿。
   验证: `make test-one` -> PASS (`src/numuya/_tests/test_testing_helpers.uya`; 2 tests OK, 0 failed).
+
+## 每次提交前检查
+
+- [x] 已完成阶段全部测试绿。
+  - 验证: `make test` 通过。
+  - 验证: `make test-cuda` 通过。
+  - 验证: `make test-cuda-vendor` 通过，链接 `-lcublasLt -lcublas -lcufft -lcurand -lcuda`。
