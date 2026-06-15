@@ -38,14 +38,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 23: CUDA linalg、random、benchmark
 
-- [ ] Benchmark strict 阈值。
-  - H2D/D2H pageable copy 各自 >= 6 GiB/s。
-  - contiguous `add_f32` 有效内存带宽 >= 150 GiB/s。
-  - contiguous `add_f64` 有效内存带宽 >= 100 GiB/s。
-  - `sum_f32` 有效读带宽 >= 60 GiB/s。
-  - pure kernel `matmul_f32` 1024x1024 >= 1.0 TFLOP/s。
-  - vendor cuBLASLt + TF32 2048x2048 启用时 >= 6.0 TFLOP/s。
-  - random fill f32 >= 40 GiB/s。
 - [ ] 验收：correctness tests 绿；benchmark 可单独运行，不进入普通测试。
 
 ## Phase 24: NumPy 兼容面扩展

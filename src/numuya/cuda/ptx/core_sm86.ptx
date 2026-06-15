@@ -285,6 +285,166 @@ END:
     ret;
 }
 
+.visible .entry numuya_sum_all_f32(
+    .param .u64 numuya_sum_all_f32_param_0,
+    .param .u64 numuya_sum_all_f32_param_1,
+    .param .u64 numuya_sum_all_f32_param_2,
+    .param .u64 numuya_sum_all_f32_param_3
+)
+{
+    .shared .f32 sdata[256];
+
+    .reg .u32   r32_tid, r32_bid, r32_ntid, r32_nctaid, r32_s, r32_tmp;
+    .reg .u64   r64_result, r64_input, r64_n, r64_tid, r64_bid, r64_ntid, r64_nctaid, r64_stride, r64_idx;
+    .reg .u64   r64_off, r64_addr_in, r64_sbase, r64_saddr, r64_addr;
+    .reg .f32   f32_sum, f32_val;
+    .reg .pred  p;
+
+    ld.param.u64    r64_result, [numuya_sum_all_f32_param_0];
+    ld.param.u64    r64_input,  [numuya_sum_all_f32_param_1];
+    ld.param.u64    r64_n,      [numuya_sum_all_f32_param_2];
+
+    mov.u32         r32_tid, %tid.x;
+    mov.u32         r32_bid, %ctaid.x;
+    mov.u32         r32_ntid, %ntid.x;
+    mov.u32         r32_nctaid, %nctaid.x;
+
+    cvt.u64.u32     r64_tid, r32_tid;
+    cvt.u64.u32     r64_bid, r32_bid;
+    cvt.u64.u32     r64_ntid, r32_ntid;
+    cvt.u64.u32     r64_nctaid, r32_nctaid;
+    mul.lo.u64      r64_stride, r64_ntid, r64_nctaid;
+
+    mov.f32         f32_sum, 0F00000000;
+    mad.lo.u64      r64_idx, r64_bid, r64_ntid, r64_tid;
+
+LOOP:
+    setp.ge.u64     p, r64_idx, r64_n;
+    @p bra          LOOP_DONE;
+    mul.lo.u64      r64_off, r64_idx, 4;
+    add.u64         r64_addr_in, r64_input, r64_off;
+    ld.f32          f32_val, [r64_addr_in];
+    add.f32         f32_sum, f32_sum, f32_val;
+    add.u64         r64_idx, r64_idx, r64_stride;
+    bra             LOOP;
+
+LOOP_DONE:
+    mov.u64         r64_sbase, sdata;
+    mul.lo.u64      r64_saddr, r64_tid, 4;
+    add.u64         r64_saddr, r64_sbase, r64_saddr;
+    st.shared.f32   [r64_saddr], f32_sum;
+
+    bar.sync        0;
+
+    shr.u32         r32_s, r32_ntid, 1;
+
+REDUCE_LOOP:
+    setp.le.u32     p, r32_s, 0;
+    @p bra          REDUCE_DONE;
+    setp.ge.u32     p, r32_tid, r32_s;
+    @p bra          REDUCE_SKIP;
+    ld.shared.f32   f32_sum, [r64_saddr];
+    add.u32         r32_tmp, r32_tid, r32_s;
+    cvt.u64.u32     r64_off, r32_tmp;
+    mul.lo.u64      r64_addr, r64_off, 4;
+    add.u64         r64_addr, r64_sbase, r64_addr;
+    ld.shared.f32   f32_val, [r64_addr];
+    add.f32         f32_sum, f32_sum, f32_val;
+    st.shared.f32   [r64_saddr], f32_sum;
+
+REDUCE_SKIP:
+    bar.sync        0;
+    shr.u32         r32_s, r32_s, 1;
+    bra             REDUCE_LOOP;
+
+REDUCE_DONE:
+    setp.ne.u32     p, r32_tid, 0;
+    @p bra          END;
+    cvt.u64.u32     r64_off, r32_bid;
+    mul.lo.u64      r64_addr, r64_off, 4;
+    add.u64         r64_addr, r64_result, r64_addr;
+    st.f32          [r64_addr], f32_sum;
+
+END:
+    ret;
+}
+
+.visible .entry numuya_sum_all_f32_finalize(
+    .param .u64 numuya_sum_all_f32_finalize_param_0,
+    .param .u64 numuya_sum_all_f32_finalize_param_1,
+    .param .u64 numuya_sum_all_f32_finalize_param_2,
+    .param .u64 numuya_sum_all_f32_finalize_param_3
+)
+{
+    .shared .f32 sdata[256];
+
+    .reg .u32   r32_tid, r32_ntid, r32_s, r32_tmp;
+    .reg .u64   r64_result, r64_input, r64_n, r64_tid, r64_ntid, r64_idx;
+    .reg .u64   r64_off, r64_addr_in, r64_sbase, r64_saddr, r64_addr;
+    .reg .f32   f32_sum, f32_val;
+    .reg .pred  p;
+
+    ld.param.u64    r64_result, [numuya_sum_all_f32_finalize_param_0];
+    ld.param.u64    r64_input,  [numuya_sum_all_f32_finalize_param_1];
+    ld.param.u64    r64_n,      [numuya_sum_all_f32_finalize_param_2];
+
+    mov.u32         r32_tid, %tid.x;
+    mov.u32         r32_ntid, %ntid.x;
+
+    cvt.u64.u32     r64_tid, r32_tid;
+    cvt.u64.u32     r64_ntid, r32_ntid;
+
+    mov.f32         f32_sum, 0F00000000;
+    mov.u64         r64_idx, r64_tid;
+
+LOOP:
+    setp.ge.u64     p, r64_idx, r64_n;
+    @p bra          LOOP_DONE;
+    mul.lo.u64      r64_off, r64_idx, 4;
+    add.u64         r64_addr_in, r64_input, r64_off;
+    ld.f32          f32_val, [r64_addr_in];
+    add.f32         f32_sum, f32_sum, f32_val;
+    add.u64         r64_idx, r64_idx, r64_ntid;
+    bra             LOOP;
+
+LOOP_DONE:
+    mov.u64         r64_sbase, sdata;
+    mul.lo.u64      r64_saddr, r64_tid, 4;
+    add.u64         r64_saddr, r64_sbase, r64_saddr;
+    st.shared.f32   [r64_saddr], f32_sum;
+
+    bar.sync        0;
+
+    shr.u32         r32_s, r32_ntid, 1;
+
+REDUCE_LOOP:
+    setp.le.u32     p, r32_s, 0;
+    @p bra          REDUCE_DONE;
+    setp.ge.u32     p, r32_tid, r32_s;
+    @p bra          REDUCE_SKIP;
+    ld.shared.f32   f32_sum, [r64_saddr];
+    add.u32         r32_tmp, r32_tid, r32_s;
+    cvt.u64.u32     r64_off, r32_tmp;
+    mul.lo.u64      r64_addr, r64_off, 4;
+    add.u64         r64_addr, r64_sbase, r64_addr;
+    ld.shared.f32   f32_val, [r64_addr];
+    add.f32         f32_sum, f32_sum, f32_val;
+    st.shared.f32   [r64_saddr], f32_sum;
+
+REDUCE_SKIP:
+    bar.sync        0;
+    shr.u32         r32_s, r32_s, 1;
+    bra             REDUCE_LOOP;
+
+REDUCE_DONE:
+    setp.ne.u32     p, r32_tid, 0;
+    @p bra          END;
+    st.f32          [r64_result], f32_sum;
+
+END:
+    ret;
+}
+
 .visible .entry numuya_random_f32(
     .param .u64 numuya_random_f32_param_0,
     .param .u64 numuya_random_f32_param_1,
