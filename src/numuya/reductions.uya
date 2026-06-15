@@ -3,6 +3,8 @@ use creation;
 use shape;
 use storage;
 
+use std.mem.allocator.IAllocator;
+
 @c_import("simd_stub.c", "", "");
 
 extern fn numuya_simd_sum_f64(data: &f64, n: usize) f64;
@@ -503,6 +505,184 @@ export fn argmax_axis_f64(array_value: &Array<f64>, axis: i32, keepdims: bool) !
 
     storage_retain<usize>(result.storage);
     return Array<usize>{
+        storage: result.storage,
+        offset: result.offset,
+        shape: result.shape,
+        strides: result.strides,
+        flags: result.flags,
+    };
+}
+
+fn scan_axis_cumsum_f64(allocator: IAllocator, array_value: &Array<f64>, normalized_axis: usize) !Array<f64> {
+    if normalized_axis >= NUMUYA_MAX_DIMS {
+        return error.NumuyaAxisOutOfBounds;
+    }
+    const rank: usize = array_value.shape.rank;
+    const output_shape: Shape = clone_shape(&array_value.shape);
+    var result: Array<f64> = try empty<f64>(allocator, output_shape);
+
+    const output_size: usize = array_size<f64>(&result);
+
+    var output_indices: [usize: NUMUYA_MAX_DIMS] = [0: NUMUYA_MAX_DIMS];
+    var input_indices: [usize: NUMUYA_MAX_DIMS] = [0: NUMUYA_MAX_DIMS];
+
+    var linear: usize = 0;
+    while linear < output_size {
+        try linear_to_indices(&result.shape, linear, output_indices[0:result.shape.rank]);
+
+        var axis_index: usize = 0;
+        while axis_index < rank {
+            input_indices[axis_index] = output_indices[axis_index];
+            axis_index = axis_index + 1;
+        }
+
+        var acc: f64 = 0.0;
+        var reduction_index: usize = 0;
+        while reduction_index <= output_indices[normalized_axis] {
+            input_indices[normalized_axis] = reduction_index;
+            const idx: usize = try physical_index_ref(&array_value.shape, &array_value.strides, array_value.offset, input_indices[0:rank]);
+            acc = acc + array_value.storage.data[idx];
+            reduction_index = reduction_index + 1;
+        }
+
+        const result_idx: usize = try physical_index_ref(&result.shape, &result.strides, result.offset, output_indices[0:result.shape.rank]);
+        result.storage.data[result_idx] = acc;
+
+        linear = linear + 1;
+    }
+
+    storage_retain<f64>(result.storage);
+    return Array<f64>{
+        storage: result.storage,
+        offset: result.offset,
+        shape: result.shape,
+        strides: result.strides,
+        flags: result.flags,
+    };
+}
+
+fn scan_axis_cumprod_f64(allocator: IAllocator, array_value: &Array<f64>, normalized_axis: usize) !Array<f64> {
+    if normalized_axis >= NUMUYA_MAX_DIMS {
+        return error.NumuyaAxisOutOfBounds;
+    }
+    const rank: usize = array_value.shape.rank;
+    const output_shape: Shape = clone_shape(&array_value.shape);
+    var result: Array<f64> = try empty<f64>(allocator, output_shape);
+
+    const output_size: usize = array_size<f64>(&result);
+
+    var output_indices: [usize: NUMUYA_MAX_DIMS] = [0: NUMUYA_MAX_DIMS];
+    var input_indices: [usize: NUMUYA_MAX_DIMS] = [0: NUMUYA_MAX_DIMS];
+
+    var linear: usize = 0;
+    while linear < output_size {
+        try linear_to_indices(&result.shape, linear, output_indices[0:result.shape.rank]);
+
+        var axis_index: usize = 0;
+        while axis_index < rank {
+            input_indices[axis_index] = output_indices[axis_index];
+            axis_index = axis_index + 1;
+        }
+
+        var acc: f64 = 1.0;
+        var reduction_index: usize = 0;
+        while reduction_index <= output_indices[normalized_axis] {
+            input_indices[normalized_axis] = reduction_index;
+            const idx: usize = try physical_index_ref(&array_value.shape, &array_value.strides, array_value.offset, input_indices[0:rank]);
+            acc = acc * array_value.storage.data[idx];
+            reduction_index = reduction_index + 1;
+        }
+
+        const result_idx: usize = try physical_index_ref(&result.shape, &result.strides, result.offset, output_indices[0:result.shape.rank]);
+        result.storage.data[result_idx] = acc;
+
+        linear = linear + 1;
+    }
+
+    storage_retain<f64>(result.storage);
+    return Array<f64>{
+        storage: result.storage,
+        offset: result.offset,
+        shape: result.shape,
+        strides: result.strides,
+        flags: result.flags,
+    };
+}
+
+export fn cumsum_axis_f64(allocator: IAllocator, array_value: &Array<f64>, axis: i32) !Array<f64> {
+    try validate_array<f64>(array_value);
+    const rank: usize = array_value.shape.rank;
+    if rank == 0 {
+        return error.NumuyaAxisOutOfBounds;
+    }
+    const normalized_axis: usize = try normalize_axis(axis, rank);
+    if normalized_axis >= NUMUYA_MAX_DIMS {
+        return error.NumuyaAxisOutOfBounds;
+    }
+    return scan_axis_cumsum_f64(allocator, array_value, normalized_axis);
+}
+
+export fn cumprod_axis_f64(allocator: IAllocator, array_value: &Array<f64>, axis: i32) !Array<f64> {
+    try validate_array<f64>(array_value);
+    const rank: usize = array_value.shape.rank;
+    if rank == 0 {
+        return error.NumuyaAxisOutOfBounds;
+    }
+    const normalized_axis: usize = try normalize_axis(axis, rank);
+    if normalized_axis >= NUMUYA_MAX_DIMS {
+        return error.NumuyaAxisOutOfBounds;
+    }
+    return scan_axis_cumprod_f64(allocator, array_value, normalized_axis);
+}
+
+export fn cumsum_all_f64(allocator: IAllocator, array_value: &Array<f64>) !Array<f64> {
+    try validate_array<f64>(array_value);
+    const size: usize = try array_size_safe<f64>(array_value);
+    var result: Array<f64> = try empty<f64>(allocator, shape1(size));
+
+    var indices: [usize: NUMUYA_MAX_DIMS] = [0: NUMUYA_MAX_DIMS];
+    var acc: f64 = 0.0;
+
+    var linear: usize = 0;
+    while linear < size {
+        try linear_to_indices(&array_value.shape, linear, indices[0:array_value.shape.rank]);
+        const idx: usize = try physical_index_ref(&array_value.shape, &array_value.strides, array_value.offset, indices[0:array_value.shape.rank]);
+        acc = acc + array_value.storage.data[idx];
+        const base: usize = try offset_as_usize(result.offset);
+        result.storage.data[base + linear] = acc;
+        linear = linear + 1;
+    }
+
+    storage_retain<f64>(result.storage);
+    return Array<f64>{
+        storage: result.storage,
+        offset: result.offset,
+        shape: result.shape,
+        strides: result.strides,
+        flags: result.flags,
+    };
+}
+
+export fn cumprod_all_f64(allocator: IAllocator, array_value: &Array<f64>) !Array<f64> {
+    try validate_array<f64>(array_value);
+    const size: usize = try array_size_safe<f64>(array_value);
+    var result: Array<f64> = try empty<f64>(allocator, shape1(size));
+
+    var indices: [usize: NUMUYA_MAX_DIMS] = [0: NUMUYA_MAX_DIMS];
+    var acc: f64 = 1.0;
+
+    var linear: usize = 0;
+    while linear < size {
+        try linear_to_indices(&array_value.shape, linear, indices[0:array_value.shape.rank]);
+        const idx: usize = try physical_index_ref(&array_value.shape, &array_value.strides, array_value.offset, indices[0:array_value.shape.rank]);
+        acc = acc * array_value.storage.data[idx];
+        const base: usize = try offset_as_usize(result.offset);
+        result.storage.data[base + linear] = acc;
+        linear = linear + 1;
+    }
+
+    storage_retain<f64>(result.storage);
+    return Array<f64>{
         storage: result.storage,
         offset: result.offset,
         shape: result.shape,

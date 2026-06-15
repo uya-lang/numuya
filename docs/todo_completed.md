@@ -1204,3 +1204,28 @@ NUMUYA_CUDA_REQUIRED=1 LDFLAGS="-lcublasLt -lcublas -lcufft -lcurand -lcuda" ../
     - `make test-one TEST=src/numuya/_tests/test_ufunc.uya` → 34/34 通过
     - `make test-one TEST=src/numuya/_tests/test_math.uya` → 19/19 通过
     - `make test` → 全部非 CUDA 测试通过
+
+
+## Phase 24: NumPy 兼容面扩展
+
+- [x] `cumsum/cumprod`。
+  - 新增测试：`src/numuya/_tests/test_reductions.uya` 中添加 9 个测试：
+    - `cumsum_axis_f64 computes cumulative sum along axis 0`
+    - `cumsum_axis_f64 computes cumulative sum along axis 1`
+    - `cumsum_axis_f64 supports negative axis`
+    - `cumsum_all_f64 flattens input and computes cumulative sum`
+    - `cumsum_axis_f64 handles non-contiguous transpose view`
+    - `cumsum_all_f64 returns empty for empty input`
+    - `cumprod_axis_f64 computes cumulative product along axis 1`
+    - `cumprod_all_f64 flattens input and computes cumulative product`
+    - `cumsum_axis_f64 rejects scalar input`
+  - 实现：`src/numuya/reductions.uya` 新增导出函数：
+    - `cumsum_axis_f64(allocator, array, axis)`：沿指定轴累积求和，输出形状与输入相同。
+    - `cumprod_axis_f64(allocator, array, axis)`：沿指定轴累积求积，输出形状与输入相同。
+    - `cumsum_all_f64(allocator, array)`：按 C-order 展平后累积求和，返回一维数组。
+    - `cumprod_all_f64(allocator, array)`：按 C-order 展平后累积求积，返回一维数组。
+  - 实现通过现有 `physical_index_ref` 与 `linear_to_indices` 支持非连续视图，空数组返回空结果，标量输入返回 `NumuyaAxisOutOfBounds`。
+  - 验证命令：
+    - `../uya/bin/uya test src/numuya/_tests/test_reductions.uya --manifest-path uya.toml` — 32/32 通过
+    - `make test` — 全部非 CUDA 测试文件通过
+
