@@ -451,3 +451,160 @@ export fn squeeze_axis<T>(array_value: &Array<T>, axis: i32) !Array<T> {
     };
 }
 
+export fn tile<T>(allocator: IAllocator, array_value: &Array<T>, reps: &[usize]) !Array<T> {
+    try validate_array_metadata<T>(array_value);
+
+    const rank: usize = array_value.shape.rank;
+    var output_rank: usize = rank;
+    if reps.len > rank {
+        output_rank = reps.len;
+    }
+    if output_rank > NUMUYA_MAX_DIMS {
+        return error.NumuyaRankTooLarge;
+    }
+
+    var input_dims: [usize: NUMUYA_MAX_DIMS] = [1: NUMUYA_MAX_DIMS];
+    var rep_factors: [usize: NUMUYA_MAX_DIMS] = [1: NUMUYA_MAX_DIMS];
+
+    var d: usize = 0;
+    const rank_offset: usize = output_rank - rank;
+    while d < output_rank {
+        if d < rank_offset {
+            input_dims[d] = 1;
+        } else {
+            const src_index: usize = d - rank_offset;
+            if src_index >= NUMUYA_MAX_DIMS {
+                return error.NumuyaRankTooLarge;
+            }
+            input_dims[d] = array_value.shape.dims[src_index];
+        }
+
+        if d >= output_rank - reps.len {
+            const rep_index: usize = d - (output_rank - reps.len);
+            rep_factors[d] = reps[rep_index];
+        } else {
+            rep_factors[d] = 1;
+        }
+        d = d + 1;
+    }
+
+    var result_shape: Shape = shape_scalar();
+    result_shape.rank = output_rank;
+    d = 0;
+    while d < output_rank {
+        const dim: usize = input_dims[d];
+        const rep: usize = rep_factors[d];
+        if rep != 0 && dim > NUMUYA_MAX_USIZE / rep {
+            return error.NumuyaShapeOverflow;
+        }
+        result_shape.dims[d] = dim * rep;
+        d = d + 1;
+    }
+
+    var result: Array<T> = try empty<T>(allocator, result_shape);
+    storage_retain<T>(result.storage);
+    if result.storage.len == 0 {
+        return Array<T>{
+            storage: result.storage,
+            offset: result.offset,
+            shape: result.shape,
+            strides: result.strides,
+            flags: result.flags,
+        };
+    }
+
+    var result_indices: [usize: NUMUYA_MAX_DIMS] = [0: NUMUYA_MAX_DIMS];
+    var source_indices: [usize: NUMUYA_MAX_DIMS] = [0: NUMUYA_MAX_DIMS];
+
+    var linear: usize = 0;
+    while linear < result.storage.len {
+        try linear_to_indices(&result.shape, linear, result_indices[0:output_rank]);
+
+        d = 0;
+        while d < output_rank {
+            source_indices[d] = result_indices[d] % input_dims[d];
+            d = d + 1;
+        }
+
+        var s: usize = 0;
+        while s < rank {
+            source_indices[s] = source_indices[rank_offset + s];
+            s = s + 1;
+        }
+
+        const physical: usize = try compute_physical_index<T>(array_value, source_indices[0:rank]);
+        result.storage.data[linear] = array_value.storage.data[physical];
+        linear = linear + 1;
+    }
+
+    return Array<T>{
+        storage: result.storage,
+        offset: result.offset,
+        shape: result.shape,
+        strides: result.strides,
+        flags: result.flags,
+    };
+}
+
+export fn repeat<T>(allocator: IAllocator, array_value: &Array<T>, repeats: usize, axis: isize) !Array<T> {
+    try validate_array_metadata<T>(array_value);
+    const rank: usize = array_value.shape.rank;
+    if rank == 0 {
+        return error.NumuyaInvalidArgument;
+    }
+
+    const normalized_axis: usize = try normalize_axis(axis, rank);
+    if normalized_axis >= NUMUYA_MAX_DIMS {
+        return error.NumuyaAxisOutOfBounds;
+    }
+
+    var result_shape: Shape = clone_shape(&array_value.shape);
+    const input_dim: usize = result_shape.dims[normalized_axis];
+    if repeats != 0 && input_dim > NUMUYA_MAX_USIZE / repeats {
+        return error.NumuyaShapeOverflow;
+    }
+    result_shape.dims[normalized_axis] = input_dim * repeats;
+
+    var result: Array<T> = try empty<T>(allocator, result_shape);
+    storage_retain<T>(result.storage);
+    if result.storage.len == 0 {
+        return Array<T>{
+            storage: result.storage,
+            offset: result.offset,
+            shape: result.shape,
+            strides: result.strides,
+            flags: result.flags,
+        };
+    }
+
+    var result_indices: [usize: NUMUYA_MAX_DIMS] = [0: NUMUYA_MAX_DIMS];
+    var source_indices: [usize: NUMUYA_MAX_DIMS] = [0: NUMUYA_MAX_DIMS];
+
+    var linear: usize = 0;
+    while linear < result.storage.len {
+        try linear_to_indices(&result.shape, linear, result_indices[0:rank]);
+
+        var d: usize = 0;
+        while d < rank {
+            if d == normalized_axis {
+                source_indices[d] = result_indices[d] / repeats;
+            } else {
+                source_indices[d] = result_indices[d];
+            }
+            d = d + 1;
+        }
+
+        const physical: usize = try compute_physical_index<T>(array_value, source_indices[0:rank]);
+        result.storage.data[linear] = array_value.storage.data[physical];
+        linear = linear + 1;
+    }
+
+    return Array<T>{
+        storage: result.storage,
+        offset: result.offset,
+        shape: result.shape,
+        strides: result.strides,
+        flags: result.flags,
+    };
+}
+

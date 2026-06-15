@@ -245,3 +245,135 @@ test "concatenate rejects mismatched shapes and out of bounds axis" {
         else => { return error.NumuyaExpectationFailed; }
     }
 }
+
+test "tile repeats a 1-D array along its single axis" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+
+    var data: [f64: 3] = [1.0, 2.0, 3.0];
+    const a: Array<f64> = try from_slice<f64>(allocator, data[0:3], shape1(3));
+    var reps: [usize: 1] = [2];
+
+    const result: Array<f64> = try tile<f64>(allocator, &a, reps[0:1]);
+
+    storage_retain<f64>(result.storage);
+    storage_release<f64>(result.storage);
+
+    try expect_eq_usize(result.shape.rank, 1);
+    try expect_eq_usize(result.shape.dims[0], 6);
+    try expect_close_f64(try get1<f64>(&result, 0), 1.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&result, 2), 3.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&result, 3), 1.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&result, 5), 3.0, 1e-12);
+}
+
+test "tile repeats a 2-D array independently along each axis" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+
+    var data: [f64: 4] = [1.0, 2.0, 3.0, 4.0];
+    const a: Array<f64> = try from_slice<f64>(allocator, data[0:4], shape2(2, 2));
+    var reps: [usize: 2] = [2, 3];
+
+    const result: Array<f64> = try tile<f64>(allocator, &a, reps[0:2]);
+
+    try expect_eq_usize(result.shape.rank, 2);
+    try expect_eq_usize(result.shape.dims[0], 4);
+    try expect_eq_usize(result.shape.dims[1], 6);
+    try expect_close_f64(try get2<f64>(&result, 0, 0), 1.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&result, 1, 1), 4.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&result, 2, 0), 1.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&result, 3, 5), 4.0, 1e-12);
+}
+
+test "tile pads shorter reps with trailing ones" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+
+    var data: [f64: 4] = [1.0, 2.0, 3.0, 4.0];
+    const a: Array<f64> = try from_slice<f64>(allocator, data[0:4], shape2(2, 2));
+    var reps: [usize: 1] = [2];
+
+    const result: Array<f64> = try tile<f64>(allocator, &a, reps[0:1]);
+
+    try expect_eq_usize(result.shape.rank, 2);
+    try expect_eq_usize(result.shape.dims[0], 2);
+    try expect_eq_usize(result.shape.dims[1], 4);
+    try expect_close_f64(try get2<f64>(&result, 0, 0), 1.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&result, 0, 2), 1.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&result, 1, 3), 4.0, 1e-12);
+}
+
+test "tile expands rank when reps is longer than array rank" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+
+    var data: [f64: 2] = [1.0, 2.0];
+    const a: Array<f64> = try from_slice<f64>(allocator, data[0:2], shape1(2));
+    var reps: [usize: 2] = [2, 3];
+
+    const result: Array<f64> = try tile<f64>(allocator, &a, reps[0:2]);
+
+    try expect_eq_usize(result.shape.rank, 2);
+    try expect_eq_usize(result.shape.dims[0], 2);
+    try expect_eq_usize(result.shape.dims[1], 6);
+    try expect_close_f64(try get2<f64>(&result, 0, 0), 1.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&result, 0, 2), 1.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&result, 1, 5), 2.0, 1e-12);
+}
+
+test "repeat replicates each element along axis 0" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+
+    var data: [f64: 3] = [1.0, 2.0, 3.0];
+    const a: Array<f64> = try from_slice<f64>(allocator, data[0:3], shape1(3));
+
+    const result: Array<f64> = try repeat<f64>(allocator, &a, 2, 0);
+
+    storage_retain<f64>(result.storage);
+    storage_release<f64>(result.storage);
+
+    try expect_eq_usize(result.shape.rank, 1);
+    try expect_eq_usize(result.shape.dims[0], 6);
+    try expect_close_f64(try get1<f64>(&result, 0), 1.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&result, 1), 1.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&result, 2), 2.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&result, 5), 3.0, 1e-12);
+}
+
+test "repeat replicates each row or column along the chosen axis" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+
+    var data: [f64: 4] = [1.0, 2.0, 3.0, 4.0];
+    const a: Array<f64> = try from_slice<f64>(allocator, data[0:4], shape2(2, 2));
+
+    const axis0: Array<f64> = try repeat<f64>(allocator, &a, 2, 0);
+    try expect_eq_usize(axis0.shape.dims[0], 4);
+    try expect_eq_usize(axis0.shape.dims[1], 2);
+    try expect_close_f64(try get2<f64>(&axis0, 0, 0), 1.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&axis0, 1, 0), 1.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&axis0, 2, 1), 4.0, 1e-12);
+
+    const axis1: Array<f64> = try repeat<f64>(allocator, &a, 3, 1);
+    try expect_eq_usize(axis1.shape.dims[0], 2);
+    try expect_eq_usize(axis1.shape.dims[1], 6);
+    try expect_close_f64(try get2<f64>(&axis1, 0, 0), 1.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&axis1, 0, 3), 2.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&axis1, 1, 5), 4.0, 1e-12);
+}
+
+test "repeat rejects out of bounds axis" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+
+    var data: [f64: 2] = [1.0, 2.0];
+    const a: Array<f64> = try from_slice<f64>(allocator, data[0:2], shape1(2));
+
+    const bad_axis: !Array<f64> = repeat<f64>(allocator, &a, 2, 1);
+    match bad_axis {
+        error.NumuyaAxisOutOfBounds => {}
+        else => { return error.NumuyaExpectationFailed; }
+    }
+}

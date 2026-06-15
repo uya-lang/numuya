@@ -1270,3 +1270,21 @@ NUMUYA_CUDA_REQUIRED=1 LDFLAGS="-lcublasLt -lcublas -lcufft -lcurand -lcuda" ../
   - 验证结果：
     - `test_shape_ops.uya`：11 tests passed, 0 failed。
     - `make test`（非 CUDA 全量）：22 个测试文件全部通过，无失败。
+
+## Phase 24: NumPy 兼容面扩展
+
+- [x] `repeat/tile`。
+  - 新增测试：`src/numuya/_tests/test_shape_ops.uya` 中添加 7 个测试：
+    - `tile repeats a 1-D array along its single axis`
+    - `tile repeats a 2-D array independently along each axis`
+    - `tile pads shorter reps with trailing ones`
+    - `tile expands rank when reps is longer than array rank`
+    - `repeat replicates each element along axis 0`
+    - `repeat replicates each row or column along the chosen axis`
+    - `repeat rejects out of bounds axis`
+  - 实现：`src/numuya/shape_ops.uya` 新增导出 `tile<T>` 与 `repeat<T>`。
+    - `tile<T>` 支持 `reps` 长度小于、等于或大于输入 rank；按 NumPy 语义将较短 `reps` 对齐到最右侧轴，较长 `reps` 时在左侧补长度为 1 的新轴；通过逐元素取模映射输出索引到源索引。
+    - `repeat<T>` 沿指定 `axis` 将每个元素重复 `repeats` 次，使用整数除法将输出索引映射回源索引。
+  - 验证命令：
+    - `../uya/bin/uya test src/numuya/_tests/test_shape_ops.uya --manifest-path uya.toml` — 18/18 通过
+    - `make test` — 全部非 CUDA 测试文件通过
