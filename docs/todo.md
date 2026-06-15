@@ -42,7 +42,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 
 
-- [ ] `cov/corrcoef`。
 - [ ] `einsum` MVP。
 - [ ] `rfft/irfft`。
 - [ ] `.npz` zip 容器。

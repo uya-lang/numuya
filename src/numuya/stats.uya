@@ -1,8 +1,13 @@
 use array;
 use creation;
 use errors;
+use linalg;
+use reductions;
 use shape;
+use shape_ops;
 use storage;
+use stride;
+use ufunc;
 
 use std.mem.allocator.IAllocator;
 
@@ -331,4 +336,117 @@ export fn histogram_f64(array_value: &Array<f64>, bins: usize, range_min: f64, r
     storage_retain<f64>(hist.storage);
     storage_retain<f64>(bin_edges.storage);
     return HistogramResult{ hist: hist, bin_edges: bin_edges };
+}
+
+fn require_1d_or_2d(array_value: &Array<f64>) !void {
+    if array_value.shape.rank != 1 && array_value.shape.rank != 2 {
+        return error.NumuyaInvalidArgument;
+    }
+    return;
+}
+
+fn variables_view(array_value: &Array<f64>, rowvar: bool) !Array<f64> {
+    const rank: usize = array_value.shape.rank;
+    if rank == 1 {
+        var reshaped: Array<f64> = try reshape<f64>(array_value, shape2(1, array_value.shape.dims[0]));
+        return reshaped;
+    }
+    if rowvar {
+        storage_retain<f64>(array_value.storage);
+        var view: Array<f64> = Array<f64>{
+            storage: array_value.storage,
+            offset: array_value.offset,
+            shape: array_value.shape,
+            strides: array_value.strides,
+            flags: array_value.flags,
+        };
+        return view;
+    }
+    var transposed: Array<f64> = try transpose<f64>(array_value);
+    return transposed;
+}
+
+export fn cov_f64(m: &Array<f64>, y: &Array<f64>, rowvar: bool, bias: bool, ddof: i64) !Array<f64> {
+    try require_1d_or_2d(m);
+    const allocator: IAllocator = m.storage.allocator;
+
+    var combined: Array<f64> = try variables_view(m, rowvar);
+    if y != null {
+        try require_1d_or_2d(y);
+        var X: Array<f64> = try variables_view(m, rowvar);
+        var Y: Array<f64> = try variables_view(y, rowvar);
+        if Y.shape.dims[1] != X.shape.dims[1] {
+            return error.NumuyaShapeMismatch;
+        }
+        var concatenated: Array<f64> = try concatenate2<f64>(allocator, &X, &Y, 0);
+        storage_release<f64>(combined.storage);
+        combined.storage = concatenated.storage;
+        combined.offset = concatenated.offset;
+        combined.shape = concatenated.shape;
+        combined.strides = concatenated.strides;
+        combined.flags = concatenated.flags;
+        concatenated.storage = null;
+    }
+
+    if combined.shape.rank != 2 {
+        return error.NumuyaInvalidArgument;
+    }
+    const vars: usize = combined.shape.dims[0];
+    const N: usize = combined.shape.dims[1];
+    if N == 0 {
+        return error.NumuyaInvalidArgument;
+    }
+
+    var effective_ddof: i64 = ddof;
+    if ddof < 0 {
+        effective_ddof = if bias { 0 as i64 } else { 1 as i64 };
+    }
+    const ddof_usz: usize = effective_ddof as! usize catch {
+        return error.NumuyaInvalidArgument;
+    };
+    if ddof_usz > N {
+        return error.NumuyaInvalidArgument;
+    }
+    if N - ddof_usz == 0 {
+        return error.NumuyaInvalidArgument;
+    }
+    const denom: usize = N - ddof_usz;
+
+    var mean: Array<f64> = try mean_axis_f64(&combined, 1, false);
+    var mean_col: Array<f64> = try reshape<f64>(&mean, shape2(vars, 1));
+    var centered: Array<f64> = try sub_f64(&combined, &mean_col);
+    var centered_t: Array<f64> = try transpose<f64>(&centered);
+    var cov: Array<f64> = try matmul_f64(&centered, &centered_t);
+
+    const cov_size: usize = array_size<f64>(&cov);
+    const base: usize = try offset_as_usize(cov.offset);
+    const scale: f64 = 1.0 / (denom as! f64).value;
+    var i: usize = 0;
+    while i < cov_size {
+        cov.storage.data[base + i] = cov.storage.data[base + i] * scale;
+        i = i + 1;
+    }
+
+    return cov;
+}
+
+export fn corrcoef_f64(x: &Array<f64>, y: &Array<f64>, rowvar: bool) !Array<f64> {
+    var cov: Array<f64> = try cov_f64(x, y, rowvar, false, -1);
+    const n: usize = cov.shape.dims[0];
+    const base: usize = try offset_as_usize(cov.offset);
+
+    var i: usize = 0;
+    while i < n {
+        const ii: usize = base + i * n + i;
+        var j: usize = 0;
+        while j < n {
+            const jj: usize = base + j * n + j;
+            const ij: usize = base + i * n + j;
+            cov.storage.data[ij] = cov.storage.data[ij] / sqrt(cov.storage.data[ii] * cov.storage.data[jj]);
+            j = j + 1;
+        }
+        i = i + 1;
+    }
+
+    return cov;
 }

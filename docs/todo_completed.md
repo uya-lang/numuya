@@ -1300,3 +1300,17 @@ NUMUYA_CUDA_REQUIRED=1 LDFLAGS="-lcublasLt -lcublas -lcufft -lcurand -lcuda" ../
     make test
     ```
   - 结果：`test_stats.uya` 23/23 通过；`make test` 全部非 CUDA 测试通过。
+
+## Phase 24: NumPy 兼容面扩展
+
+- [x] `cov/corrcoef`。
+  - 实现：`src/numuya/stats.uya` 新增 `cov_f64` 与 `corrcoef_f64`。
+    - `cov_f64(m, y, rowvar, bias, ddof)` 支持 1-D/2-D 输入、`rowvar` 开关、`bias`/`ddof` 自由度、可选第二个变量 `y`；内部统一将变量转为行、观测转为列，调用 `mean_axis_f64` 求行均值、`sub_f64` 广播去均值、`matmul_f64` 计算内积，最后按 `N - ddof` 缩放。
+    - `corrcoef_f64(x, y, rowvar)` 基于 `cov_f64(..., false, -1)` 计算协方差，再按 `cov[i,j] / sqrt(cov[i,i]*cov[j,j])` 归一化为相关系数。
+  - 测试：`src/numuya/_tests/test_stats.uya` 新增 12 个聚焦测试，覆盖 sample/population、rowvar 开关、1-D 输入、1-D/2-D `y`、异常参数、正负完全相关、1-D 标量等情况。
+  - 验证命令：
+    ```bash
+    ../uya/bin/uya test src/numuya/_tests/test_stats.uya --manifest-path uya.toml
+    make test
+    ```
+  - 验证结果：`test_stats.uya` 35/35 通过；`make test` 全部非 CUDA 测试通过。
