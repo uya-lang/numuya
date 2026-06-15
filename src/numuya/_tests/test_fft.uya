@@ -173,6 +173,107 @@ test "fft rejects non power of two length" {
     }
 }
 
+test "rfft_f64 length 1 returns constant" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var data: [f64: 1] = [1.0];
+    var input: Array<f64> = try from_slice<f64>(allocator, data[0:1], shape1(1));
+
+    var result: ComplexArray = try rfft_f64(allocator, &input);
+
+    try expect_eq_usize(result.re.shape.rank, 1);
+    try expect_eq_usize(result.re.shape.dims[0], 1);
+    try expect_eq_usize(result.im.shape.dims[0], 1);
+    try expect_close_f64(try get1<f64>(&result.re, 0), 1.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&result.im, 0), 0.0, 1e-12);
+}
+
+test "rfft_f64 length 2 on impulse" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var data: [f64: 2] = [1.0, 0.0];
+    var input: Array<f64> = try from_slice<f64>(allocator, data[0:2], shape1(2));
+
+    var result: ComplexArray = try rfft_f64(allocator, &input);
+
+    try expect_eq_usize(result.re.shape.rank, 1);
+    try expect_eq_usize(result.re.shape.dims[0], 2);
+    try expect_eq_usize(result.im.shape.dims[0], 2);
+    try expect_close_f64(try get1<f64>(&result.re, 0), 1.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&result.im, 0), 0.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&result.re, 1), 1.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&result.im, 1), 0.0, 1e-12);
+}
+
+test "rfft_f64 on four point impulse" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var data: [f64: 4] = [1.0, 0.0, 0.0, 0.0];
+    var input: Array<f64> = try from_slice<f64>(allocator, data[0:4], shape1(4));
+
+    var result: ComplexArray = try rfft_f64(allocator, &input);
+
+    try expect_eq_usize(result.re.shape.rank, 1);
+    try expect_eq_usize(result.re.shape.dims[0], 3);
+    try expect_eq_usize(result.im.shape.dims[0], 3);
+    try expect_close_f64(try get1<f64>(&result.re, 0), 1.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&result.im, 0), 0.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&result.re, 1), 1.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&result.im, 1), 0.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&result.re, 2), 1.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&result.im, 2), 0.0, 1e-12);
+}
+
+test "rfft_f64 on eight point impulse" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var data: [f64: 8] = [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
+    var input: Array<f64> = try from_slice<f64>(allocator, data[0:8], shape1(8));
+
+    var result: ComplexArray = try rfft_f64(allocator, &input);
+
+    try expect_eq_usize(result.re.shape.rank, 1);
+    try expect_eq_usize(result.re.shape.dims[0], 5);
+    try expect_eq_usize(result.im.shape.dims[0], 5);
+    var i: usize = 0;
+    while i < 5 {
+        try expect_close_f64(try get1<f64>(&result.re, i), 1.0, 1e-12);
+        try expect_close_f64(try get1<f64>(&result.im, i), 0.0, 1e-12);
+        i = i + 1;
+    }
+}
+
+test "irfft_f64 inverts rfft_f64" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var data: [f64: 8] = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
+    var input: Array<f64> = try from_slice<f64>(allocator, data[0:8], shape1(8));
+
+    var spectrum: ComplexArray = try rfft_f64(allocator, &input);
+    var recovered: Array<f64> = try irfft_f64(allocator, &spectrum);
+
+    try expect_eq_usize(recovered.shape.rank, 1);
+    try expect_eq_usize(recovered.shape.dims[0], 8);
+    var i: usize = 0;
+    while i < 8 {
+        try expect_close_f64(try get1<f64>(&recovered, i), data[i], 1e-10);
+        i = i + 1;
+    }
+}
+
+test "rfft_f64 rejects non power of two length" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var data: [f64: 3] = [1.0, 2.0, 3.0];
+    var input: Array<f64> = try from_slice<f64>(allocator, data[0:3], shape1(3));
+
+    const result: !ComplexArray = rfft_f64(allocator, &input);
+    match result {
+        error.NumuyaInvalidArgument => {}
+        else => { return error.NumuyaExpectationFailed; }
+    }
+}
+
 test "ifft rejects non power of two length" {
     var malloc_allocator: MallocAllocator = MallocAllocator{};
     var allocator: IAllocator = malloc_allocator;

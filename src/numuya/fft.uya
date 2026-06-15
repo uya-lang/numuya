@@ -192,6 +192,99 @@ export fn fft(allocator: IAllocator, input: &ComplexArray) !ComplexArray {
     };
 }
 
+export fn rfft_f64(allocator: IAllocator, input: &Array<f64>) !ComplexArray {
+    if input.shape.rank != 1 {
+        return error.NumuyaInvalidArgument;
+    }
+
+    const n: usize = input.shape.dims[0];
+    if !is_power_of_two(n) {
+        return error.NumuyaInvalidArgument;
+    }
+
+    const full: ComplexArray = try fft_f64(allocator, input);
+    const out_n: usize = (n >> (1 as i32)) + 1;
+
+    var out_re: Array<f64> = try zeros_f64(allocator, shape1(out_n));
+    var out_im: Array<f64> = try zeros_f64(allocator, shape1(out_n));
+
+    var i: usize = 0;
+    while i < out_n {
+        out_re.storage.data[i] = full.re.storage.data[i];
+        out_im.storage.data[i] = full.im.storage.data[i];
+        i = i + 1;
+    }
+
+    return ComplexArray{
+        re: out_re,
+        im: out_im,
+    };
+}
+
+export fn irfft_f64(allocator: IAllocator, freq: &ComplexArray) !Array<f64> {
+    if freq.re.shape.rank != 1 || freq.im.shape.rank != 1 {
+        return error.NumuyaInvalidArgument;
+    }
+
+    const m: usize = freq.re.shape.dims[0];
+    if m != freq.im.shape.dims[0] {
+        return error.NumuyaInvalidArgument;
+    }
+
+    if m == 0 {
+        return error.NumuyaInvalidArgument;
+    }
+
+    if m == 1 {
+        var out: Array<f64> = try zeros_f64(allocator, shape1(1));
+        out.storage.data[0] = freq.re.storage.data[0];
+        return out;
+    }
+
+    const n: usize = (m - 1) << (1 as i32);
+    if !is_power_of_two(n) {
+        return error.NumuyaInvalidArgument;
+    }
+
+    var full_re: Array<f64> = try zeros_f64(allocator, shape1(n));
+    var full_im: Array<f64> = try zeros_f64(allocator, shape1(n));
+
+    var i: usize = 0;
+    while i < m {
+        full_re.storage.data[i] = freq.re.storage.data[i];
+        full_im.storage.data[i] = freq.im.storage.data[i];
+        i = i + 1;
+    }
+
+    var k: usize = m;
+    while k < n {
+        const sym: usize = n - k;
+        const c: Complex = Complex{
+            re: full_re.storage.data[sym],
+            im: full_im.storage.data[sym],
+        };
+        const conj_c: Complex = complex_conj(&c);
+        full_re.storage.data[k] = conj_c.re;
+        full_im.storage.data[k] = conj_c.im;
+        k = k + 1;
+    }
+
+    var full: ComplexArray = ComplexArray{
+        re: full_re,
+        im: full_im,
+    };
+    var time: ComplexArray = try ifft(allocator, &full);
+
+    var out: Array<f64> = try zeros_f64(allocator, shape1(n));
+    i = 0;
+    while i < n {
+        out.storage.data[i] = time.re.storage.data[i];
+        i = i + 1;
+    }
+
+    return out;
+}
+
 export fn ifft(allocator: IAllocator, input: &ComplexArray) !ComplexArray {
     if input.re.shape.rank != 1 || input.im.shape.rank != 1 {
         return error.NumuyaInvalidArgument;

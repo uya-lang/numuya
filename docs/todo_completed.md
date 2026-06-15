@@ -1322,3 +1322,14 @@ NUMUYA_CUDA_REQUIRED=1 LDFLAGS="-lcublasLt -lcublas -lcufft -lcurand -lcuda" ../
   - 验证命令：`../uya/bin/uya test src/numuya/_tests/test_einsum.uya --manifest-path uya.toml` — 8/8 通过。
   - 回归验证：`../uya/bin/uya test src/numuya/_tests/test_einsum_debug.uya --manifest-path uya.toml` — 1/1 通过；`make test` — 全部非 CUDA 测试通过。
   - 相关文件：`src/numuya/einsum.uya`、`src/numuya/_tests/test_einsum.uya`、`src/numuya/_tests/test_einsum_debug.uya`
+
+## Phase 24: NumPy 兼容面扩展
+
+- [x] `rfft/irfft`。
+  - 验证命令：
+    - `../uya/bin/uya test src/numuya/_tests/test_fft.uya --manifest-path uya.toml`（17/17 通过）
+    - `make test`（全部非 CUDA 测试通过）
+  - 实现摘要：
+    - `rfft_f64`：对 2 的幂次长度实数序列调用完整 FFT，返回前 `n/2 + 1` 个非负频率复数分量（`ComplexArray`）。
+    - `irfft_f64`：从 `m = n/2 + 1` 个频率分量推断原序列长度 `n = 2*(m-1)`（含 `m=1` 退化情形），按实数序列共轭对称性补全负频率分量后做 IFFT，返回实数数组。
+  - 测试覆盖：长度 1/2/4/8 的 impulse、实数序列 roundtrip、非 2 的幂次拒绝。

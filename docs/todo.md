@@ -42,7 +42,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 
 
-- [ ] `rfft/irfft`。
 - [ ] `.npz` zip 容器。
 
 ## 每次提交前检查
