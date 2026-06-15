@@ -12,6 +12,7 @@ use array;
 use backend;
 use creation;
 use cuda.device_array;
+use cuda.driver;
 use cuda.memory;
 use cuda.reductions;
 use cuda.ufunc;
@@ -101,10 +102,17 @@ fn print_header() void {
     write_str("For correctness, run `make test-cuda`.\n\n");
 }
 
-fn print_bandwidth_result(name: &const byte, total_ns: u64, bytes_per_transfer: usize, iterations: usize) void {
+const MIN_H2D_GBPS: f64 = 6.0;
+const MIN_D2H_GBPS: f64 = 6.0;
+
+fn compute_bandwidth(total_ns: u64, bytes_per_transfer: usize, iterations: usize) f64 {
     const total_bytes: f64 = (bytes_per_transfer as f64) * (iterations as f64);
     const seconds: f64 = if total_ns == 0 { 0.0 } else { (total_ns as f64) / (NS_PER_SEC as f64) };
-    const gb_per_s: f64 = if seconds == 0.0 { 0.0 } else { (total_bytes / (1024.0 * 1024.0 * 1024.0)) / seconds };
+    return if seconds == 0.0 { 0.0 } else { (total_bytes / (1024.0 * 1024.0 * 1024.0)) / seconds };
+}
+
+fn print_bandwidth_result(name: &const byte, total_ns: u64, bytes_per_transfer: usize, iterations: usize) f64 {
+    const gb_per_s: f64 = compute_bandwidth(total_ns, bytes_per_transfer, iterations);
     const ns_per_iter: f64 = if iterations == 0 { 0.0 } else { (total_ns as f64) / (iterations as f64) };
 
     write_str(name);
@@ -115,6 +123,24 @@ fn print_bandwidth_result(name: &const byte, total_ns: u64, bytes_per_transfer: 
     write_str(" ms, bandwidth=");
     write_f64(gb_per_s, 2);
     write_str(" GB/s\n");
+    return gb_per_s;
+}
+
+fn check_bandwidth(name: &const byte, gb_per_s: f64, min_gb_per_s: f64) bool {
+    write_str("  ");
+    write_str(name);
+    write_str(" threshold=");
+    write_f64(min_gb_per_s, 2);
+    write_str(" GB/s, measured=");
+    write_f64(gb_per_s, 2);
+    write_str(" GB/s -> ");
+    if gb_per_s >= min_gb_per_s {
+        write_str("PASS\n");
+        return true;
+    } else {
+        write_str("FAIL\n");
+        return false;
+    }
 }
 
 fn print_throughput_result(name: &const byte, total_ns: u64, elements: usize, iterations: usize) void {
@@ -135,16 +161,21 @@ fn print_throughput_result(name: &const byte, total_ns: u64, elements: usize, it
 }
 
 fn bench_h2d(
-    pool: &MemoryPool,
     host_array: &Array<f64>,
+    device_storage: &DeviceStorage<f64>,
     context: usize,
     stream: usize,
     iterations: usize,
 ) !u64 {
+    const bytes: usize = device_storage.len * BENCH_F64_ELEMENT_SIZE;
+    const host_ptr: &byte = host_array.storage.data as &byte;
+    const device_ptr: usize = device_storage.ptr as usize;
+
     const start: u64 = monotonic_ns();
     var i: usize = 0;
     while i < iterations {
-        var device_array: DeviceArray<f64> = try device_array_from_host<f64>(pool, host_array, context, stream);
+        try cuda_memcpy_htod_async(device_ptr, host_ptr, bytes, stream);
+        try cuda_synchronize_stream(context, stream);
         i = i + 1;
     }
     const end: u64 = monotonic_ns();
@@ -152,14 +183,21 @@ fn bench_h2d(
 }
 
 fn bench_d2h(
-    allocator: IAllocator,
-    device_array: &DeviceArray<f64>,
+    host_array: &Array<f64>,
+    device_storage: &DeviceStorage<f64>,
+    context: usize,
+    stream: usize,
     iterations: usize,
 ) !u64 {
+    const bytes: usize = device_storage.len * BENCH_F64_ELEMENT_SIZE;
+    const host_ptr: &byte = host_array.storage.data as &byte;
+    const device_ptr: usize = device_storage.ptr as usize;
+
     const start: u64 = monotonic_ns();
     var i: usize = 0;
     while i < iterations {
-        var host_array: Array<f64> = try device_array_to_host<f64>(allocator, device_array);
+        try cuda_memcpy_dtoh_async(host_ptr, device_ptr, bytes, stream);
+        try cuda_synchronize_stream(context, stream);
         i = i + 1;
     }
     const end: u64 = monotonic_ns();
@@ -227,6 +265,10 @@ export fn main() i32 {
         write_str("error: failed to allocate host right array\n");
         return 1;
     };
+    var host_buffer: Array<f64> = empty<f64>(allocator, shape1(size)) catch {
+        write_str("error: failed to allocate host D2H buffer\n");
+        return 1;
+    };
 
     var device_left: DeviceArray<f64> = device_array_from_host<f64>(&pool, &host_left, state.context, state.stream) catch {
         write_str("error: failed to allocate device left array\n");
@@ -234,6 +276,10 @@ export fn main() i32 {
     };
     var device_right: DeviceArray<f64> = device_array_from_host<f64>(&pool, &host_right, state.context, state.stream) catch {
         write_str("error: failed to allocate device right array\n");
+        return 1;
+    };
+    var device_buffer: DeviceArray<f64> = device_array_new<f64>(&pool, shape1(size), state.context, state.stream) catch {
+        write_str("error: failed to allocate device H2D buffer\n");
         return 1;
     };
 
@@ -247,17 +293,24 @@ export fn main() i32 {
     write_newline();
     write_newline();
 
-    const h2d_ns: u64 = bench_h2d(&pool, &host_left, state.context, state.stream, iterations) catch {
+    const h2d_ns: u64 = bench_h2d(&host_left, device_buffer.storage, state.context, state.stream, iterations) catch {
         write_str("error: H2D bandwidth benchmark failed\n");
         return 1;
     };
-    print_bandwidth_result("H2D bandwidth", h2d_ns, bytes, iterations);
+    const h2d_gbps: f64 = print_bandwidth_result("H2D bandwidth", h2d_ns, bytes, iterations);
+    const h2d_ok: bool = check_bandwidth("H2D", h2d_gbps, MIN_H2D_GBPS);
 
-    const d2h_ns: u64 = bench_d2h(allocator, &device_left, iterations) catch {
+    const d2h_ns: u64 = bench_d2h(&host_buffer, device_left.storage, state.context, state.stream, iterations) catch {
         write_str("error: D2H bandwidth benchmark failed\n");
         return 1;
     };
-    print_bandwidth_result("D2H bandwidth", d2h_ns, bytes, iterations);
+    const d2h_gbps: f64 = print_bandwidth_result("D2H bandwidth", d2h_ns, bytes, iterations);
+    const d2h_ok: bool = check_bandwidth("D2H", d2h_gbps, MIN_D2H_GBPS);
+
+    if !h2d_ok || !d2h_ok {
+        write_str("\nH2D/D2H bandwidth benchmark FAILED strict threshold\n");
+        return 1;
+    }
 
     const add_ns: u64 = bench_add_f64(&state, &device_left, &device_right, iterations) catch {
         write_str("error: gpu_add_f64 benchmark failed\n");
@@ -272,6 +325,7 @@ export fn main() i32 {
     print_throughput_result("sum_all_f64", sum_ns, size, iterations);
 
     write_newline();
+    write_str("H2D/D2H bandwidth benchmark PASSED strict threshold\n");
     write_str("Note: add_f32/sum_f32 kernels are not yet available in the embedded CUDA module.\n");
     write_str("Done.\n");
     return 0;

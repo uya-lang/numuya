@@ -1031,3 +1031,17 @@ NUMUYA_CUDA_REQUIRED=1 LDFLAGS="-lcublasLt -lcublas -lcufft -lcurand -lcuda" ../
 # 或一次性运行：make test-cuda-vendor
 ```
 结果：cuFFT / cuRAND backend wrapper、CPU fallback 路径及对应 CUDA 测试已实现并通过。
+
+## Phase 23: CUDA linalg、random、benchmark
+
+- [x] Benchmark: H2D/D2H bandwidth。
+  - 文件：`src/numuya/_benchmarks/bench_cuda.uya`
+  - 修改：H2D/D2H 循环改为复用预先分配的 device/host buffer，避免每次迭代重复 `cuda_malloc`/`cuda_free`，并使用 `cuda_memcpy_htod_async`/`cuda_memcpy_dtoh_async` 直接测量 pageable copy 带宽；新增 `MIN_H2D_GBPS`/`MIN_D2H_GBPS` 阈值与 `check_bandwidth` 断言，未通过时返回非零退出码。
+  - 验证命令：
+    ```bash
+    make bench
+    ```
+  - 验证结果：
+    - H2D bandwidth: 9.19–9.27 GB/s，threshold=6.00 GB/s -> PASS
+    - D2H bandwidth: 8.94–9.11 GB/s，threshold=6.00 GB/s -> PASS
+    - `make test` 非 CUDA 测试全部通过

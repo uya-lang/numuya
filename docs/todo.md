@@ -38,7 +38,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 23: CUDA linalg、random、benchmark
 
-- [ ] Benchmark: H2D/D2H bandwidth。
 - [ ] Benchmark: `add_f32/add_f64` throughput。
 - [ ] Benchmark: `sum_f32/sum_f64` throughput。
 - [ ] Benchmark: `matmul_f32` 1024x1024、2048x2048。
