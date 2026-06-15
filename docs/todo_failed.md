@@ -1,14 +1,18 @@
 # Failed Todo
 
-当前没有失败项。
+当前正在重新处理失败项。
 
 ## Phase 22: CUDA ufunc 与 reduction
 
-- [f] TDD: auto backend。
+- [x] TDD: auto backend。
   - 显式 `cuda` 走 GPU。
   - `auto` 在 GPU 可用时走 GPU。
   - 显存不足或 GPU unavailable 时按设计返回错误或回退 CPU。
-  - 失败记录：接手前已标记为 [f]，本轮为归档清理，未重新运行验证。失败根因与阻塞命令需参考先前轮次日志；当前可见障碍为 CUDA auto backend 依赖的 GPU 运行时/实现尚未就绪。后续重开条件：明确 auto backend 设计并具备可运行 CUDA 测试环境后，从本归档移回主 todo 重新执行 TDD。
+  - 修复结果：现有实现已覆盖 `BackendKind.Auto`、显式 `Cuda`、无 CUDA 回退 CPU、CUDA 可用时选择 GPU，以及 auto API 的 host-return 行为和 OOM 错误路径。
+  - 验证命令：
+    - `../uya/bin/uya test src/numuya/_tests/test_cuda_driver.uya --manifest-path uya.toml` — 23 tests passed。
+    - `../uya/bin/uya test src/numuya/_tests/test_cuda_auto.uya --manifest-path uya.toml` — 6 tests passed。
+    - `../uya/bin/uya test src/numuya/_tests/test_cuda_location_preserving.uya --manifest-path uya.toml` — 4 tests passed。
 
 ## Phase 23: CUDA linalg、random、benchmark
 
