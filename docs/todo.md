@@ -41,7 +41,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 ## Phase 24: NumPy 兼容面扩展
 
 
-- [x] `cumsum/cumprod`。
 - [ ] `concatenate/stack/vstack/hstack`。
 - [ ] `squeeze/expand_dims`。
 - [ ] `repeat/tile`。
