@@ -44,7 +44,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## 每次提交前检查
 
-- [ ] CUDA backend 没有 Python/NumPy/PyTorch/C helper 依赖；CUDA Driver API 绑定和可选 cuBLAS/cuFFT/cuRAND backend 必须在文档与配置中显式开启。
 - [ ] CUDA kernel source-of-truth 是 PTX/Uya 生成资产；没有把必需实现藏在 `.cu`/`nvcc` 路径。
 - [ ] DeviceArray view/drop 路径经过 DeviceStorage refcount 测试。
 - [ ] host-return `_auto` API 与 location-preserving `_on` API 都有测试。
