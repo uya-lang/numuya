@@ -24,6 +24,7 @@ use std.mem.allocator.MallocAllocator;
 
 const CLOCK_MONOTONIC: i32 = 1;
 const NS_PER_SEC: u64 = 1000000000u64;
+const BENCH_F32_ELEMENT_SIZE: usize = 4;
 const BENCH_F64_ELEMENT_SIZE: usize = 8;
 const NUMUYA_MIB: usize = 1024 * 1024;
 
@@ -96,8 +97,8 @@ fn write_newline() void {
 }
 
 fn print_header() void {
-    write_str("Benchmark: CUDA f64 arrays\n");
-    write_str("==========================\n");
+    write_str("Benchmark: CUDA arrays\n");
+    write_str("======================\n");
     write_str("This benchmark measures wall-clock time including kernel launch and stream sync.\n");
     write_str("For correctness, run `make test-cuda`.\n\n");
 }
@@ -160,6 +161,29 @@ fn print_throughput_result(name: &const byte, total_ns: u64, elements: usize, it
     write_str(" Melem/s\n");
 }
 
+fn print_add_bandwidth_result(name: &const byte, total_ns: u64, elements: usize, iterations: usize, element_size: usize) f64 {
+    // Effective memory traffic: read left + read right + write result = 3 * elements * element_size per iteration.
+    const bytes_per_iter: f64 = (elements as f64) * (element_size as f64) * 3.0;
+    const total_bytes: f64 = bytes_per_iter * (iterations as f64);
+    const seconds: f64 = if total_ns == 0 { 0.0 } else { (total_ns as f64) / (NS_PER_SEC as f64) };
+    const gb_per_s: f64 = if seconds == 0.0 { 0.0 } else { (total_bytes / (1024.0 * 1024.0 * 1024.0)) / seconds };
+    const ns_per_iter: f64 = if iterations == 0 { 0.0 } else { (total_ns as f64) / (iterations as f64) };
+    const ns_per_elem: f64 = if elements == 0 { 0.0 } else { ns_per_iter / (elements as f64) };
+
+    write_str(name);
+    write_str(": per-iter=");
+    write_f64(ns_per_iter, 2);
+    write_str(" ns (");
+    write_f64(ns_per_elem, 4);
+    write_str(" ns/elem), throughput=");
+    const elems_per_s: f64 = if seconds == 0.0 { 0.0 } else { (elements as f64) * (iterations as f64) / seconds };
+    write_f64(elems_per_s / 1000000.0, 2);
+    write_str(" Melem/s, effective bandwidth=");
+    write_f64(gb_per_s, 2);
+    write_str(" GB/s\n");
+    return gb_per_s;
+}
+
 fn bench_h2d(
     host_array: &Array<f64>,
     device_storage: &DeviceStorage<f64>,
@@ -198,6 +222,22 @@ fn bench_d2h(
     while i < iterations {
         try cuda_memcpy_dtoh_async(host_ptr, device_ptr, bytes, stream);
         try cuda_synchronize_stream(context, stream);
+        i = i + 1;
+    }
+    const end: u64 = monotonic_ns();
+    return end - start;
+}
+
+fn bench_add_f32(
+    state: &BackendState,
+    left: &DeviceArray<f32>,
+    right: &DeviceArray<f32>,
+    iterations: usize,
+) !u64 {
+    const start: u64 = monotonic_ns();
+    var i: usize = 0;
+    while i < iterations {
+        var result: DeviceArray<f32> = try gpu_add_f32(state, left, right);
         i = i + 1;
     }
     const end: u64 = monotonic_ns();
@@ -257,6 +297,14 @@ export fn main() i32 {
 
     var pool: MemoryPool = memory_pool_new(64 * NUMUYA_MIB);
 
+    var host_left_f32: Array<f32> = full<f32>(allocator, shape1(size), 1.5) catch {
+        write_str("error: failed to allocate host f32 left array\n");
+        return 1;
+    };
+    var host_right_f32: Array<f32> = full<f32>(allocator, shape1(size), 2.5) catch {
+        write_str("error: failed to allocate host f32 right array\n");
+        return 1;
+    };
     var host_left: Array<f64> = full_f64(allocator, shape1(size), 1.5) catch {
         write_str("error: failed to allocate host left array\n");
         return 1;
@@ -270,6 +318,14 @@ export fn main() i32 {
         return 1;
     };
 
+    var device_left_f32: DeviceArray<f32> = device_array_from_host<f32>(&pool, &host_left_f32, state.context, state.stream) catch {
+        write_str("error: failed to allocate device f32 left array\n");
+        return 1;
+    };
+    var device_right_f32: DeviceArray<f32> = device_array_from_host<f32>(&pool, &host_right_f32, state.context, state.stream) catch {
+        write_str("error: failed to allocate device f32 right array\n");
+        return 1;
+    };
     var device_left: DeviceArray<f64> = device_array_from_host<f64>(&pool, &host_left, state.context, state.stream) catch {
         write_str("error: failed to allocate device left array\n");
         return 1;
@@ -312,11 +368,17 @@ export fn main() i32 {
         return 1;
     }
 
+    const add_f32_ns: u64 = bench_add_f32(&state, &device_left_f32, &device_right_f32, iterations) catch {
+        write_str("error: gpu_add_f32 benchmark failed\n");
+        return 1;
+    };
+    const add_f32_bw: f64 = print_add_bandwidth_result("add_f32", add_f32_ns, size, iterations, BENCH_F32_ELEMENT_SIZE);
+
     const add_ns: u64 = bench_add_f64(&state, &device_left, &device_right, iterations) catch {
         write_str("error: gpu_add_f64 benchmark failed\n");
         return 1;
     };
-    print_throughput_result("add_f64", add_ns, size, iterations);
+    const add_f64_bw: f64 = print_add_bandwidth_result("add_f64", add_ns, size, iterations, BENCH_F64_ELEMENT_SIZE);
 
     const sum_ns: u64 = bench_sum_all_f64(&state, &device_left, iterations) catch {
         write_str("error: gpu_sum_all_f64 benchmark failed\n");
@@ -326,7 +388,12 @@ export fn main() i32 {
 
     write_newline();
     write_str("H2D/D2H bandwidth benchmark PASSED strict threshold\n");
-    write_str("Note: add_f32/sum_f32 kernels are not yet available in the embedded CUDA module.\n");
+    write_str("add_f32 effective bandwidth: ");
+    write_f64(add_f32_bw, 2);
+    write_str(" GB/s\n");
+    write_str("add_f64 effective bandwidth: ");
+    write_f64(add_f64_bw, 2);
+    write_str(" GB/s\n");
     write_str("Done.\n");
     return 0;
 }

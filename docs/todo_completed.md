@@ -1045,3 +1045,34 @@ NUMUYA_CUDA_REQUIRED=1 LDFLAGS="-lcublasLt -lcublas -lcufft -lcurand -lcuda" ../
     - H2D bandwidth: 9.19–9.27 GB/s，threshold=6.00 GB/s -> PASS
     - D2H bandwidth: 8.94–9.11 GB/s，threshold=6.00 GB/s -> PASS
     - `make test` 非 CUDA 测试全部通过
+
+## Phase 23: CUDA linalg、random、benchmark
+
+- [x] Benchmark: `add_f32/add_f64` throughput。
+  - 实现：
+    - 在 `src/numuya/cuda/ptx/core_sm86.ptx` 新增 `numuya_add_f32` contiguous kernel，读取左右 f32 输入并写入 f32 结果。
+    - 重新生成 `src/numuya/cuda/kernels_ptx.uya`（`make cuda-ptx-embed`）与 `src/numuya/cuda/kernels_cubin.uya`（`make cuda-cubin-embed`），确保嵌入的 PTX/cubin 包含新 kernel。
+    - 在 `src/numuya/cuda/kernels.uya` 导出 `ADD_F32_KERNEL`。
+    - 在 `src/numuya/cuda/ufunc.uya` 新增 `gpu_add_f32`，支持同 shape contiguous `DeviceArray<f32>` 加法，内部复用 `numuya_add_f32` kernel。
+    - 扩展 `src/numuya/_benchmarks/bench_cuda.uya`：
+      - 新增 f32 宿主/设备数组分配与 `bench_add_f32` 测量函数。
+      - 新增 `print_add_bandwidth_result` 按“读 left + 读 right + 写 result = 3 × elements × element_size”计算有效内存带宽并打印 GB/s。
+      - 输出 `add_f32` 与 `add_f64` 的 per-iteration 耗时、Melem/s throughput 与有效带宽。
+      - 移除旧的 “add_f32/sum_f32 kernels are not yet available” 提示。
+  - correctness 测试：
+    - 在 `src/numuya/_tests/test_cuda_ufunc.uya` 新增 `gpu_add_f32 contiguous matches CPU add_f32` 测试。
+  - 验证命令：
+    ```bash
+    ../uya/bin/uya test src/numuya/_tests/test_cuda_ufunc.uya --manifest-path uya.toml
+    make test-cuda
+    ../uya/bin/uya run src/numuya/_benchmarks/bench_cuda.uya --manifest-path uya.toml
+    ```
+  - 验证结果：
+    - `test_cuda_ufunc.uya`：6/6 tests passed（含新增 gpu_add_f32 测试）。
+    - `make test-cuda`：全部 CUDA 测试文件通过。
+    - benchmark 运行成功并输出 add_f32/add_f64 throughput 与有效带宽，示例输出：
+      ```
+      add_f32: per-iter=226476.90 ns (0.2265 ns/elem), throughput=4415.46 Melem/s, effective bandwidth=49.35 GB/s
+      add_f64: per-iter=550924.70 ns (0.5509 ns/elem), throughput=1815.13 Melem/s, effective bandwidth=40.57 GB/s
+      ```
+  - 备注：当前 benchmark 包含 kernel 启动、stream 同步与每次迭代新建输出 `DeviceArray` 的开销；实测有效带宽低于后续 strict threshold 目标（add_f32 >= 150 GB/s、add_f64 >= 100 GB/s），性能优化将在后续 benchmark strict threshold 任务中处理。
