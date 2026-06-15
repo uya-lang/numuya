@@ -953,3 +953,10 @@
   - 关键代码路径：
     - CPU: `src/numuya/linalg.uya` `require_matmul_args` 在 `a.shape.dims[1] != b.shape.dims[0]` 时返回 `error.NumuyaShapeMismatch`
     - CUDA: `src/numuya/cuda/linalg.uya` `require_matmul_device_args` 在相同条件下返回 `error.NumuyaShapeMismatch`
+
+## Phase 23: CUDA linalg、random、benchmark
+
+- [x] TDD: `gpu_random_f32`。
+  - 固定 seed 可复现。
+  - 输出范围 `[0, 1)`。
+  - 验证：`../uya/bin/uya test src/numuya/_tests/test_cuda_random.uya --manifest-path uya.toml` 5/5 通过（RTX 3060, CUDA 13.0, driver 580.119.02）。

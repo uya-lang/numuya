@@ -38,9 +38,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 23: CUDA linalg、random、benchmark
 
-- [ ] TDD: `gpu_random_f32`。
-  - 固定 seed 可复现。
-  - 输出范围 `[0, 1)`。
 - [ ] 可选 feature: cuBLASLt backend。
   - 通过配置 `prefer_vendor_libs=true` 启用。
   - 关闭时仍走纯 kernel backend。
