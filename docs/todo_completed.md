@@ -1288,3 +1288,15 @@ NUMUYA_CUDA_REQUIRED=1 LDFLAGS="-lcublasLt -lcublas -lcufft -lcurand -lcuda" ../
   - 验证命令：
     - `../uya/bin/uya test src/numuya/_tests/test_shape_ops.uya --manifest-path uya.toml` — 18/18 通过
     - `make test` — 全部非 CUDA 测试文件通过
+
+## Phase 24: NumPy 兼容面扩展
+
+- [x] `histogram`。
+  - 实现：`src/numuya/stats.uya` 新增 `HistogramResult` 与 `histogram_f64`，支持指定 bins、range、density，支持 C-contiguous 与非连续视图，超范围值忽略，右边界归入最后一 bin。
+  - 测试：`src/numuya/_tests/test_stats.uya` 新增 7 个聚焦测试。
+  - 验证命令：
+    ```bash
+    ../uya/bin/uya test src/numuya/_tests/test_stats.uya --manifest-path uya.toml
+    make test
+    ```
+  - 结果：`test_stats.uya` 23/23 通过；`make test` 全部非 CUDA 测试通过。

@@ -196,3 +196,96 @@ test "percentile_f64 handles non-contiguous transpose view" {
     // sorted [1,2,3,4,5,6], position=0.5*5=2.5, result=3.5
     try expect_close_f64(result, 3.5, 1e-12);
 }
+
+test "histogram_f64 computes equal counts for uniform data" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var source: [f64: 4] = [0.5, 1.5, 2.5, 3.5];
+    var a: Array<f64> = try from_slice<f64>(allocator, source[0:4], shape1(4));
+
+    var result: HistogramResult = try histogram_f64(&a, 2, 0.0, 4.0, false);
+
+    try expect_eq_usize(result.hist.shape.dims[0], 2);
+    try expect_close_f64(result.hist.storage.data[0], 2.0, 1e-12);
+    try expect_close_f64(result.hist.storage.data[1], 2.0, 1e-12);
+    try expect_eq_usize(result.bin_edges.shape.dims[0], 3);
+    try expect_close_f64(result.bin_edges.storage.data[0], 0.0, 1e-12);
+    try expect_close_f64(result.bin_edges.storage.data[1], 2.0, 1e-12);
+    try expect_close_f64(result.bin_edges.storage.data[2], 4.0, 1e-12);
+}
+
+test "histogram_f64 computes density" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var source: [f64: 4] = [0.5, 1.5, 2.5, 3.5];
+    var a: Array<f64> = try from_slice<f64>(allocator, source[0:4], shape1(4));
+
+    var result: HistogramResult = try histogram_f64(&a, 2, 0.0, 4.0, true);
+
+    // each bin has 2 counts, total=4, width=2 -> density = 2/(4*2)=0.25
+    try expect_close_f64(result.hist.storage.data[0], 0.25, 1e-12);
+    try expect_close_f64(result.hist.storage.data[1], 0.25, 1e-12);
+}
+
+test "histogram_f64 ignores values outside range" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var source: [f64: 4] = [-1.0, 0.5, 1.5, 5.0];
+    var a: Array<f64> = try from_slice<f64>(allocator, source[0:4], shape1(4));
+
+    var result: HistogramResult = try histogram_f64(&a, 2, 0.0, 2.0, false);
+
+    try expect_close_f64(result.hist.storage.data[0], 1.0, 1e-12);
+    try expect_close_f64(result.hist.storage.data[1], 1.0, 1e-12);
+}
+
+test "histogram_f64 places right edge value in last bin" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var source: [f64: 2] = [0.5, 2.0];
+    var a: Array<f64> = try from_slice<f64>(allocator, source[0:2], shape1(2));
+
+    var result: HistogramResult = try histogram_f64(&a, 2, 0.0, 2.0, false);
+
+    try expect_close_f64(result.hist.storage.data[0], 1.0, 1e-12);
+    try expect_close_f64(result.hist.storage.data[1], 1.0, 1e-12);
+}
+
+test "histogram_f64 handles non-contiguous transpose view" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var source: [f64: 4] = [0.5, 2.5, 1.5, 3.5];
+    var original: Array<f64> = try from_slice<f64>(allocator, source[0:4], shape2(2, 2));
+    var transposed: Array<f64> = try transpose<f64>(&original);
+
+    var result: HistogramResult = try histogram_f64(&transposed, 2, 0.0, 4.0, false);
+
+    try expect_close_f64(result.hist.storage.data[0], 2.0, 1e-12);
+    try expect_close_f64(result.hist.storage.data[1], 2.0, 1e-12);
+}
+
+test "histogram_f64 rejects zero bins" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var source: [f64: 2] = [0.5, 1.5];
+    var a: Array<f64> = try from_slice<f64>(allocator, source[0:2], shape1(2));
+
+    const result: !HistogramResult = histogram_f64(&a, 0, 0.0, 2.0, false);
+    match result {
+        error.NumuyaInvalidArgument => {}
+        else => { return error.NumuyaExpectationFailed; }
+    }
+}
+
+test "histogram_f64 rejects invalid range" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var source: [f64: 2] = [0.5, 1.5];
+    var a: Array<f64> = try from_slice<f64>(allocator, source[0:2], shape1(2));
+
+    const result: !HistogramResult = histogram_f64(&a, 2, 2.0, 2.0, false);
+    match result {
+        error.NumuyaInvalidArgument => {}
+        else => { return error.NumuyaExpectationFailed; }
+    }
+}

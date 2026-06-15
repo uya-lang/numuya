@@ -1,4 +1,5 @@
 use array;
+use creation;
 use errors;
 use shape;
 use storage;
@@ -10,6 +11,11 @@ use std.mem.allocator.IAllocator;
 extern "libc" fn sqrt(x: f64) f64;
 
 const STATS_MAX_USIZE: usize = 18446744073709551615;
+
+export struct HistogramResult {
+    hist: Array<f64>,
+    bin_edges: Array<f64>,
+}
 
 fn validate_array<T>(array_value: &Array<T>) !void {
     if array_value.shape.rank > NUMUYA_MAX_DIMS {
@@ -238,4 +244,91 @@ export fn percentile_f64(array_value: &Array<f64>, q: f64) !f64 {
     const percentile: f64 = temp[lower] + fraction * (temp[upper] - temp[lower]);
     allocator.dealloc(temp_bytes);
     return percentile;
+}
+
+export fn histogram_f64(array_value: &Array<f64>, bins: usize, range_min: f64, range_max: f64, density: bool) !HistogramResult {
+    try validate_array<f64>(array_value);
+    if bins == 0 {
+        return error.NumuyaInvalidArgument;
+    }
+    if !(range_min < range_max) {
+        return error.NumuyaInvalidArgument;
+    }
+
+    const size: usize = try array_size_safe<f64>(array_value);
+    const range_width: f64 = range_max - range_min;
+    const bin_width: f64 = range_width / (bins as! f64).value;
+
+    var hist: Array<f64> = try zeros_f64(array_value.storage.allocator, shape1(bins));
+    var bin_edges: Array<f64> = try empty<f64>(array_value.storage.allocator, shape1(bins + 1));
+
+    var edge_index: usize = 0;
+    while edge_index <= bins {
+        bin_edges.storage.data[edge_index] = range_min + (edge_index as! f64).value * bin_width;
+        edge_index = edge_index + 1;
+    }
+    bin_edges.storage.data[bins] = range_max;
+
+    if size > 0 {
+        if array_is_c_contiguous<f64>(array_value) {
+            const base: usize = try offset_as_usize(array_value.offset);
+            var i: usize = 0;
+            while i < size {
+                const value: f64 = array_value.storage.data[base + i];
+                if value < range_min || value > range_max {
+                    // ignore out-of-range values
+                } else if value == range_max {
+                    hist.storage.data[bins - 1] = hist.storage.data[bins - 1] + 1.0;
+                } else {
+                    const raw_bin: f64 = (value - range_min) / bin_width;
+                    const bin_index: usize = (raw_bin as! usize).value;
+                    if bin_index < bins {
+                        hist.storage.data[bin_index] = hist.storage.data[bin_index] + 1.0;
+                    }
+                }
+                i = i + 1;
+            }
+        } else {
+            var indices: [usize: NUMUYA_MAX_DIMS] = [0: NUMUYA_MAX_DIMS];
+            var linear: usize = 0;
+            while linear < size {
+                try linear_to_indices(&array_value.shape, linear, indices[0:array_value.shape.rank]);
+                const idx: usize = try physical_index_ref(&array_value.shape, &array_value.strides, array_value.offset, indices[0:array_value.shape.rank]);
+                const value: f64 = array_value.storage.data[idx];
+                if value < range_min || value > range_max {
+                    // ignore out-of-range values
+                } else if value == range_max {
+                    hist.storage.data[bins - 1] = hist.storage.data[bins - 1] + 1.0;
+                } else {
+                    const raw_bin: f64 = (value - range_min) / bin_width;
+                    const bin_index: usize = (raw_bin as! usize).value;
+                    if bin_index < bins {
+                        hist.storage.data[bin_index] = hist.storage.data[bin_index] + 1.0;
+                    }
+                }
+                linear = linear + 1;
+            }
+        }
+    }
+
+    if density {
+        var total: f64 = 0.0;
+        var i: usize = 0;
+        while i < bins {
+            total = total + hist.storage.data[i];
+            i = i + 1;
+        }
+        if total > 0.0 {
+            const norm: f64 = 1.0 / (total * bin_width);
+            i = 0;
+            while i < bins {
+                hist.storage.data[i] = hist.storage.data[i] * norm;
+                i = i + 1;
+            }
+        }
+    }
+
+    storage_retain<f64>(hist.storage);
+    storage_retain<f64>(bin_edges.storage);
+    return HistogramResult{ hist: hist, bin_edges: bin_edges };
 }
