@@ -1229,3 +1229,30 @@ NUMUYA_CUDA_REQUIRED=1 LDFLAGS="-lcublasLt -lcublas -lcufft -lcurand -lcuda" ../
     - `../uya/bin/uya test src/numuya/_tests/test_reductions.uya --manifest-path uya.toml` — 32/32 通过
     - `make test` — 全部非 CUDA 测试文件通过
 
+
+## Phase 24: NumPy 兼容面扩展
+
+- [x] `concatenate/stack/vstack/hstack`。
+  - [x] 实现 `concatenate` 并测试。
+  - [x] 实现 `stack` 并测试。
+  - [x] 实现 `vstack` 并测试。
+  - [x] 实现 `hstack` 并测试。
+
+验证命令：
+
+```bash
+../uya/bin/uya test src/numuya/_tests/test_shape_ops.uya --manifest-path uya.toml
+../uya/bin/uya test src/numuya/_tests/test_shape.uya --manifest-path uya.toml
+../uya/bin/uya test src/numuya/_tests/test_array_creation.uya --manifest-path uya.toml
+../uya/bin/uya test src/numuya/_tests/test_stride_views.uya --manifest-path uya.toml
+```
+
+验证结果（2026-06-15）：
+- `test_shape_ops.uya`: 7 tests passed, 0 failed
+- `test_shape.uya`: 8 tests passed, 0 failed
+- `test_array_creation.uya`: 6 tests passed, 0 failed
+- `test_stride_views.uya`: 13 tests passed, 0 failed
+
+实现文件：
+- `src/numuya/shape_ops.uya`：新增 `concatenate2`、`concatenate3`、`stack2`、`vstack2`、`hstack2`
+- `src/numuya/_tests/test_shape_ops.uya`：对应 TDD 测试
