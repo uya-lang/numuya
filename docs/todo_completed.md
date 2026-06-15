@@ -994,3 +994,11 @@
     - `../uya/bin/uya test src/numuya/_tests/test_cuda_random.uya --manifest-path uya.toml` — 7/7 通过
     - `make test-cuda` — 全部 CUDA 测试通过（包含 test_cuda_random 7 个测试）
     - `make test` — 全部非 CUDA 测试通过
+
+
+## Phase 23: CUDA linalg、random、benchmark
+
+- 可选 feature: cuFFT/cuRAND backend。
+  - [x] 添加可选 cuRAND backend wrapper，`gpu_random_f32` 在 `prefer_vendor_libs=true` 且可用时走 cuRAND，否则回退到纯 kernel。
+    - 验证命令：`../uya/bin/uya test src/numuya/_tests/test_cuda_random.uya --manifest-path uya.toml`
+    - 验证结果：7/7 测试通过，0 失败。
