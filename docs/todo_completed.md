@@ -1190,3 +1190,7 @@ NUMUYA_CUDA_REQUIRED=1 LDFLAGS="-lcublasLt -lcublas -lcufft -lcurand -lcuda" ../
     - `../uya/bin/uya test src/numuya/_tests/test_math.uya --manifest-path uya.toml` — 19/19 通过
     - `make test` — 全部非 CUDA 测试文件通过，exit code 0
 
+
+## Phase 24: NumPy 兼容面扩展
+
+- [x] `clip`。
