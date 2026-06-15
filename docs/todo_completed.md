@@ -888,3 +888,20 @@
   - 验证结果：
     - `test_cuda_linalg.uya` 编译通过；6 个测试中 1 个通过（导入测试），5 个因占位实现失败，符合 TDD 预期。
     - `test_linalg.uya` 全部 30 个测试通过，未受新模块影响。
+## Phase 23: CUDA linalg、random、benchmark
+
+- [x] 写 `src/numuya/_tests/test_cuda_random.uya`。
+  - 交付物：`src/numuya/_tests/test_cuda_random.uya`、`src/numuya/cuda/random.uya`、PTX `numuya_random_f32` kernel、更新的 `kernels_ptx.uya`/`kernels_cubin.uya`/`kernels.uya`。
+  - 验证命令：
+    - `NUMUYA_CUDA_REQUIRED=1 LDFLAGS="-lcuda" ../uya/bin/uya test src/numuya/_tests/test_cuda_random.uya --manifest-path uya.toml`
+    - 结果：5/5 tests passed。
+  - 相关回归检查（本任务引入的 CUDA random 未破坏已有 CUDA 功能）：
+    - `test_cuda_auto.uya`：6/6 passed
+    - `test_cuda_device_array.uya`：16/16 passed
+    - `test_cuda_driver.uya`：21/21 passed
+    - `test_cuda_location_preserving.uya`：4/4 passed
+    - `test_cuda_module.uya`：5/5 passed
+    - `test_cuda_reductions.uya`：12/12 passed
+    - `test_cuda_ufunc.uya`：5/5 passed
+  - 说明：`test_cuda_linalg.uya` 当前失败是因为 `gpu_matmul_f32` 仍为 stub（属于后续未完成的 TDD 任务），与本次 random 改动无关。
+

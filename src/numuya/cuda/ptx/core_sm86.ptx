@@ -234,3 +234,55 @@ DONE:
 END:
     ret;
 }
+
+.visible .entry numuya_random_f32(
+    .param .u64 numuya_random_f32_param_0,
+    .param .u64 numuya_random_f32_param_1,
+    .param .u64 numuya_random_f32_param_2
+)
+{
+    .reg .u32   r32_tid, r32_bid, r32_ntid, r32_state, r32_tmp;
+    .reg .u64   r64_out, r64_n, r64_seed, r64_idx, r64_ntid, r64_tmp;
+    .reg .f64   f64_val, f64_scale;
+    .reg .f32   f32_val;
+    .reg .pred  p;
+
+    ld.param.u64    r64_out, [numuya_random_f32_param_0];
+    ld.param.u64    r64_n, [numuya_random_f32_param_1];
+    ld.param.u64    r64_seed, [numuya_random_f32_param_2];
+
+    mov.u32         r32_tid, %tid.x;
+    cvt.u64.u32     r64_idx, r32_tid;
+    mov.u32         r32_bid, %ctaid.x;
+    cvt.u64.u32     r64_tmp, r32_bid;
+    mov.u32         r32_ntid, %ntid.x;
+    cvt.u64.u32     r64_ntid, r32_ntid;
+    mad.lo.u64      r64_idx, r64_tmp, r64_ntid, r64_idx;
+
+    setp.ge.u64     p, r64_idx, r64_n;
+    @p bra          END;
+
+    add.u64         r64_tmp, r64_seed, r64_idx;
+    cvt.u32.u64     r32_state, r64_tmp;
+
+    shl.b32         r32_tmp, r32_state, 13;
+    xor.b32         r32_state, r32_state, r32_tmp;
+    shr.b32         r32_tmp, r32_state, 17;
+    xor.b32         r32_state, r32_state, r32_tmp;
+    shl.b32         r32_tmp, r32_state, 5;
+    xor.b32         r32_state, r32_state, r32_tmp;
+
+    mad.lo.u32      r32_state, r32_state, 1664525, 1013904223;
+
+    cvt.rn.f64.u32  f64_val, r32_state;
+    mov.f64         f64_scale, 0D3DF0000000000000;
+    mul.f64         f64_val, f64_val, f64_scale;
+    cvt.rn.f32.f64  f32_val, f64_val;
+
+    mul.lo.u64      r64_tmp, r64_idx, 4;
+    add.u64         r64_tmp, r64_out, r64_tmp;
+    st.f32          [r64_tmp], f32_val;
+
+END:
+    ret;
+}

@@ -38,7 +38,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 23: CUDA linalg、random、benchmark
 
-- [ ] 写 `src/numuya/_tests/test_cuda_random.uya`。
 - [ ] 写 `src/numuya/_benchmarks/bench_cuda.uya`。
 - [ ] TDD: `gpu_matmul_f32` baseline。
   - 2x2。

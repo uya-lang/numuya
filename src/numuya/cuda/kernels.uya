@@ -6,6 +6,7 @@ export const ADD_F64_KERNEL: &const byte = "numuya_add_f64" as &const byte;
 export const ADD_F64_STRIDED_KERNEL: &const byte = "numuya_add_f64_strided" as &const byte;
 export const MUL_F64_KERNEL: &const byte = "numuya_mul_f64" as &const byte;
 export const SUM_ALL_F64_KERNEL: &const byte = "numuya_sum_all_f64" as &const byte;
+export const RANDOM_F32_KERNEL: &const byte = "numuya_random_f32" as &const byte;
 
 // Re-export the embedded PTX source-of-truth generated from
 // src/numuya/cuda/ptx/core_sm86.ptx by src/numuya/_tools/embed_ptx.uya.
