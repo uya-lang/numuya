@@ -16,10 +16,13 @@
 
 ## Phase 23: CUDA linalg、random、benchmark
 
-- [f] Benchmark: `sum_f32/sum_f64` throughput。
-  - 失败原因：前序轮次已标记为 `[f]`，本轮为归档清理；未在当前轮次保留可复现的失败日志与阻塞命令。
-  - 关键错误：无新捕获日志。
-  - 后续重开条件：重新实现 `sum_f32/sum_f64` throughput benchmark 并满足 Phase 23 strict 阈值（`sum_f32` 有效读带宽 >= 60 GiB/s）后，从失败归档移回主 todo 验证。
+- [x] Benchmark: `sum_f32/sum_f64` throughput。
+  - 修复结果：`gpu_sum_all_f32`/`gpu_sum_all_f64` 复用 `BackendState` reduction scratch，避免每次调用反复 `cudaMalloc/cudaFree`；`sum_all_f64` PTX 从单线程循环改为两阶段 shared-memory 归约。
+  - 验证命令：
+    - `make cuda-ptx-embed cuda-cubin-embed` — ptxas 与内嵌资源生成成功。
+    - `../uya/bin/uya test src/numuya/_tests/test_cuda_driver.uya --manifest-path uya.toml` — 23 tests passed。
+    - `../uya/bin/uya test src/numuya/_tests/test_cuda_reductions.uya --manifest-path uya.toml` — 15 tests passed。
+    - `../uya/bin/uya run src/numuya/_benchmarks/bench_cuda.uya --manifest-path uya.toml` — `sum_all_f32` 89.68 GiB/s，`sum_all_f64` 150.02 GiB/s。
 
 ## Phase 23: CUDA linalg、random、benchmark
 

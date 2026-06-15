@@ -23,6 +23,12 @@ export struct BackendState {
     prefer_vendor_libs: bool,
     allow_tf32: bool,
     cublaslt_handle: usize,
+    reduction_f32_result_ptr: usize,
+    reduction_f32_partial_ptr: usize,
+    reduction_f32_partial_len: usize,
+    reduction_f64_result_ptr: usize,
+    reduction_f64_partial_ptr: usize,
+    reduction_f64_partial_len: usize,
 }
 
 var active_device_storage_count: usize = 0;
@@ -58,6 +64,12 @@ export fn backend_init_with_config(config: &BackendConfig) !BackendState {
         prefer_vendor_libs: config.prefer_vendor_libs,
         allow_tf32: config.allow_tf32,
         cublaslt_handle: 0,
+        reduction_f32_result_ptr: 0,
+        reduction_f32_partial_ptr: 0,
+        reduction_f32_partial_len: 0,
+        reduction_f64_result_ptr: 0,
+        reduction_f64_partial_ptr: 0,
+        reduction_f64_partial_len: 0,
     };
 
     match config.kind {
@@ -95,6 +107,25 @@ export fn backend_deinit(state: &BackendState) !void {
     }
 
     if state.kind == BackendKind.Cuda {
+        cuda_set_current_context(state.context) catch {};
+        if state.reduction_f32_result_ptr != 0 {
+            cuda_driver_free(state.reduction_f32_result_ptr) catch {};
+            state.reduction_f32_result_ptr = 0;
+        }
+        if state.reduction_f32_partial_ptr != 0 {
+            cuda_driver_free(state.reduction_f32_partial_ptr) catch {};
+            state.reduction_f32_partial_ptr = 0;
+            state.reduction_f32_partial_len = 0;
+        }
+        if state.reduction_f64_result_ptr != 0 {
+            cuda_driver_free(state.reduction_f64_result_ptr) catch {};
+            state.reduction_f64_result_ptr = 0;
+        }
+        if state.reduction_f64_partial_ptr != 0 {
+            cuda_driver_free(state.reduction_f64_partial_ptr) catch {};
+            state.reduction_f64_partial_ptr = 0;
+            state.reduction_f64_partial_len = 0;
+        }
         if state.cublaslt_handle != 0 {
             cublaslt_destroy(state.cublaslt_handle) catch {};
             state.cublaslt_handle = 0;
@@ -115,6 +146,12 @@ export fn backend_deinit(state: &BackendState) !void {
     state.prefer_vendor_libs = false;
     state.allow_tf32 = false;
     state.cublaslt_handle = 0;
+    state.reduction_f32_result_ptr = 0;
+    state.reduction_f32_partial_ptr = 0;
+    state.reduction_f32_partial_len = 0;
+    state.reduction_f64_result_ptr = 0;
+    state.reduction_f64_partial_ptr = 0;
+    state.reduction_f64_partial_len = 0;
 }
 
 export fn backend_device_storage_retain() void {

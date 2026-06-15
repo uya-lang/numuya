@@ -66,6 +66,40 @@ fn device_array_is_c_contiguous_local(shape_value: &Shape, strides_value: &Strid
     return true;
 }
 
+fn ensure_reduction_f32_scratch(state: &BackendState, num_blocks: usize) !void {
+    try cuda_set_current_context(state.context);
+
+    if state.reduction_f32_result_ptr == 0 {
+        state.reduction_f32_result_ptr = try cuda_driver_malloc(REDUCTION_F32_ELEMENT_SIZE);
+    }
+    if state.reduction_f32_partial_len < num_blocks {
+        if state.reduction_f32_partial_ptr != 0 {
+            cuda_driver_free(state.reduction_f32_partial_ptr) catch {};
+            state.reduction_f32_partial_ptr = 0;
+            state.reduction_f32_partial_len = 0;
+        }
+        state.reduction_f32_partial_ptr = try cuda_driver_malloc(num_blocks * REDUCTION_F32_ELEMENT_SIZE);
+        state.reduction_f32_partial_len = num_blocks;
+    }
+}
+
+fn ensure_reduction_f64_scratch(state: &BackendState, num_blocks: usize) !void {
+    try cuda_set_current_context(state.context);
+
+    if state.reduction_f64_result_ptr == 0 {
+        state.reduction_f64_result_ptr = try cuda_driver_malloc(F64_ELEMENT_SIZE);
+    }
+    if state.reduction_f64_partial_len < num_blocks {
+        if state.reduction_f64_partial_ptr != 0 {
+            cuda_driver_free(state.reduction_f64_partial_ptr) catch {};
+            state.reduction_f64_partial_ptr = 0;
+            state.reduction_f64_partial_len = 0;
+        }
+        state.reduction_f64_partial_ptr = try cuda_driver_malloc(num_blocks * F64_ELEMENT_SIZE);
+        state.reduction_f64_partial_len = num_blocks;
+    }
+}
+
 fn clone_shape_local(shape_value: &Shape) Shape {
     var cloned: Shape = shape_scalar();
     cloned.rank = shape_value.rank;
@@ -153,14 +187,11 @@ export fn gpu_sum_all_f32(state: &BackendState, array_value: &DeviceArray<f32>) 
     }
 
     const num_blocks: usize = 256;
-    const result_storage: &DeviceStorage<f32> = try device_storage_new<f32>(array_value.storage.pool, 1);
-    defer device_storage_release<f32>(result_storage);
-    const partial_sums_storage: &DeviceStorage<f32> = try device_storage_new<f32>(array_value.storage.pool, num_blocks);
-    defer device_storage_release<f32>(partial_sums_storage);
+    try ensure_reduction_f32_scratch(state, num_blocks);
 
     const input_ptr: usize = device_ptr_with_offset_f32(array_value);
-    const result_ptr: usize = result_storage.ptr as usize;
-    const partial_sums_ptr: usize = partial_sums_storage.ptr as usize;
+    const result_ptr: usize = state.reduction_f32_result_ptr;
+    const partial_sums_ptr: usize = state.reduction_f32_partial_ptr;
 
     var arg_partial_ptr: usize = partial_sums_ptr;
     var arg_input_ptr: usize = input_ptr;
@@ -183,8 +214,6 @@ export fn gpu_sum_all_f32(state: &BackendState, array_value: &DeviceArray<f32>) 
         &args[0]
     );
 
-    try cuda_synchronize_stream(state.context, state.stream);
-
     var arg_result_ptr: usize = result_ptr;
     var arg_partial_ptr2: usize = partial_sums_ptr;
     var arg_num_blocks: usize = num_blocks;
@@ -205,8 +234,6 @@ export fn gpu_sum_all_f32(state: &BackendState, array_value: &DeviceArray<f32>) 
         state.stream,
         &finalize_args[0]
     );
-
-    try cuda_synchronize_stream(state.context, state.stream);
 
     var device_result_value: f32 = 0.0;
     try cuda_memcpy_dtoh_async((&device_result_value) as &byte, result_ptr, REDUCTION_F32_ELEMENT_SIZE, state.stream);
@@ -238,35 +265,59 @@ export fn gpu_sum_all_f64(state: &BackendState, array_value: &DeviceArray<f64>) 
         return error.NumuyaCudaError;
     }
 
-    const result_storage: &DeviceStorage<f64> = try device_storage_new<f64>(array_value.storage.pool, 1);
-    defer device_storage_release<f64>(result_storage);
+    const finalize_func: usize = try cuda_module_get_function(state.module, SUM_ALL_F64_FINALIZE_KERNEL);
+    if finalize_func == 0 {
+        return error.NumuyaCudaError;
+    }
+
+    const num_blocks: usize = 256;
+    try ensure_reduction_f64_scratch(state, num_blocks);
 
     const input_ptr: usize = device_ptr_with_offset_f64(array_value);
-    const result_ptr: usize = result_storage.ptr as usize;
-    const stride_bytes: usize = F64_ELEMENT_SIZE;
+    const result_ptr: usize = state.reduction_f64_result_ptr;
+    const partial_sums_ptr: usize = state.reduction_f64_partial_ptr;
 
-    var arg_result_ptr: usize = result_ptr;
+    var arg_partial_ptr: usize = partial_sums_ptr;
     var arg_input_ptr: usize = input_ptr;
     var arg_n: usize = n;
-    var arg_stride: usize = stride_bytes;
+    var arg_unused: usize = 0;
 
     var args: [usize: 4] = [
-        (&arg_result_ptr) as usize,
+        (&arg_partial_ptr) as usize,
         (&arg_input_ptr) as usize,
         (&arg_n) as usize,
-        (&arg_stride) as usize,
+        (&arg_unused) as usize,
     ];
 
     try cuda_launch_kernel(
         func,
-        1, 1, 1,
-        1, 1, 1,
-        0,
+        num_blocks, 1, 1,
+        256, 1, 1,
+        256 * F64_ELEMENT_SIZE,
         state.stream,
         &args[0]
     );
 
-    try cuda_synchronize_stream(state.context, state.stream);
+    var arg_result_ptr: usize = result_ptr;
+    var arg_partial_ptr2: usize = partial_sums_ptr;
+    var arg_num_blocks: usize = num_blocks;
+    var arg_unused2: usize = 0;
+
+    var finalize_args: [usize: 4] = [
+        (&arg_result_ptr) as usize,
+        (&arg_partial_ptr2) as usize,
+        (&arg_num_blocks) as usize,
+        (&arg_unused2) as usize,
+    ];
+
+    try cuda_launch_kernel(
+        finalize_func,
+        1, 1, 1,
+        256, 1, 1,
+        256 * F64_ELEMENT_SIZE,
+        state.stream,
+        &finalize_args[0]
+    );
 
     var device_result_value: f64 = 0.0;
     try cuda_memcpy_dtoh_async((&device_result_value) as &byte, result_ptr, F64_ELEMENT_SIZE, state.stream);
