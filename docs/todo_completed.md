@@ -818,3 +818,13 @@
     - `../uya/bin/uya test src/numuya/_tests/test_broadcast.uya --manifest-path uya.toml` → 7/7 通过。
     - `../uya/bin/uya test src/numuya/_tests/test_ufunc.uya --manifest-path uya.toml` → 20/20 通过。
     - `NUMUYA_CUDA_REQUIRED=1 LDFLAGS="-lcuda" ../uya/bin/uya test src/numuya/_tests/test_cuda_ufunc.uya --manifest-path uya.toml` → broadcast 与 contiguous 测试通过；同文件中的 transpose 测试仍失败，原因为 `device_array_from_host` 尚未按 strides 上传非连续视图，属于后续 L41 任务。
+
+## Phase 22: CUDA ufunc 与 reduction
+
+- [x] TDD: non-contiguous input。
+  - transpose view 输入正确。
+  - 验证：
+    - `NUMUYA_CUDA_REQUIRED=1 LDFLAGS="-lcuda" ../uya/bin/uya test src/numuya/_tests/test_cuda_ufunc.uya --manifest-path uya.toml` → 5/5 passed（包含 `gpu_add_f64 handles non-contiguous transpose input`）。
+    - `make test` → 所有非 CUDA tests 通过。
+    - `make test-cuda` 中 `test_cuda_device_array.uya`、`test_cuda_driver.uya`、`test_cuda_module.uya`、`test_cuda_ufunc.uya` 通过；`test_cuda_reductions.uya` 因下一任务 `cuda.reductions` 模块尚未实现而失败，非本改动引入。
+  - 改动：`src/numuya/cuda/device_array.uya` 的 `device_array_from_host<T>` 现在保留 host array 的 offset、shape 与 strides，并复制完整 backing storage，使 strided CUDA kernel 能正确处理 transpose 等非连续输入；新增 `device_array_is_c_contiguous`、`device_array_is_f_contiguous`、`stride_step_matches` 辅助函数计算 flags。

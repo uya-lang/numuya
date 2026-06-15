@@ -143,13 +143,104 @@ export fn device_array_view<T>(array_value: &DeviceArray<T>) DeviceArray<T> {
     };
 }
 
+fn stride_step_matches(step: isize, expected: usize) bool {
+    if step <= 0 {
+        return false;
+    }
+    const step_usize: usize = step as! usize catch {
+        return false;
+    };
+    return step_usize == expected;
+}
+
+fn device_array_is_c_contiguous(shape_value: &Shape, strides_value: &Strides) bool {
+    if shape_value.rank != strides_value.rank || shape_value.rank > NUMUYA_MAX_DIMS {
+        return false;
+    }
+    if shape_value.rank == 0 {
+        return true;
+    }
+
+    var expected_stride: usize = 1;
+    var axis: usize = shape_value.rank;
+    while axis > 0 {
+        const index: usize = axis - 1;
+        if index >= NUMUYA_MAX_DIMS {
+            return false;
+        }
+        const dim: usize = shape_value.dims[index];
+        if dim == 0 {
+            return true;
+        }
+        const step: isize = strides_value.steps[index];
+        if !stride_step_matches(step, expected_stride) {
+            return false;
+        }
+        expected_stride = expected_stride * dim;
+        axis = index;
+    }
+    return true;
+}
+
+fn device_array_is_f_contiguous(shape_value: &Shape, strides_value: &Strides) bool {
+    if shape_value.rank != strides_value.rank || shape_value.rank > NUMUYA_MAX_DIMS {
+        return false;
+    }
+    if shape_value.rank == 0 {
+        return true;
+    }
+
+    var expected_stride: usize = 1;
+    var axis: usize = 0;
+    while axis < shape_value.rank {
+        if axis >= NUMUYA_MAX_DIMS {
+            return false;
+        }
+        const dim: usize = shape_value.dims[axis];
+        if dim == 0 {
+            return true;
+        }
+        const step: isize = strides_value.steps[axis];
+        if !stride_step_matches(step, expected_stride) {
+            return false;
+        }
+        expected_stride = expected_stride * dim;
+        axis = axis + 1;
+    }
+    return true;
+}
+
+fn device_array_flags_from_strides(shape_value: &Shape, strides_value: &Strides) ArrayFlags {
+    return ArrayFlags{
+        c_contiguous: device_array_is_c_contiguous(shape_value, strides_value),
+        f_contiguous: device_array_is_f_contiguous(shape_value, strides_value),
+        writeable: true,
+        owns_data: true,
+    };
+}
+
 export fn device_array_from_host<T>(pool: &MemoryPool, host_array: &Array<T>, context: usize, stream: usize) !DeviceArray<T> {
-    var device: DeviceArray<T> = try device_array_new<T>(pool, host_array.shape, context, stream);
-    const bytes: usize = element_size_of<T>() * device.storage.len;
+    if host_array.offset < 0 {
+        return error.NumuyaInvalidArgument;
+    }
+    const offset: usize = (host_array.offset as! usize).value;
+
+    const storage_len: usize = host_array.storage.len;
+    const storage_value: &DeviceStorage<T> = try device_storage_new<T>(pool, storage_len);
+    const bytes: usize = element_size_of<T>() * storage_len;
     const host_ptr: &byte = host_array.storage.data as &byte;
-    try cuda_memcpy_htod_async(device.storage.ptr as usize, host_ptr, bytes, stream);
+    try cuda_memcpy_htod_async(storage_value.ptr as usize, host_ptr, bytes, stream);
     try cuda_synchronize_stream(context, stream);
-    return device;
+
+    return DeviceArray<T>{
+        storage: storage_value,
+        offset: offset,
+        shape: host_array.shape,
+        strides: host_array.strides,
+        flags: device_array_flags_from_strides(&host_array.shape, &host_array.strides),
+        context: context,
+        stream: stream,
+    };
 }
 
 export fn device_empty_f64(pool: &MemoryPool, shape_value: Shape, context: usize, stream: usize) !DeviceArray<f64> {

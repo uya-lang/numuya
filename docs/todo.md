@@ -35,8 +35,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 22: CUDA ufunc 与 reduction
 
-- [ ] TDD: non-contiguous input。
-  - transpose view 输入正确。
 - [ ] TDD: `gpu_sum_f64`。
   - 小数组。
   - 大数组。
