@@ -1,0 +1,45 @@
+use array;
+use shape;
+use storage;
+use stride;
+
+use std.mem.allocator.IAllocator;
+
+export fn concatenate2<T>(allocator: IAllocator, a: &Array<T>, b: &Array<T>, axis: isize) !Array<T> {
+    _ = allocator;
+    _ = a;
+    _ = b;
+    _ = axis;
+    return error.NumuyaUnsupportedDType;
+}
+
+export fn concatenate3<T>(allocator: IAllocator, a: &Array<T>, b: &Array<T>, c: &Array<T>, axis: isize) !Array<T> {
+    _ = allocator;
+    _ = a;
+    _ = b;
+    _ = c;
+    _ = axis;
+    return error.NumuyaUnsupportedDType;
+}
+
+export fn stack2<T>(allocator: IAllocator, a: &Array<T>, b: &Array<T>, axis: isize) !Array<T> {
+    _ = allocator;
+    _ = a;
+    _ = b;
+    _ = axis;
+    return error.NumuyaUnsupportedDType;
+}
+
+export fn vstack2<T>(allocator: IAllocator, a: &Array<T>, b: &Array<T>) !Array<T> {
+    _ = allocator;
+    _ = a;
+    _ = b;
+    return error.NumuyaUnsupportedDType;
+}
+
+export fn hstack2<T>(allocator: IAllocator, a: &Array<T>, b: &Array<T>) !Array<T> {
+    _ = allocator;
+    _ = a;
+    _ = b;
+    return error.NumuyaUnsupportedDType;
+}
