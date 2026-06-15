@@ -1,0 +1,37 @@
+use array;
+use creation;
+use einsum;
+use indexing;
+use shape;
+use stride;
+use testing.expect_close_f64;
+use testing.expect_eq_usize;
+
+use std.mem.allocator.IAllocator;
+use std.mem.allocator.MallocAllocator;
+
+test "einsum batch matmul ravel check" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+
+    var a_data: [f64: 12] = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0,
+                              7.0, 8.0, 9.0, 10.0, 11.0, 12.0];
+    var a: Array<f64> = try from_slice<f64>(allocator, a_data[0:12], shape3(2, 2, 3));
+
+    var b_data: [f64: 12] = [1.0, 0.0, 0.0, 1.0, 0.0, 0.0,
+                              0.0, 0.0, 1.0, 0.0, 1.0, 1.0];
+    var b: Array<f64> = try from_slice<f64>(allocator, b_data[0:12], shape3(2, 3, 2));
+
+    var result: Array<f64> = try einsum_f64(allocator, "bij,bjk->bik", &a, &b);
+    var flat: Array<f64> = try ravel<f64>(&result);
+
+    try expect_eq_usize(flat.shape.dims[0], 8);
+    try expect_close_f64(try get1<f64>(&flat, 0), 1.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&flat, 1), 2.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&flat, 2), 4.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&flat, 3), 5.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&flat, 4), 17.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&flat, 5), 9.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&flat, 6), 23.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&flat, 7), 12.0, 1e-12);
+}

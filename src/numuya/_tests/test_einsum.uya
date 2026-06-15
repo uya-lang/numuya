@@ -1,0 +1,148 @@
+use array;
+use creation;
+use einsum;
+use indexing;
+use shape;
+use testing.expect_close_f64;
+use testing.expect_eq_usize;
+
+use std.mem.allocator.IAllocator;
+use std.mem.allocator.MallocAllocator;
+
+test "einsum test file imports einsum module" {
+}
+
+test "einsum matrix multiplication ij,jk->ik" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+
+    var a_data: [f64: 6] = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
+    var a: Array<f64> = try from_slice<f64>(allocator, a_data[0:6], shape2(2, 3));
+
+    var b_data: [f64: 6] = [7.0, 8.0, 9.0, 10.0, 11.0, 12.0];
+    var b: Array<f64> = try from_slice<f64>(allocator, b_data[0:6], shape2(3, 2));
+
+    var result: Array<f64> = try einsum_f64(allocator, "ij,jk->ik", &a, &b);
+
+    try expect_eq_usize(result.shape.rank, 2);
+    try expect_eq_usize(result.shape.dims[0], 2);
+    try expect_eq_usize(result.shape.dims[1], 2);
+    try expect_close_f64(try get2<f64>(&result, 0, 0), 58.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&result, 0, 1), 64.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&result, 1, 0), 139.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&result, 1, 1), 154.0, 1e-12);
+}
+
+test "einsum sum all elements ij->" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+
+    var data: [f64: 4] = [1.0, 2.0, 3.0, 4.0];
+    var a: Array<f64> = try from_slice<f64>(allocator, data[0:4], shape2(2, 2));
+
+    var result: Array<f64> = try einsum_f64(allocator, "ij->", &a, null);
+
+    try expect_eq_usize(result.shape.rank, 0);
+    try expect_close_f64(try get0<f64>(&result), 10.0, 1e-12);
+}
+
+test "einsum trace ii->" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+
+    var data: [f64: 4] = [1.0, 2.0, 3.0, 4.0];
+    var a: Array<f64> = try from_slice<f64>(allocator, data[0:4], shape2(2, 2));
+
+    var result: Array<f64> = try einsum_f64(allocator, "ii->", &a, null);
+
+    try expect_eq_usize(result.shape.rank, 0);
+    try expect_close_f64(try get0<f64>(&result), 5.0, 1e-12);
+}
+
+test "einsum extract diagonal ii->i" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+
+    var data: [f64: 4] = [1.0, 2.0, 3.0, 4.0];
+    var a: Array<f64> = try from_slice<f64>(allocator, data[0:4], shape2(2, 2));
+
+    var result: Array<f64> = try einsum_f64(allocator, "ii->i", &a, null);
+
+    try expect_eq_usize(result.shape.rank, 1);
+    try expect_eq_usize(result.shape.dims[0], 2);
+    try expect_close_f64(try get1<f64>(&result, 0), 1.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&result, 1), 4.0, 1e-12);
+}
+
+test "einsum outer product i,j->ij" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+
+    var a_data: [f64: 3] = [1.0, 2.0, 3.0];
+    var a: Array<f64> = try from_slice<f64>(allocator, a_data[0:3], shape1(3));
+
+    var b_data: [f64: 2] = [4.0, 5.0];
+    var b: Array<f64> = try from_slice<f64>(allocator, b_data[0:2], shape1(2));
+
+    var result: Array<f64> = try einsum_f64(allocator, "i,j->ij", &a, &b);
+
+    try expect_eq_usize(result.shape.rank, 2);
+    try expect_eq_usize(result.shape.dims[0], 3);
+    try expect_eq_usize(result.shape.dims[1], 2);
+    try expect_close_f64(try get2<f64>(&result, 0, 0), 4.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&result, 0, 1), 5.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&result, 1, 0), 8.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&result, 1, 1), 10.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&result, 2, 0), 12.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&result, 2, 1), 15.0, 1e-12);
+}
+
+test "einsum batch matrix multiplication bij,bjk->bik" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+
+    var a_data: [f64: 12] = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0,
+                              7.0, 8.0, 9.0, 10.0, 11.0, 12.0];
+    var a: Array<f64> = try from_slice<f64>(allocator, a_data[0:12], shape3(2, 2, 3));
+
+    var b_data: [f64: 12] = [1.0, 0.0, 0.0, 1.0, 0.0, 0.0,
+                              0.0, 0.0, 1.0, 0.0, 1.0, 1.0];
+    var b: Array<f64> = try from_slice<f64>(allocator, b_data[0:12], shape3(2, 3, 2));
+
+    var result: Array<f64> = try einsum_f64(allocator, "bij,bjk->bik", &a, &b);
+
+    try expect_eq_usize(result.shape.rank, 3);
+    try expect_eq_usize(result.shape.dims[0], 2);
+    try expect_eq_usize(result.shape.dims[1], 2);
+    try expect_eq_usize(result.shape.dims[2], 2);
+    // Batch 0: a[0] @ b[0]
+    try expect_close_f64(try get3<f64>(&result, 0, 0, 0), 1.0, 1e-12);
+    try expect_close_f64(try get3<f64>(&result, 0, 0, 1), 2.0, 1e-12);
+    try expect_close_f64(try get3<f64>(&result, 0, 1, 0), 4.0, 1e-12);
+    try expect_close_f64(try get3<f64>(&result, 0, 1, 1), 5.0, 1e-12);
+    // Batch 1: a[1] @ b[1]
+    try expect_close_f64(try get3<f64>(&result, 1, 0, 0), 17.0, 1e-12);
+    try expect_close_f64(try get3<f64>(&result, 1, 0, 1), 9.0, 1e-12);
+    try expect_close_f64(try get3<f64>(&result, 1, 1, 0), 23.0, 1e-12);
+    try expect_close_f64(try get3<f64>(&result, 1, 1, 1), 12.0, 1e-12);
+}
+
+test "einsum transpose ij->ji" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+
+    var data: [f64: 6] = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
+    var a: Array<f64> = try from_slice<f64>(allocator, data[0:6], shape2(2, 3));
+
+    var result: Array<f64> = try einsum_f64(allocator, "ij->ji", &a, null);
+
+    try expect_eq_usize(result.shape.rank, 2);
+    try expect_eq_usize(result.shape.dims[0], 3);
+    try expect_eq_usize(result.shape.dims[1], 2);
+    try expect_close_f64(try get2<f64>(&result, 0, 0), 1.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&result, 0, 1), 4.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&result, 1, 0), 2.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&result, 1, 1), 5.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&result, 2, 0), 3.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&result, 2, 1), 6.0, 1e-12);
+}

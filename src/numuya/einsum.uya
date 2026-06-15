@@ -1,0 +1,388 @@
+use array;
+use creation;
+use errors;
+use indexing;
+use shape;
+use storage;
+
+use std.mem.allocator.IAllocator;
+use std.string.strlen;
+
+const EINSUM_MAX_LABELS: usize = 16;
+fn is_lowercase_letter(ch: byte) bool {
+    return ch >= 'a' as byte && ch <= 'z' as byte;
+}
+
+fn label_to_index(ch: byte) !usize {
+    if !is_lowercase_letter(ch) {
+        return error.NumuyaInvalidArgument;
+    }
+    const idx: usize = (ch - ('a' as byte)) as usize;
+    if idx >= 26 {
+        return error.NumuyaInvalidArgument;
+    }
+    return idx;
+}
+
+fn multiply_usize_isize(index_value: usize, step: isize) !isize {
+    if step == 0 {
+        return (0 as! isize).value;
+    }
+    const signed_index: isize = index_value as! isize catch {
+        return error.NumuyaIndexOutOfBounds;
+    };
+    if signed_index == 0 {
+        return (0 as! isize).value;
+    }
+    const abs_step: isize = if step < 0 { -step } else { step };
+    if abs_step > NUMUYA_ISIZE_MAX / signed_index {
+        return error.NumuyaIndexOutOfBounds;
+    }
+    return signed_index * step;
+}
+
+fn operand_value_at_labels<T>(
+    array_value: &Array<T>,
+    labels: &[byte],
+    labels_len: usize,
+    label_value: &[usize],
+) !T {
+    var linear_index: isize = array_value.offset;
+    var axis: usize = 0;
+    while axis < labels_len {
+        const label_idx: usize = try label_to_index(labels[axis]);
+        if label_idx >= 26 {
+            return error.NumuyaInvalidArgument;
+        }
+        const index_value: usize = label_value[label_idx];
+        const dim: usize = array_value.shape.dims[axis];
+        if index_value >= dim {
+            return error.NumuyaIndexOutOfBounds;
+        }
+        const step: isize = array_value.strides.steps[axis];
+        const contribution: isize = try multiply_usize_isize(index_value, step);
+        linear_index = linear_index + contribution;
+        axis = axis + 1;
+    }
+    if linear_index < 0 {
+        return error.NumuyaIndexOutOfBounds;
+    }
+    const physical: usize = (linear_index as! usize).value;
+    if physical >= array_value.storage.len {
+        return error.NumuyaIndexOutOfBounds;
+    }
+    return array_value.storage.data[physical];
+}
+
+export fn einsum_f64(allocator: IAllocator, subscript: &const byte, a: &Array<f64>, b: &Array<f64>) !Array<f64> {
+    var operand_count: usize = 2;
+    if b == null {
+        operand_count = 1;
+    }
+
+    const sub_len: usize = strlen(subscript);
+    if sub_len == 0 {
+        return error.NumuyaInvalidArgument;
+    }
+
+    const MAX_SUBSCRIPT_LEN: usize = 64;
+    var sub_local: [byte: MAX_SUBSCRIPT_LEN] = [0: MAX_SUBSCRIPT_LEN];
+    if sub_len >= MAX_SUBSCRIPT_LEN {
+        return error.NumuyaInvalidArgument;
+    }
+    var cursor: usize = 0;
+    while cursor < sub_len {
+        sub_local[cursor] = subscript[cursor];
+        cursor = cursor + 1;
+    }
+
+    // Locate arrow "->".
+    var arrow_pos: usize = sub_len;
+    cursor = 0;
+    while cursor + 1 < sub_len {
+        if sub_local[cursor] == '-' as byte && sub_local[cursor + 1] == '>' as byte {
+            arrow_pos = cursor;
+            break;
+        }
+        cursor = cursor + 1;
+    }
+
+    const input_part_len: usize = arrow_pos;
+    const two_usize: usize = 2;
+    var output_part_start: usize = sub_len;
+    var output_part_len: usize = 0;
+    if arrow_pos < sub_len {
+        output_part_start = arrow_pos + two_usize;
+        output_part_len = sub_len - arrow_pos - two_usize;
+    }
+
+    // Buffers for parsed labels.
+    var input0: [byte: EINSUM_MAX_LABELS] = [0: EINSUM_MAX_LABELS];
+    var input1: [byte: EINSUM_MAX_LABELS] = [0: EINSUM_MAX_LABELS];
+    var output: [byte: EINSUM_MAX_LABELS] = [0: EINSUM_MAX_LABELS];
+    var input0_len: usize = 0;
+    var input1_len: usize = 0;
+    var output_len: usize = 0;
+
+    // Parse output labels.
+    cursor = 0;
+    while cursor < output_part_len {
+        if output_part_start + cursor >= sub_len {
+            return error.NumuyaInvalidArgument;
+        }
+        const ch: byte = sub_local[output_part_start + cursor];
+        if !is_lowercase_letter(ch) {
+            return error.NumuyaInvalidArgument;
+        }
+        if output_len >= EINSUM_MAX_LABELS {
+            return error.NumuyaRankTooLarge;
+        }
+        output[output_len] = ch;
+        output_len = output_len + 1;
+        cursor = cursor + 1;
+    }
+
+    // Parse input labels, split by commas.
+    var current_input: &[byte] = input0[0:EINSUM_MAX_LABELS];
+    var current_len: &usize = &input0_len;
+    var parsed_operands: usize = 1;
+
+    cursor = 0;
+    while cursor <= input_part_len {
+        if cursor == input_part_len || sub_local[cursor] == ',' as byte {
+            if parsed_operands > operand_count {
+                return error.NumuyaInvalidArgument;
+            }
+            if cursor == input_part_len {
+                break;
+            }
+            parsed_operands = parsed_operands + 1;
+            if parsed_operands == 2 {
+                current_input = input1[0:EINSUM_MAX_LABELS];
+                current_len = &input1_len;
+            }
+            cursor = cursor + 1;
+            continue;
+        }
+
+        if cursor >= sub_len {
+            return error.NumuyaInvalidArgument;
+        }
+        const ch: byte = sub_local[cursor];
+        if !is_lowercase_letter(ch) {
+            return error.NumuyaInvalidArgument;
+        }
+        if current_len[0] >= EINSUM_MAX_LABELS {
+            return error.NumuyaRankTooLarge;
+        }
+        current_input[current_len[0]] = ch;
+        current_len[0] = current_len[0] + 1;
+        cursor = cursor + 1;
+    }
+
+    if parsed_operands != operand_count {
+        return error.NumuyaInvalidArgument;
+    }
+
+    // Validate ranks.
+    if input0_len != a.shape.rank {
+        return error.NumuyaShapeMismatch;
+    }
+    if b != null {
+        if input1_len != b.shape.rank {
+            return error.NumuyaShapeMismatch;
+        }
+    }
+
+    // Build label dimensions from input operands and collect all unique labels.
+    var label_dim: [usize: 26] = [0: 26];
+    var label_present: [bool: 26] = [false: 26];
+    var all_labels: [byte: EINSUM_MAX_LABELS] = [0: EINSUM_MAX_LABELS];
+    var all_labels_len: usize = 0;
+
+    // Process operand 0.
+    {
+        var axis: usize = 0;
+        while axis < input0_len {
+            const idx: usize = try label_to_index(input0[axis]);
+            if idx >= 26 {
+                return error.NumuyaInvalidArgument;
+            }
+            const dim: usize = a.shape.dims[axis];
+            if !label_present[idx] {
+                label_present[idx] = true;
+                label_dim[idx] = dim;
+                if all_labels_len >= EINSUM_MAX_LABELS {
+                    return error.NumuyaRankTooLarge;
+                }
+                all_labels[all_labels_len] = input0[axis];
+                all_labels_len = all_labels_len + 1;
+            } else {
+                if label_dim[idx] != dim {
+                    return error.NumuyaShapeMismatch;
+                }
+            }
+            axis = axis + 1;
+        }
+    }
+
+    // Process operand 1 if present.
+    if b != null {
+        var axis: usize = 0;
+        while axis < input1_len {
+            const idx: usize = try label_to_index(input1[axis]);
+            if idx >= 26 {
+                return error.NumuyaInvalidArgument;
+            }
+            const dim: usize = b.shape.dims[axis];
+            if !label_present[idx] {
+                label_present[idx] = true;
+                label_dim[idx] = dim;
+                if all_labels_len >= EINSUM_MAX_LABELS {
+                    return error.NumuyaRankTooLarge;
+                }
+                all_labels[all_labels_len] = input1[axis];
+                all_labels_len = all_labels_len + 1;
+            } else {
+                if label_dim[idx] != dim {
+                    return error.NumuyaShapeMismatch;
+                }
+            }
+            axis = axis + 1;
+        }
+    }
+
+    // Build output shape and verify all output labels appear in inputs.
+    var output_shape: Shape = shape_scalar();
+    if output_len > NUMUYA_MAX_DIMS {
+        return error.NumuyaRankTooLarge;
+    }
+    output_shape.rank = output_len;
+    cursor = 0;
+    while cursor < output_len {
+        const idx: usize = try label_to_index(output[cursor]);
+        if idx >= 26 {
+            return error.NumuyaInvalidArgument;
+        }
+        if !label_present[idx] {
+            return error.NumuyaInvalidArgument;
+        }
+        output_shape.dims[cursor] = label_dim[idx];
+        cursor = cursor + 1;
+    }
+
+    var result: Array<f64> = try zeros_f64(allocator, output_shape);
+
+    if all_labels_len > EINSUM_MAX_LABELS {
+        return error.NumuyaRankTooLarge;
+    }
+
+    // Precompute dimensions and label indices for all labels.
+    var all_label_dims: [usize: EINSUM_MAX_LABELS] = [0: EINSUM_MAX_LABELS];
+    var all_label_indices: [usize: EINSUM_MAX_LABELS] = [0: EINSUM_MAX_LABELS];
+    cursor = 0;
+    while cursor < all_labels_len {
+        if cursor >= EINSUM_MAX_LABELS {
+            return error.NumuyaRankTooLarge;
+        }
+        const ch: byte = all_labels[cursor];
+        if !is_lowercase_letter(ch) {
+            return error.NumuyaInvalidArgument;
+        }
+        const idx: usize = (ch - ('a' as byte)) as usize;
+        if idx >= 26 {
+            return error.NumuyaInvalidArgument;
+        }
+        all_label_indices[cursor] = idx;
+        all_label_dims[cursor] = label_dim[idx];
+        cursor = cursor + 1;
+    }
+
+    // Precompute output label indices and dimensions.
+    var output_label_indices: [usize: EINSUM_MAX_LABELS] = [0: EINSUM_MAX_LABELS];
+    var output_dims: [usize: EINSUM_MAX_LABELS] = [0: EINSUM_MAX_LABELS];
+    cursor = 0;
+    while cursor < output_len {
+        if cursor >= EINSUM_MAX_LABELS {
+            return error.NumuyaRankTooLarge;
+        }
+        const ch: byte = output[cursor];
+        if !is_lowercase_letter(ch) {
+            return error.NumuyaInvalidArgument;
+        }
+        const idx: usize = (ch - ('a' as byte)) as usize;
+        if idx >= 26 {
+            return error.NumuyaInvalidArgument;
+        }
+        output_label_indices[cursor] = idx;
+        output_dims[cursor] = label_dim[idx];
+        cursor = cursor + 1;
+    }
+
+    // Total number of combinations across all labels.
+    var total_count: usize = 1;
+    cursor = 0;
+    while cursor < all_labels_len {
+        if cursor >= EINSUM_MAX_LABELS {
+            return error.NumuyaRankTooLarge;
+        }
+        total_count = total_count * all_label_dims[cursor];
+        cursor = cursor + 1;
+    }
+
+    // Main contraction loop over all label combinations.
+    var label_value: [usize: 26] = [0: 26];
+    var linear: usize = 0;
+    while linear < total_count {
+        // Decode linear index into label values using forward iteration.
+        var remaining: usize = linear;
+        cursor = 0;
+        while cursor < all_labels_len {
+            if cursor >= EINSUM_MAX_LABELS {
+                return error.NumuyaRankTooLarge;
+            }
+            const label_idx: usize = all_label_indices[cursor];
+            if label_idx >= 26 {
+                return error.NumuyaInvalidArgument;
+            }
+            const dim: usize = all_label_dims[cursor];
+            label_value[label_idx] = remaining % dim;
+            remaining = remaining / dim;
+            cursor = cursor + 1;
+        }
+
+        // Compute output linear index from output labels.
+        var out_idx: usize = 0;
+        cursor = 0;
+        while cursor < output_len {
+            if cursor >= EINSUM_MAX_LABELS {
+                return error.NumuyaRankTooLarge;
+            }
+            const label_idx: usize = output_label_indices[cursor];
+            if label_idx >= 26 {
+                return error.NumuyaInvalidArgument;
+            }
+            const dim: usize = output_dims[cursor];
+            out_idx = out_idx * dim + label_value[label_idx];
+            cursor = cursor + 1;
+        }
+
+        // Compute product over operands.
+        var product: f64 = try operand_value_at_labels<f64>(a, input0[0:EINSUM_MAX_LABELS], input0_len, label_value[0:26]);
+        if b != null {
+            const val: f64 = try operand_value_at_labels<f64>(b, input1[0:EINSUM_MAX_LABELS], input1_len, label_value[0:26]);
+            product = product * val;
+        }
+
+        result.storage.data[out_idx] = result.storage.data[out_idx] + product;
+        linear = linear + 1;
+    }
+
+    const out_storage: &Storage<f64> = result.storage;
+    const out_offset: isize = result.offset;
+    const out_shape: Shape = result.shape;
+    const out_strides: Strides = result.strides;
+    const out_flags: ArrayFlags = result.flags;
+    result.storage = null;
+    return Array<f64>{ storage: out_storage, offset: out_offset, shape: out_shape, strides: out_strides, flags: out_flags };
+}
