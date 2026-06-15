@@ -38,10 +38,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 23: CUDA linalg、random、benchmark
 
-- [ ] 可选 feature: cuBLASLt backend。
-  - 通过配置 `prefer_vendor_libs=true` 启用。
-  - 关闭时仍走纯 kernel backend。
-  - correctness tests 与 baseline 共用。
 - [ ] 可选 feature: cuFFT/cuRAND backend。
   - 必须有纯 kernel 或 CPU fallback。
 - [ ] Benchmark: H2D/D2H bandwidth。

@@ -960,3 +960,21 @@
   - 固定 seed 可复现。
   - 输出范围 `[0, 1)`。
   - 验证：`../uya/bin/uya test src/numuya/_tests/test_cuda_random.uya --manifest-path uya.toml` 5/5 通过（RTX 3060, CUDA 13.0, driver 580.119.02）。
+
+## Phase 23: CUDA linalg、random、benchmark
+
+- [x] 可选 feature: cuBLASLt backend。
+  - 通过配置 `prefer_vendor_libs=true` 启用。
+  - 关闭时仍走纯 kernel backend。
+  - correctness tests 与 baseline 共用。
+  - 实现：
+    - `src/numuya/backend.uya` 新增 `BackendConfig`（`kind`、`prefer_vendor_libs`、`allow_tf32`）、`BackendState` 扩展对应字段与 `cublaslt_handle`、导出 `backend_init_with_config` 与 `backend_default_config`。
+    - `src/numuya/cuda/cublaslt.uya` 与 `src/numuya/cuda/cublaslt_stub.c` 通过运行时 `dlopen` 动态加载 `libcublasLt`，提供 `cublaslt_is_available` / `cublaslt_init` / `cublaslt_matmul_f32`。
+    - `src/numuya/cuda/linalg.uya` 在 `gpu_matmul_f32` 中按 `state.prefer_vendor_libs` 与库可用性选择 cuBLASLt 或纯 kernel 路径；`allow_tf32=true` 时使用 `CUBLAS_COMPUTE_32F_FAST_TF32`。
+    - `src/numuya/_tests/test_cuda_linalg.uya` 新增 3 个测试覆盖默认配置、`prefer_vendor_libs=false` 纯 kernel 路径、`prefer_vendor_libs=true` vendor 路径。
+  - 验证命令：
+    - `../uya/bin/uya test src/numuya/_tests/test_cuda_linalg.uya --manifest-path uya.toml` — 9/9 通过
+    - `make test-cuda` — 全部 CUDA 测试文件通过（83/83）
+    - `make test-cuda-vendor` — 链接 `-lcublasLt -lcublas -lcufft -lcurand -lcuda`，全部 CUDA 测试文件通过（83/83）
+    - `make test` — 全部非 CUDA 测试文件通过
+  - 备注：cuBLASLt stub 在缺少 `<cublasLt.h>` / `<cuda.h>` 时编译为 no-op，保持无硬依赖。

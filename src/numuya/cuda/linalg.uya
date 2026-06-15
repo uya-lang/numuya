@@ -1,5 +1,6 @@
 use array;
 use backend;
+use cuda.cublaslt;
 use cuda.device_array;
 use cuda.driver;
 use cuda.kernels;
@@ -55,6 +56,49 @@ export fn gpu_matmul_f32(state: &BackendState, left: &DeviceArray<f32>, right: &
         };
     }
 
+    const left_ptr: usize = device_ptr_with_offset_f32(left);
+    const right_ptr: usize = device_ptr_with_offset_f32(right);
+    const result_ptr: usize = device_ptr_with_offset_f32(&result);
+
+    if state.prefer_vendor_libs && cublaslt_is_available() {
+        try cuda_set_current_context(state.context);
+        if state.cublaslt_handle == 0 {
+            const init_result: !void = cublaslt_init(&state.cublaslt_handle);
+            match init_result {
+                error.NumuyaCublasltUnavailable => {}
+                else => { try init_result; }
+            }
+        }
+        if state.cublaslt_handle != 0 {
+            const vendor_result: !void = cublaslt_matmul_f32(
+                state.stream,
+                state.cublaslt_handle,
+                m as i32, n as i32, k as i32,
+                left_ptr,
+                right_ptr,
+                result_ptr,
+                state.allow_tf32
+            );
+            match vendor_result {
+                error.NumuyaCublasltUnavailable => {}
+                else => {
+                    try vendor_result;
+                    try cuda_synchronize_stream(state.context, state.stream);
+                    device_storage_retain<f32>(result.storage);
+                    return DeviceArray<f32>{
+                        storage: result.storage,
+                        offset: result.offset,
+                        shape: result.shape,
+                        strides: result.strides,
+                        flags: result.flags,
+                        context: result.context,
+                        stream: result.stream,
+                    };
+                }
+            }
+        }
+    }
+
     if state.module == 0 {
         state.module = try cuda_kernels_load(state.context);
     }
@@ -67,10 +111,6 @@ export fn gpu_matmul_f32(state: &BackendState, left: &DeviceArray<f32>, right: &
     const total_elements: usize = m * n;
     const block_size: u32 = 256;
     const grid_size: u32 = ceil_div_u32(total_elements, block_size as usize);
-
-    const left_ptr: usize = device_ptr_with_offset_f32(left);
-    const right_ptr: usize = device_ptr_with_offset_f32(right);
-    const result_ptr: usize = device_ptr_with_offset_f32(&result);
 
     var arg_result_ptr: usize = result_ptr;
     var arg_left_ptr: usize = left_ptr;

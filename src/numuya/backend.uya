@@ -1,3 +1,4 @@
+use cuda.cublaslt;
 use cuda.driver;
 use errors;
 
@@ -7,15 +8,32 @@ export enum BackendKind {
     Cuda,
 }
 
+export struct BackendConfig {
+    kind: BackendKind,
+    prefer_vendor_libs: bool,
+    allow_tf32: bool,
+}
+
 export struct BackendState {
     kind: BackendKind,
     context: usize,
     stream: usize,
     module: usize,
     pool: usize,
+    prefer_vendor_libs: bool,
+    allow_tf32: bool,
+    cublaslt_handle: usize,
 }
 
 var active_device_storage_count: usize = 0;
+
+export fn backend_default_config() BackendConfig {
+    return BackendConfig{
+        kind: BackendKind.Auto,
+        prefer_vendor_libs: false,
+        allow_tf32: false,
+    };
+}
 
 export fn backend_is_cuda_available() bool {
     cuda_init() catch {
@@ -25,15 +43,24 @@ export fn backend_is_cuda_available() bool {
 }
 
 export fn backend_init(kind: BackendKind) !BackendState {
+    var config: BackendConfig = backend_default_config();
+    config.kind = kind;
+    return backend_init_with_config(&config);
+}
+
+export fn backend_init_with_config(config: &BackendConfig) !BackendState {
     var state: BackendState = BackendState{
         kind: BackendKind.Cpu,
         context: 0,
         stream: 0,
         module: 0,
         pool: 0,
+        prefer_vendor_libs: config.prefer_vendor_libs,
+        allow_tf32: config.allow_tf32,
+        cublaslt_handle: 0,
     };
 
-    match kind {
+    match config.kind {
         BackendKind.Cpu => {
             state.kind = BackendKind.Cpu;
         }
@@ -68,6 +95,10 @@ export fn backend_deinit(state: &BackendState) !void {
     }
 
     if state.kind == BackendKind.Cuda {
+        if state.cublaslt_handle != 0 {
+            cublaslt_destroy(state.cublaslt_handle) catch {};
+            state.cublaslt_handle = 0;
+        }
         if state.stream != 0 {
             cuda_destroy_stream(state.context, state.stream) catch {};
         }
@@ -81,6 +112,9 @@ export fn backend_deinit(state: &BackendState) !void {
     state.stream = 0;
     state.module = 0;
     state.pool = 0;
+    state.prefer_vendor_libs = false;
+    state.allow_tf32 = false;
+    state.cublaslt_handle = 0;
 }
 
 export fn backend_device_storage_retain() void {

@@ -92,6 +92,97 @@ fn cpu_matmul_f32(a: &Array<f32>, b: &Array<f32>, allocator: IAllocator) !Array<
 test "cuda linalg test file imports cuda.linalg module" {
 }
 
+test "backend_init sets prefer_vendor_libs=false by default" {
+    var state: BackendState = try backend_init(BackendKind.Cuda);
+    defer backend_deinit(&state) catch {};
+    if state.prefer_vendor_libs != false {
+        return error.NumuyaExpectationFailed;
+    }
+    if state.allow_tf32 != false {
+        return error.NumuyaExpectationFailed;
+    }
+}
+
+test "backend_init_with_config accepts prefer_vendor_libs=false and uses pure kernel" {
+    if !backend_is_cuda_available() {
+        return;
+    }
+    var config: BackendConfig = BackendConfig{
+        kind: BackendKind.Cuda,
+        prefer_vendor_libs: false,
+        allow_tf32: false,
+    };
+    var state: BackendState = try backend_init_with_config(&config);
+    defer backend_deinit(&state) catch {};
+
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var pool: MemoryPool = memory_pool_new(4 * NUMUYA_MIB);
+
+    var a_data: [f32: 4] = [1.0, 2.0, 3.0, 4.0];
+    var b_data: [f32: 4] = [5.0, 6.0, 7.0, 8.0];
+    var host_a: Array<f32> = try from_slice<f32>(allocator, a_data[0:4], shape2(2, 2));
+    var host_b: Array<f32> = try from_slice<f32>(allocator, b_data[0:4], shape2(2, 2));
+
+    var device_a: DeviceArray<f32> = try device_array_from_host<f32>(&pool, &host_a, state.context, state.stream);
+    var device_b: DeviceArray<f32> = try device_array_from_host<f32>(&pool, &host_b, state.context, state.stream);
+
+    var device_result: DeviceArray<f32> = try gpu_matmul_f32(&state, &device_a, &device_b);
+    var host_result: Array<f32> = try device_array_to_host<f32>(allocator, &device_result);
+
+    var expected: [f32: 4] = [19.0, 22.0, 43.0, 50.0];
+    try expect_matrix_close_f32(&host_result, expected[0:4], F32_TOL);
+}
+
+test "backend_init_with_config prefer_vendor_libs=true produces correct matmul" {
+    if !backend_is_cuda_available() {
+        return;
+    }
+    var config: BackendConfig = BackendConfig{
+        kind: BackendKind.Cuda,
+        prefer_vendor_libs: true,
+        allow_tf32: false,
+    };
+    var state: BackendState = try backend_init_with_config(&config);
+    defer backend_deinit(&state) catch {};
+
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var pool: MemoryPool = memory_pool_new(16 * NUMUYA_MIB);
+
+    var host_a: Array<f32> = try empty<f32>(allocator, shape2(16, 16));
+    var host_b: Array<f32> = try empty<f32>(allocator, shape2(16, 16));
+
+    var i: usize = 0;
+    while i < 16 {
+        var j: usize = 0;
+        while j < 16 {
+            host_a.storage.data[i * 16 + j] = ((i * 16 + j) as f32) * 0.01 + 0.1;
+            host_b.storage.data[i * 16 + j] = ((j * 16 + i) as f32) * 0.01 + 0.1;
+            j = j + 1;
+        }
+        i = i + 1;
+    }
+
+    var expected: Array<f32> = try cpu_matmul_f32(&host_a, &host_b, allocator);
+
+    var device_a: DeviceArray<f32> = try device_array_from_host<f32>(&pool, &host_a, state.context, state.stream);
+    var device_b: DeviceArray<f32> = try device_array_from_host<f32>(&pool, &host_b, state.context, state.stream);
+
+    var device_result: DeviceArray<f32> = try gpu_matmul_f32(&state, &device_a, &device_b);
+    var host_result: Array<f32> = try device_array_to_host<f32>(allocator, &device_result);
+
+    i = 0;
+    while i < 16 {
+        var j: usize = 0;
+        while j < 16 {
+            try expect_eq_f32(try get2<f32>(&host_result, i, j), try get2<f32>(&expected, i, j), F32_TOL);
+            j = j + 1;
+        }
+        i = i + 1;
+    }
+}
+
 test "gpu_matmul_f32 multiplies 2x2 matrices" {
     if !backend_is_cuda_available() {
         return;

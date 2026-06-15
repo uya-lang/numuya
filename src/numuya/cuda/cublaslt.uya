@@ -1,0 +1,74 @@
+use errors;
+
+export error NumuyaCublasltUnavailable;
+export error NumuyaCublasltError;
+
+@c_import("cublaslt_stub.c", "", "-ldl");
+
+extern fn numuya_cublaslt_available() i32;
+extern fn numuya_cublaslt_init(handle: &usize) i32;
+extern fn numuya_cublaslt_destroy(handle: usize) i32;
+extern fn numuya_cublaslt_matmul_f32(
+    stream: usize,
+    handle: usize,
+    m: i32, n: i32, k: i32,
+    a_ptr: usize,
+    b_ptr: usize,
+    c_ptr: usize,
+    allow_tf32: i32
+) i32;
+
+export fn cublaslt_is_available() bool {
+    const status: i32 = numuya_cublaslt_available();
+    return status == 0;
+}
+
+export fn cublaslt_init(handle: &usize) !void {
+    const status: i32 = numuya_cublaslt_init(handle);
+    if status == 0 {
+        return;
+    } else if status == 1 {
+        return error.NumuyaCublasltUnavailable;
+    } else {
+        return error.NumuyaCublasltError;
+    }
+}
+
+export fn cublaslt_destroy(handle: usize) !void {
+    const status: i32 = numuya_cublaslt_destroy(handle);
+    if status == 0 {
+        return;
+    } else if status == 1 {
+        return error.NumuyaCublasltUnavailable;
+    } else {
+        return error.NumuyaCublasltError;
+    }
+}
+
+export fn cublaslt_matmul_f32(
+    stream: usize,
+    handle: usize,
+    m: i32, n: i32, k: i32,
+    a_ptr: usize,
+    b_ptr: usize,
+    c_ptr: usize,
+    allow_tf32: bool
+) !void {
+    const tf32_flag: i32 = if allow_tf32 { 1 as i32 } else { 0 as i32 };
+    const status: i32 = numuya_cublaslt_matmul_f32(
+        stream,
+        handle,
+        m, n, k,
+        a_ptr,
+        b_ptr,
+        c_ptr,
+        tf32_flag
+    );
+    if status == 0 {
+        return;
+    } else if status == 1 {
+        return error.NumuyaCublasltUnavailable;
+    } else {
+        return error.NumuyaCublasltError;
+    }
+}
