@@ -38,7 +38,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 23: CUDA linalg、random、benchmark
 
-- [ ] Benchmark: `sum_f32/sum_f64` throughput。
 - [ ] Benchmark: `matmul_f32` 1024x1024、2048x2048。
 - [ ] Benchmark 输出 RTX 3060、driver、CUDA、显存、backend 路径。
 - [ ] Benchmark strict 阈值。
