@@ -35,10 +35,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 22: CUDA ufunc 与 reduction
 
-- [ ] TDD: `gpu_sum_f64`。
-  - 小数组。
-  - 大数组。
-  - 非 2 的幂长度。
 - [ ] TDD: auto backend。
   - 显式 `cuda` 走 GPU。
   - `auto` 在 GPU 可用时走 GPU。

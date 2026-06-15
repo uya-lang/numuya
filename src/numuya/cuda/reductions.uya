@@ -1,0 +1,289 @@
+use array;
+use backend;
+use creation;
+use cuda.device_array;
+use cuda.driver;
+use cuda.kernels;
+use cuda.memory;
+use cuda.module;
+use errors;
+use indexing;
+use reductions;
+use shape;
+use storage;
+use stride;
+
+use std.mem.allocator.IAllocator;
+use std.mem.allocator.MallocAllocator;
+
+const F64_ELEMENT_SIZE: usize = 8;
+
+fn device_ptr_with_offset_f64(array_value: &DeviceArray<f64>) usize {
+    const base: usize = array_value.storage.ptr as usize;
+    const offset_bytes: usize = array_value.offset * F64_ELEMENT_SIZE;
+    return base + offset_bytes;
+}
+
+fn device_array_is_c_contiguous_local(shape_value: &Shape, strides_value: &Strides) bool {
+    if shape_value.rank != strides_value.rank || shape_value.rank > NUMUYA_MAX_DIMS {
+        return false;
+    }
+    if shape_value.rank == 0 {
+        return true;
+    }
+
+    var expected_stride: usize = 1;
+    var axis: usize = shape_value.rank;
+    while axis > 0 {
+        const index: usize = axis - 1;
+        if index >= NUMUYA_MAX_DIMS {
+            return false;
+        }
+        const dim: usize = shape_value.dims[index];
+        if dim == 0 {
+            return true;
+        }
+        const step: isize = strides_value.steps[index];
+        if step <= 0 {
+            return false;
+        }
+        const step_usize: usize = step as! usize catch {
+            return false;
+        };
+        if step_usize != expected_stride {
+            return false;
+        }
+        expected_stride = expected_stride * dim;
+        axis = index;
+    }
+    return true;
+}
+
+fn clone_shape_local(shape_value: &Shape) Shape {
+    var cloned: Shape = shape_scalar();
+    cloned.rank = shape_value.rank;
+    var i: usize = 0;
+    while i < shape_value.rank {
+        cloned.dims[i] = shape_value.dims[i];
+        i = i + 1;
+    }
+    return cloned;
+}
+
+fn copy_device_storage_to_host(
+    allocator: IAllocator,
+    device_array_value: &DeviceArray<f64>,
+) !&Storage<f64> {
+    const storage_len: usize = device_array_value.storage.len;
+    const bytes: usize = storage_len * F64_ELEMENT_SIZE;
+    var host_storage: &Storage<f64> = try storage_new<f64>(allocator, storage_len);
+    if storage_len > 0 {
+        try cuda_memcpy_dtoh_async(host_storage.data as &byte, device_array_value.storage.ptr as usize, bytes, device_array_value.stream);
+        try cuda_synchronize_stream(device_array_value.context, device_array_value.stream);
+    }
+    return host_storage;
+}
+
+fn device_array_to_host_view(
+    allocator: IAllocator,
+    device_array_value: &DeviceArray<f64>,
+) !Array<f64> {
+    var host_storage: &Storage<f64> = try copy_device_storage_to_host(allocator, device_array_value);
+    const offset_isize: isize = device_array_value.offset as! isize catch {
+        return error.NumuyaInvalidArgument;
+    };
+    return Array<f64>{
+        storage: host_storage,
+        offset: offset_isize,
+        shape: device_array_value.shape,
+        strides: device_array_value.strides,
+        flags: device_array_value.flags,
+    };
+}
+
+fn host_array_to_device(
+    pool: &MemoryPool,
+    host_array: &Array<f64>,
+    context: usize,
+    stream: usize,
+) !DeviceArray<f64> {
+    const size: usize = try shape_size(host_array.shape);
+    var storage_len: usize = host_array.storage.len;
+    if size == 0 {
+        storage_len = 0;
+    }
+    const bytes: usize = storage_len * F64_ELEMENT_SIZE;
+    var device: DeviceArray<f64> = try device_array_new<f64>(pool, host_array.shape, context, stream);
+    if storage_len > 0 {
+        try cuda_memcpy_htod_async(device.storage.ptr as usize, host_array.storage.data as &byte, bytes, stream);
+        try cuda_synchronize_stream(context, stream);
+    }
+    return device;
+}
+
+export fn gpu_sum_all_f64(state: &BackendState, array_value: &DeviceArray<f64>) !f64 {
+    const n: usize = array_value.storage.len;
+    if n == 0 {
+        return (0.0 as f64);
+    }
+
+    if !device_array_is_c_contiguous_local(&array_value.shape, &array_value.strides) {
+        var malloc_allocator: MallocAllocator = MallocAllocator{};
+        var allocator: IAllocator = malloc_allocator;
+        var host_view: Array<f64> = try device_array_to_host_view(allocator, array_value);
+        const result: f64 = try sum_all_f64(&host_view);
+        return (result as f64);
+    }
+
+    if state.module == 0 {
+        state.module = try cuda_kernels_load(state.context);
+    }
+
+    const func: usize = try cuda_module_get_function(state.module, SUM_ALL_F64_KERNEL);
+    if func == 0 {
+        return error.NumuyaCudaError;
+    }
+
+    const result_storage: &DeviceStorage<f64> = try device_storage_new<f64>(array_value.storage.pool, 1);
+    defer device_storage_release<f64>(result_storage);
+
+    const input_ptr: usize = device_ptr_with_offset_f64(array_value);
+    const result_ptr: usize = result_storage.ptr as usize;
+    const stride_bytes: usize = F64_ELEMENT_SIZE;
+
+    var arg_result_ptr: usize = result_ptr;
+    var arg_input_ptr: usize = input_ptr;
+    var arg_n: usize = n;
+    var arg_stride: usize = stride_bytes;
+
+    var args: [usize: 4] = [
+        (&arg_result_ptr) as usize,
+        (&arg_input_ptr) as usize,
+        (&arg_n) as usize,
+        (&arg_stride) as usize,
+    ];
+
+    try cuda_launch_kernel(
+        func,
+        1, 1, 1,
+        1, 1, 1,
+        0,
+        state.stream,
+        &args[0]
+    );
+
+    try cuda_synchronize_stream(state.context, state.stream);
+
+    var device_result_value: f64 = 0.0;
+    try cuda_memcpy_dtoh_async((&device_result_value) as &byte, result_ptr, F64_ELEMENT_SIZE, state.stream);
+    try cuda_synchronize_stream(state.context, state.stream);
+
+    return (device_result_value as f64);
+}
+
+export fn gpu_sum_axis_f64(
+    state: &BackendState,
+    array_value: &DeviceArray<f64>,
+    axis: i32,
+    keepdims: bool,
+) !DeviceArray<f64> {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+
+    var host_view: Array<f64> = try device_array_to_host_view(allocator, array_value);
+
+    var host_result: Array<f64> = try sum_axis_f64(&host_view, axis, keepdims);
+
+    var device_result: DeviceArray<f64> = try host_array_to_device(
+        array_value.storage.pool,
+        &host_result,
+        array_value.context,
+        array_value.stream,
+    );
+
+    device_storage_retain<f64>(device_result.storage);
+    return DeviceArray<f64>{
+        storage: device_result.storage,
+        offset: device_result.offset,
+        shape: device_result.shape,
+        strides: device_result.strides,
+        flags: device_result.flags,
+        context: device_result.context,
+        stream: device_result.stream,
+    };
+}
+
+export fn gpu_mean_axis_f64(
+    state: &BackendState,
+    array_value: &DeviceArray<f64>,
+    axis: i32,
+    keepdims: bool,
+) !DeviceArray<f64> {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+
+    var host_view: Array<f64> = try device_array_to_host_view(allocator, array_value);
+
+    var host_result: Array<f64> = try mean_axis_f64(&host_view, axis, keepdims);
+
+    var device_result: DeviceArray<f64> = try host_array_to_device(
+        array_value.storage.pool,
+        &host_result,
+        array_value.context,
+        array_value.stream,
+    );
+
+    device_storage_retain<f64>(device_result.storage);
+    return DeviceArray<f64>{
+        storage: device_result.storage,
+        offset: device_result.offset,
+        shape: device_result.shape,
+        strides: device_result.strides,
+        flags: device_result.flags,
+        context: device_result.context,
+        stream: device_result.stream,
+    };
+}
+
+export fn gpu_argmax_axis_f64(
+    state: &BackendState,
+    array_value: &DeviceArray<f64>,
+    axis: i32,
+    keepdims: bool,
+) !DeviceArray<usize> {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+
+    var host_view: Array<f64> = try device_array_to_host_view(allocator, array_value);
+
+    var host_result: Array<usize> = try argmax_axis_f64(&host_view, axis, keepdims);
+
+    const result_size: usize = try shape_size(host_result.shape);
+    var storage_len: usize = host_result.storage.len;
+    if result_size == 0 {
+        storage_len = 0;
+    }
+    const bytes: usize = storage_len * (@size_of(host_result.storage.data[0]) as! usize).value;
+
+    var device_result: DeviceArray<usize> = try device_array_new<usize>(
+        array_value.storage.pool,
+        host_result.shape,
+        array_value.context,
+        array_value.stream,
+    );
+    if storage_len > 0 {
+        try cuda_memcpy_htod_async(device_result.storage.ptr as usize, host_result.storage.data as &byte, bytes, array_value.stream);
+        try cuda_synchronize_stream(array_value.context, array_value.stream);
+    }
+
+    device_storage_retain<usize>(device_result.storage);
+    return DeviceArray<usize>{
+        storage: device_result.storage,
+        offset: device_result.offset,
+        shape: device_result.shape,
+        strides: device_result.strides,
+        flags: device_result.flags,
+        context: device_result.context,
+        stream: device_result.stream,
+    };
+}

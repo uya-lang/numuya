@@ -828,3 +828,21 @@
     - `make test` → 所有非 CUDA tests 通过。
     - `make test-cuda` 中 `test_cuda_device_array.uya`、`test_cuda_driver.uya`、`test_cuda_module.uya`、`test_cuda_ufunc.uya` 通过；`test_cuda_reductions.uya` 因下一任务 `cuda.reductions` 模块尚未实现而失败，非本改动引入。
   - 改动：`src/numuya/cuda/device_array.uya` 的 `device_array_from_host<T>` 现在保留 host array 的 offset、shape 与 strides，并复制完整 backing storage，使 strided CUDA kernel 能正确处理 transpose 等非连续输入；新增 `device_array_is_c_contiguous`、`device_array_is_f_contiguous`、`stride_step_matches` 辅助函数计算 flags。
+
+
+## Phase 22: CUDA ufunc 与 reduction
+
+- [x] TDD: `gpu_sum_f64`。
+  - 小数组：`gpu_sum_all_f64 small array` 测试 3 个元素 [1.0, 2.0, 3.0]，GPU 与 CPU 结果均为 6.0。
+  - 大数组：`gpu_sum_all_f64 large array` 测试 10000 个元素全 1.0，GPU 与 CPU 结果均为 10000.0。
+  - 非 2 的幂长度：`gpu_sum_all_f64 non-power-of-two length` 测试 1000 个元素全 1.0，GPU 与 CPU 结果均为 1000.0。
+  - 实现：
+    - 新增 `src/numuya/cuda/reductions.uya`，导出 `gpu_sum_all_f64`、`gpu_sum_axis_f64`、`gpu_mean_axis_f64`、`gpu_argmax_axis_f64`。
+    - `gpu_sum_all_f64` 对 contiguous 输入使用 embedded PTX kernel `numuya_sum_all_f64`（1 block × 1 thread，每个线程线性累加）；对 non-contiguous 输入通过 H2D 拷回主机后复用 CPU `sum_all_f64`。
+    - `gpu_sum_axis_f64`/`gpu_mean_axis_f64`/`gpu_argmax_axis_f64` 当前通过主机 fallback 实现（拷回主机、调用 CPU reduction、拷回设备），保证现有测试编译与正确性。
+    - `src/numuya/cuda/device_array.uya` 的 `_force_device_storage_release_instantiations` 增加 `usize` 特化，避免 `DeviceArray<usize>` drop 时找不到 release 函数。
+  - 验证命令：
+    - `../uya/bin/uya test src/numuya/_tests/test_cuda_reductions.uya --manifest-path uya.toml` — 12/12 通过
+    - `../uya/bin/uya test src/numuya/_tests/test_reductions.uya --manifest-path uya.toml` — 23/23 通过（CPU regression）
+    - `../uya/bin/uya test src/numuya/_tests/test_cuda_ufunc.uya --manifest-path uya.toml` — 5/5 通过（CUDA ufunc regression）
+    - `../uya/bin/uya test src/numuya/_tests/test_cuda_device_array.uya --manifest-path uya.toml` — 16/16 通过（DeviceArray regression）

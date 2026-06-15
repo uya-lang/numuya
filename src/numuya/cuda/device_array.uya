@@ -54,11 +54,13 @@ fn _force_device_storage_release_instantiations() void {
     var _di32: &DeviceStorage<i32> = null;
     var _di64: &DeviceStorage<i64> = null;
     var _du8: &DeviceStorage<u8> = null;
+    var _duz: &DeviceStorage<usize> = null;
     device_storage_release<f64>(_df64);
     device_storage_release<f32>(_df32);
     device_storage_release<i32>(_di32);
     device_storage_release<i64>(_di64);
     device_storage_release<u8>(_du8);
+    device_storage_release<usize>(_duz);
 }
 
 export fn device_storage_release<T>(storage_value: &DeviceStorage<T>) void {
