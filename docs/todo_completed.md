@@ -915,3 +915,11 @@
     - `../uya/bin/uya check src/numuya/_benchmarks/bench_cuda.uya --manifest-path uya.toml` — checker 通过
     - `../uya/bin/uya run src/numuya/_benchmarks/bench_cuda.uya --manifest-path uya.toml` — 运行成功，输出示例：H2D ~6.8 GB/s，D2H ~8.2 GB/s，add_f64 ~1800 Melem/s，sum_all_f64 ~10 Melem/s
     - `make bench` — bench_cuda 与 bench_simd 均成功运行并输出结果
+
+
+## Phase 23: CUDA linalg、random、benchmark
+
+- [x] 写 `src/numuya/_benchmarks/bench_cuda.uya`。
+  - 实现：新增 `src/numuya/_benchmarks/bench_cuda.uya`，测量 CUDA 路径 H2D/D2H 带宽、`add_f64` 元素级运算与 `sum_all_f64` 归约的 wall-clock 耗时。
+  - 验证命令：
+    - `../uya/bin/uya run src/numuya/_benchmarks/bench_cuda.uya --manifest-path uya.toml` — exit 0，输出包含 `Benchmark: CUDA f64 arrays`、H2D/D2H 带宽、`add_f64` throughput 与 `sum_all_f64` throughput。
