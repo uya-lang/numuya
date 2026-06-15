@@ -1194,3 +1194,13 @@ NUMUYA_CUDA_REQUIRED=1 LDFLAGS="-lcublasLt -lcublas -lcufft -lcurand -lcuda" ../
 ## Phase 24: NumPy 兼容面扩展
 
 - [x] `clip`。
+
+## Phase 24: NumPy 兼容面扩展
+
+- [x] `maximum/minimum`。
+  - 实现：`src/numuya/ufunc.uya` 新增 `maximum_f64` / `minimum_f64` 二元 ufunc，支持 broadcasting、C-contiguous 快速路径、非连续 stride 路径及 NaN 传播。
+  - 测试：`src/numuya/_tests/test_ufunc.uya` 新增 10 个用例，覆盖同 shape、标量广播、非连续 transpose 输入、NaN 传播和输出独立性。
+  - 验证：
+    - `make test-one TEST=src/numuya/_tests/test_ufunc.uya` → 34/34 通过
+    - `make test-one TEST=src/numuya/_tests/test_math.uya` → 19/19 通过
+    - `make test` → 全部非 CUDA 测试通过
