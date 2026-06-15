@@ -939,3 +939,17 @@
     - `make test-cuda` — 全部 CUDA 测试文件通过
     - `make test` — 全部非 CUDA 测试文件通过
 
+
+## Phase 23: CUDA linalg、random、benchmark
+
+- [x] TDD: incompatible matmul shape 返回 `NumuyaShapeMismatch`。
+  - 验证命令：
+    - `../uya/bin/uya test src/numuya/_tests/test_linalg.uya --manifest-path uya.toml`
+    - `../uya/bin/uya test src/numuya/_tests/test_cuda_linalg.uya --manifest-path uya.toml`
+    - `NUMUYA_CUDA_REQUIRED=1 LDFLAGS="-lcuda" ../uya/bin/uya test src/numuya/_tests/test_cuda_linalg.uya --manifest-path uya.toml`
+  - 验证结果：
+    - CPU `matmul_f64 rejects incompatible inner dimensions` 通过（30/30 tests passed）
+    - CUDA `gpu_matmul_f32 rejects incompatible inner dimensions` 在无 GPU 要求与 GPU 强制要求模式下均通过（6/6 tests passed）
+  - 关键代码路径：
+    - CPU: `src/numuya/linalg.uya` `require_matmul_args` 在 `a.shape.dims[1] != b.shape.dims[0]` 时返回 `error.NumuyaShapeMismatch`
+    - CUDA: `src/numuya/cuda/linalg.uya` `require_matmul_device_args` 在相同条件下返回 `error.NumuyaShapeMismatch`
