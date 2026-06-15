@@ -1354,3 +1354,8 @@ NUMUYA_CUDA_REQUIRED=1 LDFLAGS="-lcublasLt -lcublas -lcufft -lcurand -lcuda" ../
     - `git show --unified=3 --format=medium 3d9121d -- docs/todo_failed.md docs/todo.md`
     - `git show --unified=2 --format=medium 7f247c2 -- docs/todo_completed.md docs/todo_failed.md`
   - 验证结果：通过；`385897e` 先添加 `squeeze/expand_dims` failing tests，`74ba779` 后实现；`.npz` 先由 `3d9121d` 记录失败任务块，后由 `7f247c2` 完成实现并记录 `test_io_npz.uya`、`test_io_npy.uya`、`make test` 通过。
+
+## 每次提交前检查
+
+- [x] 单个相关测试绿。
+  验证: `make test-one` -> PASS (`src/numuya/_tests/test_testing_helpers.uya`; 2 tests OK, 0 failed).
