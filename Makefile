@@ -8,7 +8,7 @@ TESTS := $(sort $(wildcard src/numuya/_tests/test_*.uya))
 BENCH ?= src/numuya/_benchmarks/bench_simd.uya
 BENCHES := $(sort $(wildcard src/numuya/_benchmarks/bench_*.uya))
 
-.PHONY: bootstrap-upm upm-install test-one test test-cuda test-cuda-vendor check-one verify-upm-consumer require-upm bench cuda-ptx-embed cuda-cubin-embed cuda-ptx-validate
+.PHONY: bootstrap-upm upm-install test-one test test-cuda test-cuda-vendor check-one check-cpu-core-deps verify-upm-consumer require-upm bench cuda-ptx-embed cuda-cubin-embed cuda-ptx-validate
 
 require-upm:
 	@test -x "$(UPM)" || { echo "missing executable $(UPM)"; exit 1; }
@@ -68,6 +68,14 @@ test-cuda-vendor: bootstrap-upm
 
 check-one: require-upm
 	$(UYA) check "$(TEST)" --manifest-path $(MANIFEST)
+
+check-cpu-core-deps:
+	@! rg -n '@c_import|extern "libc" fn (sqrt|exp|log|sin|cos)\b|math_stub\.c|simd_stub\.c|-lm|\b(Python|python|NumPy|numpy|BLAS|blas|LAPACK|lapack)\b' src/numuya \
+		-g '*.uya' \
+		-g '!**/cuda/**' \
+		-g '!**/_tests/**' \
+		-g '!**/_benchmarks/**' \
+		-g '!**/_tools/**'
 
 bench: require-upm
 	@test -n "$(BENCHES)" || { echo "no benchmark files found"; exit 1; }

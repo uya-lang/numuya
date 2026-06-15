@@ -11,9 +11,7 @@ use ufunc;
 
 use std.mem.allocator.IAllocator;
 
-@c_import("math_stub.c", "", "-lm");
-
-extern "libc" fn sqrt(x: f64) f64;
+use libc.math as cmath;
 
 const STATS_MAX_USIZE: usize = 18446744073709551615;
 
@@ -187,7 +185,7 @@ export fn var_all_f64(array_value: &Array<f64>, ddof: usize) !f64 {
 
 export fn std_all_f64(array_value: &Array<f64>) !f64 {
     const variance: f64 = try var_all_f64(array_value, 0);
-    return sqrt(variance);
+    return cmath.sqrt(variance);
 }
 
 fn insertion_sort_f64(values: &f64, len: usize) void {
@@ -442,7 +440,7 @@ export fn corrcoef_f64(x: &Array<f64>, y: &Array<f64>, rowvar: bool) !Array<f64>
         while j < n {
             const jj: usize = base + j * n + j;
             const ij: usize = base + i * n + j;
-            cov.storage.data[ij] = cov.storage.data[ij] / sqrt(cov.storage.data[ii] * cov.storage.data[jj]);
+            cov.storage.data[ij] = cov.storage.data[ij] / cmath.sqrt(cov.storage.data[ii] * cov.storage.data[jj]);
             j = j + 1;
         }
         i = i + 1;

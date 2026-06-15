@@ -5,10 +5,21 @@ use shape;
 use storage;
 use stride;
 
-@c_import("simd_stub.c", "", "");
+fn numuya_simd_add_f64(left: &f64, right: &f64, result: &f64, n: usize) void {
+    var i: usize = 0;
+    while i < n {
+        result[i] = left[i] + right[i];
+        i = i + 1;
+    }
+}
 
-extern fn numuya_simd_add_f64(left: &f64, right: &f64, result: &f64, n: usize) void;
-extern fn numuya_simd_mul_f64(left: &f64, right: &f64, result: &f64, n: usize) void;
+fn numuya_simd_mul_f64(left: &f64, right: &f64, result: &f64, n: usize) void {
+    var i: usize = 0;
+    while i < n {
+        result[i] = left[i] * right[i];
+        i = i + 1;
+    }
+}
 
 use std.mem.allocator.IAllocator;
 

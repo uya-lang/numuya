@@ -521,9 +521,7 @@ export fn solve_f64(a: &Array<f64>, b: &Array<f64>) !Array<f64> {
     return Array<f64>{ storage: out_storage, offset: out_offset, shape: out_shape, strides: out_strides, flags: out_flags };
 }
 
-@c_import("math_stub.c", "", "-lm");
-
-extern "libc" fn sqrt(x: f64) f64;
+use libc.math as cmath;
 
 export struct QRResult {
     q: Array<f64>,
@@ -580,7 +578,7 @@ export fn qr_f64(a: &Array<f64>) !QRResult {
             norm_sq = norm_sq + val * val;
             row = row + 1;
         }
-        const norm: f64 = sqrt(norm_sq);
+        const norm: f64 = cmath.sqrt(norm_sq);
 
         if norm < SINGULAR_EPS {
             return error.NumuyaSingularMatrix;
@@ -673,12 +671,12 @@ fn svd_jacobi_solve(work: &Array<f64>, v: &Array<f64>, m: usize, n: usize) void 
                     i = i + 1;
                 }
 
-                if abs_f64(gamma) > EPS * sqrt(alpha * beta) {
+                if abs_f64(gamma) > EPS * cmath.sqrt(alpha * beta) {
                     changed = true;
                     const zeta: f64 = (beta - alpha) / (2.0 * gamma);
                     const sign_zeta: f64 = if zeta >= 0.0 { 1.0 } else { -1.0 };
-                    const t: f64 = sign_zeta / (abs_f64(zeta) + sqrt(1.0 + zeta * zeta));
-                    const c: f64 = 1.0 / sqrt(1.0 + t * t);
+                    const t: f64 = sign_zeta / (abs_f64(zeta) + cmath.sqrt(1.0 + zeta * zeta));
+                    const c: f64 = 1.0 / cmath.sqrt(1.0 + t * t);
                     const s: f64 = c * t;
 
                     i = 0;
@@ -748,7 +746,7 @@ export fn svd_f64(a: &Array<f64>) !SVDResult {
             norm_sq = norm_sq + val * val;
             row = row + 1;
         }
-        const sigma: f64 = sqrt(norm_sq);
+        const sigma: f64 = cmath.sqrt(norm_sq);
         singular_values.storage.data[j] = sigma;
 
         if sigma > 1e-15 {

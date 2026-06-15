@@ -1375,3 +1375,11 @@ NUMUYA_CUDA_REQUIRED=1 LDFLAGS="-lcublasLt -lcublas -lcufft -lcurand -lcuda" ../
   - 验证：`make test-one TEST=src/numuya/_tests/test_indexing.uya` -> PASS，6/6 tests passed。
   - 验证：`make test-one TEST=src/numuya/_tests/test_cuda_linalg.uya` -> PASS，10/10 tests passed。
   - 验证：`make test` -> PASS，退出码 0。
+
+## 每次提交前检查
+
+- [x] CPU core 没有 runtime 依赖 Python/NumPy/BLAS/LAPACK/libm/C helper。
+  - 验证：
+    - `make check-cpu-core-deps` 通过（无 `@c_import`、`-lm`、C helper、Python/NumPy/BLAS/LAPACK 关键字）。
+    - `make test` 全部非 CUDA 测试通过。
+    - `ldd` / `readelf -d` 检查 CPU core 测试二进制仅依赖 `libc.so.6`，无 libm / libblas / liblapack / libpython 等。

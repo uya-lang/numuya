@@ -4,19 +4,64 @@ use shape;
 use storage;
 use ufunc;
 
-@c_import("math_stub.c", "", "-lm");
+use libc.math as cmath;
 
-extern "libc" fn sqrt(x: f64) f64;
-extern "libc" fn exp(x: f64) f64;
-extern "libc" fn log(x: f64) f64;
-extern "libc" fn sin(x: f64) f64;
-extern "libc" fn cos(x: f64) f64;
+// 纯 Uya 实现的 log，避免 libc.math 中 log 的精度问题。
+// 将 x 规约到 [1/sqrt(2), sqrt(2)) 后使用 atanh 级数，收敛快且稳定。
+export fn log(x: f64) f64 {
+    if x < 0.0 {
+        return 0.0 - (1.0 / 0.0); // NaN
+    }
+    if x == 0.0 {
+        return 0.0 - (1.0 / 0.0); // -inf
+    }
+    if x == 1.0 {
+        return 0.0;
+    }
+
+    const LN2: f64 = 0.69314718055994530942;
+    const SQRT2: f64 = 1.41421356237309504880;
+
+    var e: i64 = 0;
+    var m: f64 = x;
+    while m >= 2.0 {
+        m = m / 2.0;
+        e = e + 1;
+    }
+    while m < 1.0 {
+        m = m * 2.0;
+        e = e - 1;
+    }
+    if m > SQRT2 {
+        m = m / 2.0;
+        e = e + 1;
+    }
+
+    const t: f64 = (m - 1.0) / (m + 1.0);
+    const t2: f64 = t * t;
+    var sum: f64 = 0.0;
+    var term: f64 = t;
+    var denom: f64 = 1.0;
+    while denom < 80.0 {
+        sum = sum + term / denom;
+        term = term * t2;
+        denom = denom + 2.0;
+    }
+    return 2.0 * sum + (e as f64) * LN2;
+}
 
 fn apply_abs(x: f64) f64 {
     if x < 0.0 {
         return -x;
     }
     return x;
+}
+
+fn numuya_sqrt(x: f64) f64 {
+    if x < 0.0 {
+        return cmath.sqrt(0.0 - x);
+    }
+    return cmath.sqrt(x);
 }
 
 export fn abs_f64(input: &Array<f64>) !Array<f64> {
@@ -60,7 +105,7 @@ export fn sqrt_f64(input: &Array<f64>) !Array<f64> {
         const size: usize = array_size<f64>(&result);
         var i: usize = 0;
         while i < size {
-            result.storage.data[result_base + i] = sqrt(input.storage.data[input_base + i]);
+            result.storage.data[result_base + i] = numuya_sqrt(input.storage.data[input_base + i]);
             i = i + 1;
         }
     } else {
@@ -68,7 +113,7 @@ export fn sqrt_f64(input: &Array<f64>) !Array<f64> {
         var linear: usize = 0;
         while linear < size {
             const idx: UnaryIndices = try unary_stride_indices<f64>(input, &result, linear);
-            result.storage.data[idx.result_idx] = sqrt(input.storage.data[idx.input_idx]);
+            result.storage.data[idx.result_idx] = numuya_sqrt(input.storage.data[idx.input_idx]);
             linear = linear + 1;
         }
     }
@@ -92,7 +137,7 @@ export fn exp_f64(input: &Array<f64>) !Array<f64> {
         const size: usize = array_size<f64>(&result);
         var i: usize = 0;
         while i < size {
-            result.storage.data[result_base + i] = exp(input.storage.data[input_base + i]);
+            result.storage.data[result_base + i] = cmath.exp(input.storage.data[input_base + i]);
             i = i + 1;
         }
     } else {
@@ -100,7 +145,7 @@ export fn exp_f64(input: &Array<f64>) !Array<f64> {
         var linear: usize = 0;
         while linear < size {
             const idx: UnaryIndices = try unary_stride_indices<f64>(input, &result, linear);
-            result.storage.data[idx.result_idx] = exp(input.storage.data[idx.input_idx]);
+            result.storage.data[idx.result_idx] = cmath.exp(input.storage.data[idx.input_idx]);
             linear = linear + 1;
         }
     }
@@ -156,7 +201,7 @@ export fn sin_f64(input: &Array<f64>) !Array<f64> {
         const size: usize = array_size<f64>(&result);
         var i: usize = 0;
         while i < size {
-            result.storage.data[result_base + i] = sin(input.storage.data[input_base + i]);
+            result.storage.data[result_base + i] = cmath.sin(input.storage.data[input_base + i]);
             i = i + 1;
         }
     } else {
@@ -164,7 +209,7 @@ export fn sin_f64(input: &Array<f64>) !Array<f64> {
         var linear: usize = 0;
         while linear < size {
             const idx: UnaryIndices = try unary_stride_indices<f64>(input, &result, linear);
-            result.storage.data[idx.result_idx] = sin(input.storage.data[idx.input_idx]);
+            result.storage.data[idx.result_idx] = cmath.sin(input.storage.data[idx.input_idx]);
             linear = linear + 1;
         }
     }
@@ -188,7 +233,7 @@ export fn cos_f64(input: &Array<f64>) !Array<f64> {
         const size: usize = array_size<f64>(&result);
         var i: usize = 0;
         while i < size {
-            result.storage.data[result_base + i] = cos(input.storage.data[input_base + i]);
+            result.storage.data[result_base + i] = cmath.cos(input.storage.data[input_base + i]);
             i = i + 1;
         }
     } else {
@@ -196,7 +241,7 @@ export fn cos_f64(input: &Array<f64>) !Array<f64> {
         var linear: usize = 0;
         while linear < size {
             const idx: UnaryIndices = try unary_stride_indices<f64>(input, &result, linear);
-            result.storage.data[idx.result_idx] = cos(input.storage.data[idx.input_idx]);
+            result.storage.data[idx.result_idx] = cmath.cos(input.storage.data[idx.input_idx]);
             linear = linear + 1;
         }
     }

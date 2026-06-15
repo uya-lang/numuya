@@ -5,9 +5,15 @@ use storage;
 
 use std.mem.allocator.IAllocator;
 
-@c_import("simd_stub.c", "", "");
-
-extern fn numuya_simd_sum_f64(data: &f64, n: usize) f64;
+fn numuya_simd_sum_f64(data: &f64, n: usize) f64 {
+    var total: f64 = 0.0;
+    var i: usize = 0;
+    while i < n {
+        total = total + data[i];
+        i = i + 1;
+    }
+    return total;
+}
 
 fn force_storage_release_usize(storage_value: &Storage<usize>) void {
     storage_release<usize>(storage_value);
