@@ -905,3 +905,13 @@
     - `test_cuda_ufunc.uya`：5/5 passed
   - 说明：`test_cuda_linalg.uya` 当前失败是因为 `gpu_matmul_f32` 仍为 stub（属于后续未完成的 TDD 任务），与本次 random 改动无关。
 
+
+## Phase 23: CUDA linalg、random、benchmark
+
+- [x] 写 `src/numuya/_benchmarks/bench_cuda.uya`。
+  - 交付物：`src/numuya/_benchmarks/bench_cuda.uya`
+  - 覆盖：H2D/D2H 带宽、`gpu_add_f64` throughput、`gpu_sum_all_f64` throughput；CUDA 不可用时优雅退出并打印提示。
+  - 验证命令：
+    - `../uya/bin/uya check src/numuya/_benchmarks/bench_cuda.uya --manifest-path uya.toml` — checker 通过
+    - `../uya/bin/uya run src/numuya/_benchmarks/bench_cuda.uya --manifest-path uya.toml` — 运行成功，输出示例：H2D ~6.8 GB/s，D2H ~8.2 GB/s，add_f64 ~1800 Melem/s，sum_all_f64 ~10 Melem/s
+    - `make bench` — bench_cuda 与 bench_simd 均成功运行并输出结果

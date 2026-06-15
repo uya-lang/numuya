@@ -1,0 +1,278 @@
+// NumUya CUDA 性能 benchmark
+//
+// 测量 CUDA 路径在 H2D/D2H 带宽、元素级二元运算（add）和归约（sum）上的耗时。
+// 本文件是性能基准，不是正确性测试；结果仅用于观察 GPU 相对性能。
+//
+// 运行：
+//   make bench
+// 或直接：
+//   ../uya/bin/uya run src/numuya/_benchmarks/bench_cuda.uya --manifest-path uya.toml
+
+use array;
+use backend;
+use creation;
+use cuda.device_array;
+use cuda.memory;
+use cuda.reductions;
+use cuda.ufunc;
+use shape;
+
+use libc.syscall;
+use std.mem.allocator.IAllocator;
+use std.mem.allocator.MallocAllocator;
+
+const CLOCK_MONOTONIC: i32 = 1;
+const NS_PER_SEC: u64 = 1000000000u64;
+const BENCH_F64_ELEMENT_SIZE: usize = 8;
+const NUMUYA_MIB: usize = 1024 * 1024;
+
+extern "libc" fn snprintf(buf: &byte, size: usize, format: &const byte, ...) i32;
+
+fn monotonic_ns() u64 {
+    var ts: TimeSpec = TimeSpec{ tv_sec: 0, tv_nsec: 0 };
+    _ = sys_clock_gettime(CLOCK_MONOTONIC, &ts) catch {
+        return 0u64;
+    };
+    const sec: u64 = (ts.tv_sec as! u64).value;
+    const nsec: u64 = (ts.tv_nsec as! u64).value;
+    return sec * NS_PER_SEC + nsec;
+}
+
+fn write_str(text: &const byte) void {
+    const len: usize = strlen(text);
+    _ = sys_write(1, text, len) catch { return; };
+}
+
+fn write_byte(b: byte) void {
+    _ = sys_write(1, &b, 1) catch { return; };
+}
+
+fn write_usize(value: usize) void {
+    if value == 0 {
+        write_str("0");
+        return;
+    }
+    var digits: [byte: 32] = [];
+    var digit_count: usize = 0;
+    var remaining: usize = value;
+    while remaining > 0 {
+        const d: usize = remaining % (10 as usize);
+        const zero: usize = 48;
+        digits[digit_count] = ((zero + d) as! byte).value;
+        digit_count = digit_count + 1;
+        remaining = remaining / (10 as usize);
+    }
+    var i: usize = digit_count;
+    while i > 0 {
+        i = i - 1;
+        write_byte(digits[i]);
+    }
+}
+
+fn write_f64(value: f64, decimals: usize) void {
+    var buf: [byte: 64] = [];
+    if decimals == 0 {
+        _ = snprintf(&buf[0], 64, "%f", value);
+    } else if decimals == 1 {
+        _ = snprintf(&buf[0], 64, "%.1f", value);
+    } else if decimals == 2 {
+        _ = snprintf(&buf[0], 64, "%.2f", value);
+    } else if decimals == 3 {
+        _ = snprintf(&buf[0], 64, "%.3f", value);
+    } else if decimals == 4 {
+        _ = snprintf(&buf[0], 64, "%.4f", value);
+    } else if decimals == 6 {
+        _ = snprintf(&buf[0], 64, "%.6f", value);
+    } else {
+        _ = snprintf(&buf[0], 64, "%.2f", value);
+    }
+    const len: usize = strlen(&buf[0]);
+    _ = sys_write(1, &buf[0], len) catch { return; };
+}
+
+fn write_newline() void {
+    write_str("\n");
+}
+
+fn print_header() void {
+    write_str("Benchmark: CUDA f64 arrays\n");
+    write_str("==========================\n");
+    write_str("This benchmark measures wall-clock time including kernel launch and stream sync.\n");
+    write_str("For correctness, run `make test-cuda`.\n\n");
+}
+
+fn print_bandwidth_result(name: &const byte, total_ns: u64, bytes_per_transfer: usize, iterations: usize) void {
+    const total_bytes: f64 = (bytes_per_transfer as f64) * (iterations as f64);
+    const seconds: f64 = if total_ns == 0 { 0.0 } else { (total_ns as f64) / (NS_PER_SEC as f64) };
+    const gb_per_s: f64 = if seconds == 0.0 { 0.0 } else { (total_bytes / (1024.0 * 1024.0 * 1024.0)) / seconds };
+    const ns_per_iter: f64 = if iterations == 0 { 0.0 } else { (total_ns as f64) / (iterations as f64) };
+
+    write_str(name);
+    write_str(": total=");
+    write_f64((total_ns as f64) / 1000000.0, 2);
+    write_str(" ms, per-iter=");
+    write_f64(ns_per_iter / 1000000.0, 3);
+    write_str(" ms, bandwidth=");
+    write_f64(gb_per_s, 2);
+    write_str(" GB/s\n");
+}
+
+fn print_throughput_result(name: &const byte, total_ns: u64, elements: usize, iterations: usize) void {
+    const total_elements: f64 = (elements as f64) * (iterations as f64);
+    const seconds: f64 = if total_ns == 0 { 0.0 } else { (total_ns as f64) / (NS_PER_SEC as f64) };
+    const elems_per_s: f64 = if seconds == 0.0 { 0.0 } else { total_elements / seconds };
+    const ns_per_iter: f64 = if iterations == 0 { 0.0 } else { (total_ns as f64) / (iterations as f64) };
+    const ns_per_elem: f64 = if elements == 0 { 0.0 } else { ns_per_iter / (elements as f64) };
+
+    write_str(name);
+    write_str(": per-iter=");
+    write_f64(ns_per_iter, 2);
+    write_str(" ns (");
+    write_f64(ns_per_elem, 4);
+    write_str(" ns/elem), throughput=");
+    write_f64(elems_per_s / 1000000.0, 2);
+    write_str(" Melem/s\n");
+}
+
+fn bench_h2d(
+    pool: &MemoryPool,
+    host_array: &Array<f64>,
+    context: usize,
+    stream: usize,
+    iterations: usize,
+) !u64 {
+    const start: u64 = monotonic_ns();
+    var i: usize = 0;
+    while i < iterations {
+        var device_array: DeviceArray<f64> = try device_array_from_host<f64>(pool, host_array, context, stream);
+        i = i + 1;
+    }
+    const end: u64 = monotonic_ns();
+    return end - start;
+}
+
+fn bench_d2h(
+    allocator: IAllocator,
+    device_array: &DeviceArray<f64>,
+    iterations: usize,
+) !u64 {
+    const start: u64 = monotonic_ns();
+    var i: usize = 0;
+    while i < iterations {
+        var host_array: Array<f64> = try device_array_to_host<f64>(allocator, device_array);
+        i = i + 1;
+    }
+    const end: u64 = monotonic_ns();
+    return end - start;
+}
+
+fn bench_add_f64(
+    state: &BackendState,
+    left: &DeviceArray<f64>,
+    right: &DeviceArray<f64>,
+    iterations: usize,
+) !u64 {
+    const start: u64 = monotonic_ns();
+    var i: usize = 0;
+    while i < iterations {
+        var result: DeviceArray<f64> = try gpu_add_f64(state, left, right);
+        i = i + 1;
+    }
+    const end: u64 = monotonic_ns();
+    return end - start;
+}
+
+fn bench_sum_all_f64(
+    state: &BackendState,
+    device_array: &DeviceArray<f64>,
+    iterations: usize,
+) !u64 {
+    const start: u64 = monotonic_ns();
+    var i: usize = 0;
+    while i < iterations {
+        const result: f64 = try gpu_sum_all_f64(state, device_array);
+        _ = result;
+        i = i + 1;
+    }
+    const end: u64 = monotonic_ns();
+    return end - start;
+}
+
+export fn main() i32 {
+    if !backend_is_cuda_available() {
+        write_str("CUDA not available; skipping CUDA benchmark.\n");
+        return 0;
+    }
+
+    var state: BackendState = backend_init(BackendKind.Cuda) catch {
+        write_str("error: failed to initialize CUDA backend\n");
+        return 1;
+    };
+    defer backend_deinit(&state) catch {};
+
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+
+    const size: usize = 1000000;
+    const bytes: usize = size * BENCH_F64_ELEMENT_SIZE;
+    const iterations: usize = 100;
+
+    var pool: MemoryPool = memory_pool_new(64 * NUMUYA_MIB);
+
+    var host_left: Array<f64> = full_f64(allocator, shape1(size), 1.5) catch {
+        write_str("error: failed to allocate host left array\n");
+        return 1;
+    };
+    var host_right: Array<f64> = full_f64(allocator, shape1(size), 2.5) catch {
+        write_str("error: failed to allocate host right array\n");
+        return 1;
+    };
+
+    var device_left: DeviceArray<f64> = device_array_from_host<f64>(&pool, &host_left, state.context, state.stream) catch {
+        write_str("error: failed to allocate device left array\n");
+        return 1;
+    };
+    var device_right: DeviceArray<f64> = device_array_from_host<f64>(&pool, &host_right, state.context, state.stream) catch {
+        write_str("error: failed to allocate device right array\n");
+        return 1;
+    };
+
+    print_header();
+    write_str("array size: ");
+    write_usize(size);
+    write_str(" elements (");
+    write_usize(bytes / NUMUYA_MIB);
+    write_str(" MiB), iterations: ");
+    write_usize(iterations);
+    write_newline();
+    write_newline();
+
+    const h2d_ns: u64 = bench_h2d(&pool, &host_left, state.context, state.stream, iterations) catch {
+        write_str("error: H2D bandwidth benchmark failed\n");
+        return 1;
+    };
+    print_bandwidth_result("H2D bandwidth", h2d_ns, bytes, iterations);
+
+    const d2h_ns: u64 = bench_d2h(allocator, &device_left, iterations) catch {
+        write_str("error: D2H bandwidth benchmark failed\n");
+        return 1;
+    };
+    print_bandwidth_result("D2H bandwidth", d2h_ns, bytes, iterations);
+
+    const add_ns: u64 = bench_add_f64(&state, &device_left, &device_right, iterations) catch {
+        write_str("error: gpu_add_f64 benchmark failed\n");
+        return 1;
+    };
+    print_throughput_result("add_f64", add_ns, size, iterations);
+
+    const sum_ns: u64 = bench_sum_all_f64(&state, &device_left, iterations) catch {
+        write_str("error: gpu_sum_all_f64 benchmark failed\n");
+        return 1;
+    };
+    print_throughput_result("sum_all_f64", sum_ns, size, iterations);
+
+    write_newline();
+    write_str("Note: add_f32/sum_f32 kernels are not yet available in the embedded CUDA module.\n");
+    write_str("Done.\n");
+    return 0;
+}
