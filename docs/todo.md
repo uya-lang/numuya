@@ -38,10 +38,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## Phase 23: CUDA linalg、random、benchmark
 
-- [x] 可选 feature: cuFFT/cuRAND backend。
-  - 必须有纯 kernel 或 CPU fallback。
-  - [x] 添加可选 cuFFT backend wrapper，`cuda.fft` 在可用时走 cuFFT，否则回退到 CPU FFT。
-  - [x] 为 cuRAND/cuFFT backend 路径编写测试。
 - [ ] Benchmark: H2D/D2H bandwidth。
 - [ ] Benchmark: `add_f32/add_f64` throughput。
 - [ ] Benchmark: `sum_f32/sum_f64` throughput。
