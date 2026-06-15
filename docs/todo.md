@@ -42,8 +42,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 
 
-- [ ] `.npz` zip 容器。
-
 ## 每次提交前检查
 
 - [ ] 新功能有失败测试记录或 commit 顺序能看出 test-first。
