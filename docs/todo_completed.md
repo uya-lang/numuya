@@ -1167,3 +1167,12 @@ NUMUYA_CUDA_REQUIRED=1 LDFLAGS="-lcublasLt -lcublas -lcufft -lcurand -lcuda" ../
     - `../uya/bin/uya test src/numuya/_tests/test_cuda_random.uya --manifest-path uya.toml` — 8 tests passed。
     - `../uya/bin/uya test src/numuya/_tests/test_cuda_reductions.uya --manifest-path uya.toml` — 15 tests passed。
     - `../uya/bin/uya run src/numuya/_benchmarks/bench_cuda.uya --manifest-path uya.toml` — 返回 0；H2D 9.27 GB/s、D2H 9.12 GB/s、`add_f32` 256.77 GB/s、`add_f64` 300.75 GB/s、pure `matmul_f32` 1024x1024 1.22 TFLOP/s、cuBLASLt TF32 2048x2048 11.01 TFLOP/s、`sum_all_f32` 75.57 GB/s、`random_f32` 191.54 GB/s。
+
+## Phase 24: NumPy 兼容面扩展
+
+- [x] `where`。
+  - 实现：在 `src/numuya/ufunc.uya` 中新增 `where_f64(condition, x, y)`，支持 condition/x/y 三向广播、C 连续快速路径与非连续 strides 回退路径。
+  - 测试：在 `src/numuya/_tests/test_ufunc.uya` 中新增 4 个测试（同 shape 选择、标量条件广播、标量 x/y 广播、输出独立所有权）。
+  - 验证命令与结果：
+    - `make test-one TEST=src/numuya/_tests/test_ufunc.uya` => 24 tests passed, 0 failed。
+    - `make test` => 所有非 CUDA 测试通过（exit 0）。

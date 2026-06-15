@@ -366,3 +366,84 @@ test "unary_stride_indices maps non-contiguous transpose indices" {
     try expect_eq_usize(idx2.input_idx, 3);
     try expect_eq_usize(idx2.result_idx, 1);
 }
+
+test "where_f64 picks x when condition is true, y when false" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var cond_data: [bool: 3] = [true, false, true];
+    var x_data: [f64: 3] = [1.0, 2.0, 3.0];
+    var y_data: [f64: 3] = [10.0, 20.0, 30.0];
+    var cond: Array<bool> = try from_slice<bool>(allocator, cond_data[0:3], shape1(3));
+    var x: Array<f64> = try from_slice<f64>(allocator, x_data[0:3], shape1(3));
+    var y: Array<f64> = try from_slice<f64>(allocator, y_data[0:3], shape1(3));
+
+    var result: Array<f64> = try where_f64(&cond, &x, &y);
+
+    try expect_eq_usize(result.shape.rank, 1);
+    try expect_eq_usize(result.shape.dims[0], 3);
+    try expect_close_f64(try get1<f64>(&result, 0), 1.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&result, 1), 20.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&result, 2), 3.0, 1e-12);
+}
+
+test "where_f64 broadcasts scalar condition" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var cond_data: [bool: 1] = [true];
+    var x_data: [f64: 3] = [1.0, 2.0, 3.0];
+    var y_data: [f64: 3] = [10.0, 20.0, 30.0];
+    var cond: Array<bool> = try from_slice<bool>(allocator, cond_data[0:1], shape_scalar());
+    var x: Array<f64> = try from_slice<f64>(allocator, x_data[0:3], shape1(3));
+    var y: Array<f64> = try from_slice<f64>(allocator, y_data[0:3], shape1(3));
+
+    var result: Array<f64> = try where_f64(&cond, &x, &y);
+
+    try expect_eq_usize(result.shape.rank, 1);
+    try expect_eq_usize(result.shape.dims[0], 3);
+    try expect_close_f64(try get1<f64>(&result, 0), 1.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&result, 1), 2.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&result, 2), 3.0, 1e-12);
+}
+
+test "where_f64 broadcasts scalar x and y with matrix condition" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var cond_data: [bool: 4] = [true, false, false, true];
+    var cond: Array<bool> = try from_slice<bool>(allocator, cond_data[0:4], shape2(2, 2));
+    var x: Array<f64> = try full_f64(allocator, shape_scalar(), 5.0);
+    var y: Array<f64> = try full_f64(allocator, shape_scalar(), -5.0);
+
+    var result: Array<f64> = try where_f64(&cond, &x, &y);
+
+    try expect_eq_usize(result.shape.rank, 2);
+    try expect_eq_usize(result.shape.dims[0], 2);
+    try expect_eq_usize(result.shape.dims[1], 2);
+    try expect_close_f64(try get2<f64>(&result, 0, 0), 5.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&result, 0, 1), -5.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&result, 1, 0), -5.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&result, 1, 1), 5.0, 1e-12);
+}
+
+test "where_f64 output is a new owner independent of inputs" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var cond_data: [bool: 3] = [true, false, true];
+    var x_data: [f64: 3] = [1.0, 2.0, 3.0];
+    var y_data: [f64: 3] = [10.0, 20.0, 30.0];
+    var cond: Array<bool> = try from_slice<bool>(allocator, cond_data[0:3], shape1(3));
+    var x: Array<f64> = try from_slice<f64>(allocator, x_data[0:3], shape1(3));
+    var y: Array<f64> = try from_slice<f64>(allocator, y_data[0:3], shape1(3));
+
+    var result: Array<f64> = try where_f64(&cond, &x, &y);
+
+    try expect_eq_usize(result.storage.ref_count, 1);
+    if result.flags.owns_data != true {
+        return error.NumuyaExpectationFailed;
+    }
+
+    try set1<f64>(&result, 0, 99.0);
+
+    try expect_close_f64(try get1<f64>(&x, 0), 1.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&y, 0), 10.0, 1e-12);
+    try expect_close_f64(try get1<f64>(&result, 0), 99.0, 1e-12);
+}
