@@ -1002,3 +1002,17 @@
   - [x] 添加可选 cuRAND backend wrapper，`gpu_random_f32` 在 `prefer_vendor_libs=true` 且可用时走 cuRAND，否则回退到纯 kernel。
     - 验证命令：`../uya/bin/uya test src/numuya/_tests/test_cuda_random.uya --manifest-path uya.toml`
     - 验证结果：7/7 测试通过，0 失败。
+
+## Phase 23: CUDA linalg、random、benchmark
+
+- [x] 可选 feature: cuFFT/cuRAND backend。
+  - 必须有纯 kernel 或 CPU fallback。
+  - [x] 添加可选 cuFFT backend wrapper，`cuda.fft` 在可用时走 cuFFT，否则回退到 CPU FFT。
+    - 新增文件：`src/numuya/cuda/cufft_stub.c`、`src/numuya/cuda/cufft.uya`、`src/numuya/cuda/fft.uya`、`src/numuya/_tests/test_cuda_fft.uya`
+    - 聚焦验证：`../uya/bin/uya test src/numuya/_tests/test_cuda_fft.uya --manifest-path uya.toml` → 5 passed
+    - 回归验证：`make test` → non-CUDA 全绿
+    - 回归验证：`make test-cuda` → CUDA 测试全绿（含 test_cuda_fft）
+    - 回归验证：`make test-cuda-vendor` → vendor 链接测试全绿（含 test_cuda_fft）
+  - [x] 为 cuRAND/cuFFT backend 路径编写测试。
+    - cuFFT 测试：`src/numuya/_tests/test_cuda_fft.uya`（5 个测试全部通过）
+    - cuRAND 测试：`src/numuya/_tests/test_cuda_random.uya`（已存在并通过）

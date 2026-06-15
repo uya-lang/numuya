@@ -1,0 +1,62 @@
+use errors;
+
+export error NumuyaCufftUnavailable;
+export error NumuyaCufftError;
+
+@c_import("cufft_stub.c", "", "-ldl");
+
+extern fn numuya_cufft_available() i32;
+extern fn numuya_cufft_plan_z2z_1d(n: i32, handle: &usize) i32;
+extern fn numuya_cufft_destroy(handle: usize) i32;
+extern fn numuya_cufft_set_stream(handle: usize, stream: usize) i32;
+extern fn numuya_cufft_exec_z2z(handle: usize, idata: usize, odata: usize, direction: i32) i32;
+
+export fn cufft_is_available() bool {
+    const status: i32 = numuya_cufft_available();
+    return status == 0;
+}
+
+export fn cufft_plan_z2z_1d(n: i32) !usize {
+    var handle: usize = 0;
+    const status: i32 = numuya_cufft_plan_z2z_1d(n, &handle);
+    if status == 0 {
+        return handle;
+    } else if status == 1 {
+        return error.NumuyaCufftUnavailable;
+    } else {
+        return error.NumuyaCufftError;
+    }
+}
+
+export fn cufft_destroy(handle: usize) !void {
+    const status: i32 = numuya_cufft_destroy(handle);
+    if status == 0 {
+        return;
+    } else if status == 1 {
+        return error.NumuyaCufftUnavailable;
+    } else {
+        return error.NumuyaCufftError;
+    }
+}
+
+export fn cufft_set_stream(handle: usize, stream: usize) !void {
+    const status: i32 = numuya_cufft_set_stream(handle, stream);
+    if status == 0 {
+        return;
+    } else if status == 1 {
+        return error.NumuyaCufftUnavailable;
+    } else {
+        return error.NumuyaCufftError;
+    }
+}
+
+export fn cufft_exec_z2z(handle: usize, idata: usize, odata: usize, direction: i32) !void {
+    const status: i32 = numuya_cufft_exec_z2z(handle, idata, odata, direction);
+    if status == 0 {
+        return;
+    } else if status == 1 {
+        return error.NumuyaCufftUnavailable;
+    } else {
+        return error.NumuyaCufftError;
+    }
+}

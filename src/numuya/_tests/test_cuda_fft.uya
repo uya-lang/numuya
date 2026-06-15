@@ -1,0 +1,89 @@
+use array;
+use backend;
+use creation;
+use cuda.cufft;
+use cuda.fft;
+use fft;
+use indexing;
+use shape;
+use testing.expect_close_f64;
+use testing.expect_eq_usize;
+
+use std.mem.allocator.IAllocator;
+use std.mem.allocator.MallocAllocator;
+
+const F64_TOL: f64 = 1e-9;
+
+fn expect_close_complex(actual: Complex, expected_re: f64, expected_im: f64) !void {
+    try expect_close_f64(actual.re, expected_re, F64_TOL);
+    try expect_close_f64(actual.im, expected_im, F64_TOL);
+}
+
+test "cuda fft test file imports cuda.fft module" {
+}
+
+test "cuda cufft availability reports without crashing" {
+    const available: bool = cufft_is_available();
+    if available != true && available != false {
+        return error.NumuyaExpectationFailed;
+    }
+}
+
+test "fft_f64_auto on impulse matches cpu fft_f64" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var data: [f64: 8] = [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
+    var input: Array<f64> = try from_slice<f64>(allocator, data[0:8], shape1(8));
+
+    var expected: ComplexArray = try fft_f64(allocator, &input);
+    var actual: ComplexArray = try fft_f64_auto(allocator, &input);
+
+    try expect_eq_usize(actual.re.shape.rank, 1);
+    try expect_eq_usize(actual.re.shape.dims[0], 8);
+    try expect_eq_usize(actual.im.shape.dims[0], 8);
+
+    var i: usize = 0;
+    while i < 8 {
+        try expect_close_f64(try get1<f64>(&actual.re, i), try get1<f64>(&expected.re, i), F64_TOL);
+        try expect_close_f64(try get1<f64>(&actual.im, i), try get1<f64>(&expected.im, i), F64_TOL);
+        i = i + 1;
+    }
+}
+
+test "fft_auto and ifft_auto round trip complex input" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var re_data: [f64: 4] = [1.0, 2.0, 3.0, 4.0];
+    var im_data: [f64: 4] = [0.5, -0.5, 1.0, -1.0];
+    var re_array: Array<f64> = try from_slice<f64>(allocator, re_data[0:4], shape1(4));
+    var im_array: Array<f64> = try from_slice<f64>(allocator, im_data[0:4], shape1(4));
+    var input: ComplexArray = ComplexArray{ re: re_array, im: im_array };
+
+    var spectrum: ComplexArray = try fft_auto(allocator, &input);
+    var recovered: ComplexArray = try ifft_auto(allocator, &spectrum);
+
+    try expect_eq_usize(recovered.re.shape.rank, 1);
+    try expect_eq_usize(recovered.re.shape.dims[0], 4);
+    try expect_eq_usize(recovered.im.shape.dims[0], 4);
+    try expect_close_f64(try get1<f64>(&recovered.re, 0), 1.0, F64_TOL);
+    try expect_close_f64(try get1<f64>(&recovered.im, 0), 0.5, F64_TOL);
+    try expect_close_f64(try get1<f64>(&recovered.re, 1), 2.0, F64_TOL);
+    try expect_close_f64(try get1<f64>(&recovered.im, 1), -0.5, F64_TOL);
+    try expect_close_f64(try get1<f64>(&recovered.re, 2), 3.0, F64_TOL);
+    try expect_close_f64(try get1<f64>(&recovered.im, 2), 1.0, F64_TOL);
+    try expect_close_f64(try get1<f64>(&recovered.re, 3), 4.0, F64_TOL);
+    try expect_close_f64(try get1<f64>(&recovered.im, 3), -1.0, F64_TOL);
+}
+
+test "fft_f64_auto rejects non power of two length" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var data: [f64: 3] = [1.0, 2.0, 3.0];
+    var input: Array<f64> = try from_slice<f64>(allocator, data[0:3], shape1(3));
+
+    const result: !ComplexArray = fft_f64_auto(allocator, &input);
+    match result {
+        error.NumuyaInvalidArgument => {}
+        else => { return error.NumuyaExpectationFailed; }
+    }
+}

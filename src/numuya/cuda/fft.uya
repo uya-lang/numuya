@@ -1,0 +1,164 @@
+use array;
+use backend;
+use cuda.cufft;
+use cuda.device_array;
+use cuda.driver;
+use cuda.memory;
+use creation;
+use errors;
+use fft;
+use shape;
+
+use std.mem.allocator.IAllocator;
+
+const CUFFT_FORWARD: i32 = -1;
+const CUFFT_INVERSE: i32 = 1;
+const F64_ELEMENT_SIZE: usize = 8;
+const DEFAULT_POOL_BUDGET_BYTES: usize = 64 * 1024 * 1024;
+
+fn is_power_of_two(n: usize) bool {
+    if n == 0 {
+        return false;
+    }
+    const one: usize = 1;
+    return (n & (n - one)) == 0;
+}
+
+fn device_ptr_with_offset_f64(array_value: &DeviceArray<f64>) usize {
+    const base: usize = array_value.storage.ptr as usize;
+    const offset_bytes: usize = array_value.offset * F64_ELEMENT_SIZE;
+    return base + offset_bytes;
+}
+
+fn interleaved_from_complex_array(allocator: IAllocator, input: &ComplexArray) !Array<f64> {
+    const n: usize = input.re.shape.dims[0];
+    var buffer: Array<f64> = try empty<f64>(allocator, shape1(n * 2));
+
+    var i: usize = 0;
+    while i < n {
+        buffer.storage.data[i * 2] = input.re.storage.data[i];
+        buffer.storage.data[i * 2 + 1] = input.im.storage.data[i];
+        i = i + 1;
+    }
+
+    return buffer;
+}
+
+fn complex_array_from_interleaved(allocator: IAllocator, input: &Array<f64>) !ComplexArray {
+    const total: usize = input.shape.dims[0];
+    if total % (2 as usize) != 0 {
+        return error.NumuyaInvalidArgument;
+    }
+    const n: usize = total / 2;
+
+    var re: Array<f64> = try zeros_f64(allocator, shape1(n));
+    var im: Array<f64> = try zeros_f64(allocator, shape1(n));
+
+    var i: usize = 0;
+    while i < n {
+        re.storage.data[i] = input.storage.data[i * 2];
+        im.storage.data[i] = input.storage.data[i * 2 + 1];
+        i = i + 1;
+    }
+
+    return ComplexArray{
+        re: re,
+        im: im,
+    };
+}
+
+fn fft_auto_impl(allocator: IAllocator, input: &ComplexArray, direction: i32) !ComplexArray {
+    if input.re.shape.rank != 1 || input.im.shape.rank != 1 {
+        return error.NumuyaInvalidArgument;
+    }
+
+    const n: usize = input.re.shape.dims[0];
+    if n != input.im.shape.dims[0] {
+        return error.NumuyaInvalidArgument;
+    }
+    if !is_power_of_two(n) {
+        return error.NumuyaInvalidArgument;
+    }
+
+    if !backend_is_cuda_available() || !cufft_is_available() {
+        if direction == CUFFT_FORWARD {
+            return fft(allocator, input);
+        } else {
+            return ifft(allocator, input);
+        }
+    }
+
+    var config: BackendConfig = backend_default_config();
+    config.kind = BackendKind.Cuda;
+    config.prefer_vendor_libs = true;
+    var state: BackendState = try backend_init_with_config(&config);
+    defer backend_deinit(&state) catch {};
+
+    try cuda_set_current_context(state.context);
+
+    var pool: MemoryPool = memory_pool_new(DEFAULT_POOL_BUDGET_BYTES);
+
+    var host_in: Array<f64> = try interleaved_from_complex_array(allocator, input);
+    var device_in: DeviceArray<f64> = try device_array_from_host<f64>(&pool, &host_in, state.context, state.stream);
+    var device_out: DeviceArray<f64> = try device_array_new<f64>(&pool, shape1(n * 2), state.context, state.stream);
+
+    const plan: usize = try cufft_plan_z2z_1d(n as i32);
+    defer cufft_destroy(plan) catch {};
+
+    try cufft_set_stream(plan, state.stream);
+    try cufft_exec_z2z(
+        plan,
+        device_ptr_with_offset_f64(&device_in),
+        device_ptr_with_offset_f64(&device_out),
+        direction
+    );
+    try cuda_synchronize_stream(state.context, state.stream);
+
+    var host_out: Array<f64> = try device_array_to_host<f64>(allocator, &device_out);
+
+    if direction == CUFFT_INVERSE {
+        const scale: f64 = 1.0 / ((n as! f64).value);
+        var i: usize = 0;
+        while i < n * 2 {
+            host_out.storage.data[i] = host_out.storage.data[i] * scale;
+            i = i + 1;
+        }
+    }
+
+    return complex_array_from_interleaved(allocator, &host_out);
+}
+
+export fn fft_f64_auto(allocator: IAllocator, input: &Array<f64>) !ComplexArray {
+    if input.shape.rank != 1 {
+        return error.NumuyaInvalidArgument;
+    }
+
+    const n: usize = input.shape.dims[0];
+    if !is_power_of_two(n) {
+        return error.NumuyaInvalidArgument;
+    }
+
+    var re: Array<f64> = try zeros_f64(allocator, shape1(n));
+    var im: Array<f64> = try zeros_f64(allocator, shape1(n));
+
+    var i: usize = 0;
+    while i < n {
+        re.storage.data[i] = input.storage.data[i];
+        i = i + 1;
+    }
+
+    var complex_input: ComplexArray = ComplexArray{
+        re: re,
+        im: im,
+    };
+
+    return fft_auto_impl(allocator, &complex_input, CUFFT_FORWARD);
+}
+
+export fn fft_auto(allocator: IAllocator, input: &ComplexArray) !ComplexArray {
+    return fft_auto_impl(allocator, input, CUFFT_FORWARD);
+}
+
+export fn ifft_auto(allocator: IAllocator, input: &ComplexArray) !ComplexArray {
+    return fft_auto_impl(allocator, input, CUFFT_INVERSE);
+}
