@@ -1,5 +1,6 @@
 use array;
 use backend;
+use cuda.curand;
 use cuda.device_array;
 use cuda.driver;
 use cuda.kernels;
@@ -48,6 +49,24 @@ export fn gpu_random_f32(state: &BackendState, pool: &MemoryPool, shape_value: S
         };
     }
 
+    const result_ptr: usize = device_ptr_with_offset_f32(&result);
+
+    if state.prefer_vendor_libs && curand_is_available() {
+        try curand_random_f32(state.stream, result_ptr, n, seed);
+        try cuda_synchronize_stream(state.context, state.stream);
+
+        device_storage_retain<f32>(result.storage);
+        return DeviceArray<f32>{
+            storage: result.storage,
+            offset: result.offset,
+            shape: result.shape,
+            strides: result.strides,
+            flags: result.flags,
+            context: result.context,
+            stream: result.stream,
+        };
+    }
+
     if state.module == 0 {
         state.module = try cuda_kernels_load(state.context);
     }
@@ -59,8 +78,6 @@ export fn gpu_random_f32(state: &BackendState, pool: &MemoryPool, shape_value: S
 
     const block_size: u32 = 256;
     const grid_size: u32 = ceil_div_u32(n, block_size as usize);
-
-    const result_ptr: usize = device_ptr_with_offset_f32(&result);
 
     var arg_result_ptr: usize = result_ptr;
     var arg_n: usize = n;

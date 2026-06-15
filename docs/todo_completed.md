@@ -978,3 +978,19 @@
     - `make test-cuda-vendor` — 链接 `-lcublasLt -lcublas -lcufft -lcurand -lcuda`，全部 CUDA 测试文件通过（83/83）
     - `make test` — 全部非 CUDA 测试文件通过
   - 备注：cuBLASLt stub 在缺少 `<cublasLt.h>` / `<cuda.h>` 时编译为 no-op，保持无硬依赖。
+
+
+## Phase 23: CUDA linalg、random、benchmark
+
+- [x] 添加可选 cuRAND backend wrapper，`gpu_random_f32` 在 `prefer_vendor_libs=true` 且可用时走 cuRAND，否则回退到纯 kernel。
+  - 实现：
+    - 新增 `src/numuya/cuda/curand_stub.c`：运行时动态加载 `libcurand.so`，无硬链接依赖；缺少头文件时编译为 no-op 返回 unavailable。
+    - 新增 `src/numuya/cuda/curand.uya`：导出 `curand_is_available()` 与 `curand_random_f32(stream, ptr, n, seed)`。
+    - 修改 `src/numuya/cuda/random.uya`：当 `state.prefer_vendor_libs && curand_is_available()` 时调用 cuRAND，否则回退到原有纯 kernel `RANDOM_F32_KERNEL`。
+    - 在 `src/numuya/_tests/test_cuda_random.uya` 中新增两个测试：
+      - `cuda curand module is importable and reports availability`
+      - `gpu_random_f32 vendor path produces values in half open interval zero one`
+  - 验证命令：
+    - `../uya/bin/uya test src/numuya/_tests/test_cuda_random.uya --manifest-path uya.toml` — 7/7 通过
+    - `make test-cuda` — 全部 CUDA 测试通过（包含 test_cuda_random 7 个测试）
+    - `make test` — 全部非 CUDA 测试通过

@@ -1,0 +1,25 @@
+use errors;
+
+export error NumuyaCurandUnavailable;
+export error NumuyaCurandError;
+
+@c_import("curand_stub.c", "", "-ldl");
+
+extern fn numuya_curand_available() i32;
+extern fn numuya_curand_random_f32(stream: usize, ptr: usize, n: usize, seed: u64) i32;
+
+export fn curand_is_available() bool {
+    const status: i32 = numuya_curand_available();
+    return status == 0;
+}
+
+export fn curand_random_f32(stream: usize, ptr: usize, n: usize, seed: u64) !void {
+    const status: i32 = numuya_curand_random_f32(stream, ptr, n, seed);
+    if status == 0 {
+        return;
+    } else if status == 1 {
+        return error.NumuyaCurandUnavailable;
+    } else {
+        return error.NumuyaCurandError;
+    }
+}
