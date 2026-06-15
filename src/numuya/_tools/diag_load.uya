@@ -1,0 +1,25 @@
+use backend;
+use cuda.driver;
+use cuda.kernels;
+use cuda.module;
+use errors;
+
+export fn main() i32 {
+    const available: bool = backend_is_cuda_available();
+    if !available {
+        return 100;
+    }
+    cuda_init() catch |err| {
+        return 101;
+    };
+    const ctx: usize = cuda_create_context(0) catch |err| {
+        return 102;
+    };
+    const module: usize = cuda_kernels_load(ctx) catch |err| {
+        cuda_destroy_context(ctx) catch {};
+        return 1032;
+    };
+    cuda_module_unload(module) catch {};
+    cuda_destroy_context(ctx) catch {};
+    return 0;
+}

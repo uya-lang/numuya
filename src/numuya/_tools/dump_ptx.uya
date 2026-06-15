@@ -1,0 +1,17 @@
+use cuda.kernels_ptx;
+use std.io.file.fopen;
+use std.io.file.fclose;
+use std.io.file.fwrite;
+use std.string.strlen;
+
+export fn main() i32 {
+    const ptx: &const byte = core_sm86_ptx();
+    const len: usize = strlen(ptx);
+    const out: &FILE = fopen("/tmp/dumped.ptx", "w" as &const byte);
+    if out == null {
+        return 1;
+    }
+    fwrite(ptx, 1, len, out);
+    fclose(out);
+    return 0;
+}
