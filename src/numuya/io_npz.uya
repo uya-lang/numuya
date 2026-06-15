@@ -1,0 +1,466 @@
+use array;
+use creation;
+use io_npy;
+use shape;
+
+use std.io.File;
+use std.io.file_close;
+use std.io.file_open;
+use std.io.file_read;
+use std.io.file_write;
+use std.mem.mem_copy;
+use std.mem.allocator.IAllocator;
+use std.crypto.crc32;
+use std.string.strlen;
+
+use libc.O_RDONLY;
+use libc.O_WRONLY;
+use libc.O_CREAT;
+use libc.O_TRUNC;
+use libc.SEEK_END;
+use libc.SEEK_SET;
+use libc.lseek;
+use libc.unlink;
+
+const NPZ_MAX_ENTRIES: usize = 64;
+const NPZ_LOCAL_HEADER_SIZE: usize = 30;
+const NPZ_CENTRAL_DIR_HEADER_SIZE: usize = 46;
+const NPZ_EOCD_SIZE: usize = 22;
+const NPZ_WRITE_FILE_MODE: u32 = 0o644;
+
+struct NpzEntryInfo {
+    name: &const byte,
+    name_len: usize,
+    crc32: u32,
+    uncompressed_size: u32,
+    local_header_offset: u32,
+}
+
+export struct NpzWriter {
+    file: File,
+    allocator: IAllocator,
+    entries: [NpzEntryInfo: NPZ_MAX_ENTRIES],
+    entry_count: usize,
+}
+
+export struct NpzReader {
+    file_bytes: &byte,
+    file_len: usize,
+    cd_offset: usize,
+    cd_size: usize,
+    entry_count: usize,
+    allocator: IAllocator,
+}
+
+fn npz_write_u16_le(file: &File, value: u16) !void {
+    const b0: byte = (value & 0xffu16) as! byte catch {
+        return error.NumuyaInvalidArgument;
+    };
+    const b1: byte = ((value >> 8) & 0xffu16) as! byte catch {
+        return error.NumuyaInvalidArgument;
+    };
+    var bytes: [byte: 2] = [b0, b1];
+    try npz_write_exact(file, &bytes[0], 2);
+}
+
+fn npz_write_u32_le(file: &File, value: u32) !void {
+    const b0: byte = (value & 0xffu32) as! byte catch {
+        return error.NumuyaInvalidArgument;
+    };
+    const b1: byte = ((value >> 8) & 0xffu32) as! byte catch {
+        return error.NumuyaInvalidArgument;
+    };
+    const b2: byte = ((value >> 16) & 0xffu32) as! byte catch {
+        return error.NumuyaInvalidArgument;
+    };
+    const b3: byte = ((value >> 24) & 0xffu32) as! byte catch {
+        return error.NumuyaInvalidArgument;
+    };
+    var bytes: [byte: 4] = [b0, b1, b2, b3];
+    try npz_write_exact(file, &bytes[0], 4);
+}
+
+fn npz_write_exact(file: &File, buf: &const byte, count: usize) !void {
+    var written: usize = 0;
+    while written < count {
+        const chunk: usize = try file_write(file, &buf[written], count - written);
+        if chunk == 0 {
+            return error.NumuyaInvalidArgument;
+        }
+        written = written + chunk;
+    }
+}
+
+fn npz_read_u16_le(data: &const byte, offset: usize) !u16 {
+    if offset + 2 > 0x10000000 {
+        return error.NumuyaInvalidArgument;
+    }
+    const low: u16 = data[offset] as u16;
+    const high: u16 = (data[offset + 1] as u16) << 8;
+    return low | high;
+}
+
+fn npz_read_u32_le(data: &const byte, offset: usize) !u32 {
+    if offset + 4 > 0x10000000 {
+        return error.NumuyaInvalidArgument;
+    }
+    const b0: u32 = data[offset] as u32;
+    const b1: u32 = (data[offset + 1] as u32) << 8;
+    const b2: u32 = (data[offset + 2] as u32) << 16;
+    const b3: u32 = (data[offset + 3] as u32) << 24;
+    return b0 | b1 | b2 | b3;
+}
+
+fn npz_file_size(file: &File) !usize {
+    const end_offset: i64 = lseek(file.fd, 0, SEEK_END);
+    if end_offset < 0 {
+        return error.NumuyaInvalidArgument;
+    }
+    const size: usize = end_offset as! usize catch {
+        return error.NumuyaInvalidArgument;
+    };
+    if lseek(file.fd, 0, SEEK_SET) < 0 {
+        return error.NumuyaInvalidArgument;
+    }
+    return size;
+}
+
+fn npz_current_offset(file: &File) !usize {
+    const end_offset: i64 = lseek(file.fd, 0, SEEK_END);
+    if end_offset < 0 {
+        return error.NumuyaInvalidArgument;
+    }
+    return end_offset as! usize catch {
+        return error.NumuyaInvalidArgument;
+    };
+}
+
+fn npz_read_exact(file: &File, buf: &byte, count: usize) !void {
+    var filled: usize = 0;
+    while filled < count {
+        const chunk: isize = file_read(file, &buf[filled], count - filled);
+        if chunk <= 0 {
+            return error.NumuyaInvalidArgument;
+        }
+        const read_len: usize = chunk as! usize catch {
+            return error.NumuyaInvalidArgument;
+        };
+        filled = filled + read_len;
+    }
+}
+
+fn npz_name_len(name: &const byte) !usize {
+    const len: usize = strlen(name);
+    if len == 0 || len > 65535 {
+        return error.NumuyaInvalidArgument;
+    }
+    return len;
+}
+
+fn npz_validate_name(name: &const byte) !void {
+    const len: usize = strlen(name);
+    if len == 0 || len > 65535 {
+        return error.NumuyaInvalidArgument;
+    }
+    var i: usize = 0;
+    while i < len {
+        const ch: byte = name[i];
+        if ch == 0 {
+            return error.NumuyaInvalidArgument;
+        }
+        if ch == 92 as byte || ch == 58 as byte || ch == 42 as byte || ch == 63 as byte {
+            return error.NumuyaInvalidArgument;
+        }
+        i = i + 1;
+    }
+}
+
+export fn npz_writer_open(allocator: IAllocator, path: &const byte) !NpzWriter {
+    var file: File = try file_open(path, (O_WRONLY | O_CREAT | O_TRUNC) as i32, NPZ_WRITE_FILE_MODE);
+    errdefer {
+        _ = file_close(&file) catch {};
+    }
+
+    return NpzWriter{
+        file: file,
+        allocator: allocator,
+        entries: [],
+        entry_count: 0,
+    };
+}
+
+export fn npz_writer_add_f64(writer: &NpzWriter, name: &const byte, array_value: &Array<f64>) !void {
+    if writer.entry_count >= NPZ_MAX_ENTRIES {
+        return error.NumuyaInvalidArgument;
+    }
+    try npz_validate_name(name);
+
+    const name_len_value: usize = try npz_name_len(name);
+    const local_header_offset: usize = try npz_current_offset(&writer.file);
+
+    var buf: NpyBuffer = try save_npy_f64_to_buffer(writer.allocator, array_value);
+    errdefer {
+        npy_buffer_drop(writer.allocator, &buf);
+    }
+
+    const crc: u32 = crc32_compute(buf.bytes[0:buf.len]);
+    const uncomp_size: u32 = buf.len as! u32 catch {
+        return error.NumuyaInvalidArgument;
+    };
+    const name_len_u16: u16 = name_len_value as! u16 catch {
+        return error.NumuyaInvalidArgument;
+    };
+
+    const local_offset_u32: u32 = local_header_offset as! u32 catch {
+        return error.NumuyaInvalidArgument;
+    };
+
+    try npz_write_u32_le(&writer.file, 0x04034b50u32);
+    try npz_write_u16_le(&writer.file, 20);
+    try npz_write_u16_le(&writer.file, 0);
+    try npz_write_u16_le(&writer.file, 0);
+    try npz_write_u16_le(&writer.file, 0);
+    try npz_write_u16_le(&writer.file, 0);
+    try npz_write_u32_le(&writer.file, crc);
+    try npz_write_u32_le(&writer.file, uncomp_size);
+    try npz_write_u32_le(&writer.file, uncomp_size);
+    try npz_write_u16_le(&writer.file, name_len_u16);
+    try npz_write_u16_le(&writer.file, 0);
+    try npz_write_exact(&writer.file, name, name_len_value);
+    try npz_write_exact(&writer.file, buf.bytes, buf.len);
+
+    writer.entries[writer.entry_count] = NpzEntryInfo{
+        name: name,
+        name_len: name_len_value,
+        crc32: crc,
+        uncompressed_size: uncomp_size,
+        local_header_offset: local_offset_u32,
+    };
+    writer.entry_count = writer.entry_count + 1;
+
+    npy_buffer_drop(writer.allocator, &buf);
+}
+
+export fn npz_writer_close(writer: &NpzWriter) !void {
+    const cd_offset: usize = try npz_current_offset(&writer.file);
+    const cd_offset_u32: u32 = cd_offset as! u32 catch {
+        return error.NumuyaInvalidArgument;
+    };
+
+    var entry_index: usize = 0;
+    while entry_index < writer.entry_count {
+        const info: &NpzEntryInfo = &writer.entries[entry_index];
+        const name_len_u16: u16 = info.name_len as! u16 catch {
+            return error.NumuyaInvalidArgument;
+        };
+
+        try npz_write_u32_le(&writer.file, 0x02014b50u32);
+        try npz_write_u16_le(&writer.file, 20);
+        try npz_write_u16_le(&writer.file, 20);
+        try npz_write_u16_le(&writer.file, 0);
+        try npz_write_u16_le(&writer.file, 0);
+        try npz_write_u16_le(&writer.file, 0);
+        try npz_write_u16_le(&writer.file, 0);
+        try npz_write_u32_le(&writer.file, info.crc32);
+        try npz_write_u32_le(&writer.file, info.uncompressed_size);
+        try npz_write_u32_le(&writer.file, info.uncompressed_size);
+        try npz_write_u16_le(&writer.file, name_len_u16);
+        try npz_write_u16_le(&writer.file, 0);
+        try npz_write_u16_le(&writer.file, 0);
+        try npz_write_u16_le(&writer.file, 0);
+        try npz_write_u16_le(&writer.file, 0);
+        try npz_write_u32_le(&writer.file, 0);
+        try npz_write_u32_le(&writer.file, info.local_header_offset);
+        try npz_write_exact(&writer.file, info.name, info.name_len);
+
+        entry_index = entry_index + 1;
+    }
+
+    const cd_end_offset: usize = try npz_current_offset(&writer.file);
+    if cd_end_offset < cd_offset {
+        return error.NumuyaInvalidArgument;
+    }
+    const cd_size: usize = cd_end_offset - cd_offset;
+    const cd_size_u32: u32 = cd_size as! u32 catch {
+        return error.NumuyaInvalidArgument;
+    };
+    const entry_count_u16: u16 = writer.entry_count as! u16 catch {
+        return error.NumuyaInvalidArgument;
+    };
+
+    try npz_write_u32_le(&writer.file, 0x06054b50u32);
+    try npz_write_u16_le(&writer.file, 0);
+    try npz_write_u16_le(&writer.file, 0);
+    try npz_write_u16_le(&writer.file, entry_count_u16);
+    try npz_write_u16_le(&writer.file, entry_count_u16);
+    try npz_write_u32_le(&writer.file, cd_size_u32);
+    try npz_write_u32_le(&writer.file, cd_offset_u32);
+    try npz_write_u16_le(&writer.file, 0);
+
+    try file_close(&writer.file);
+}
+
+fn npz_find_eocd(data: &const byte, len: usize) !usize {
+    if len < NPZ_EOCD_SIZE {
+        return error.NumuyaInvalidArgument;
+    }
+
+    var offset: usize = len - NPZ_EOCD_SIZE;
+    while offset > 0 {
+        if try npz_read_u32_le(data, offset) == 0x06054b50u32 {
+            return offset;
+        }
+        offset = offset - 1;
+    }
+
+    if try npz_read_u32_le(data, 0) == 0x06054b50u32 {
+        return 0 as usize;
+    }
+
+    return error.NumuyaInvalidArgument;
+}
+
+export fn npz_reader_open(allocator: IAllocator, path: &const byte) !NpzReader {
+    var file: File = try file_open(path, O_RDONLY as i32, 0);
+    errdefer {
+        _ = file_close(&file) catch {};
+    }
+
+    const file_size: usize = try npz_file_size(&file);
+    if file_size < NPZ_EOCD_SIZE {
+        return error.NumuyaInvalidArgument;
+    }
+
+    const file_bytes: &byte = try allocator.alloc(file_size);
+    errdefer {
+        allocator.dealloc(file_bytes);
+    }
+
+    try npz_read_exact(&file, file_bytes, file_size);
+    try file_close(&file);
+
+    const eocd_offset: usize = try npz_find_eocd(file_bytes, file_size);
+    if eocd_offset + NPZ_EOCD_SIZE > file_size {
+        return error.NumuyaInvalidArgument;
+    }
+
+    const cd_entries: u16 = try npz_read_u16_le(file_bytes, eocd_offset + 8);
+    const total_entries: u16 = try npz_read_u16_le(file_bytes, eocd_offset + 10);
+    const cd_size: u32 = try npz_read_u32_le(file_bytes, eocd_offset + 12);
+    const cd_offset: u32 = try npz_read_u32_le(file_bytes, eocd_offset + 16);
+
+    if cd_entries != total_entries {
+        return error.NumuyaInvalidArgument;
+    }
+    if cd_entries == 0 {
+        return error.NumuyaInvalidArgument;
+    }
+    const cd_offset_usize: usize = cd_offset as usize;
+    const cd_size_usize: usize = cd_size as usize;
+    if cd_offset_usize + cd_size_usize > file_size {
+        return error.NumuyaInvalidArgument;
+    }
+
+    return NpzReader{
+        file_bytes: file_bytes,
+        file_len: file_size,
+        cd_offset: cd_offset_usize,
+        cd_size: cd_size_usize,
+        entry_count: cd_entries as usize,
+        allocator: allocator,
+    };
+}
+
+fn npz_cd_entry_offset(reader: &NpzReader, index: usize) !usize {
+    if index >= reader.entry_count {
+        return error.NumuyaInvalidArgument;
+    }
+
+    var cursor: usize = reader.cd_offset;
+    var remaining: usize = reader.cd_size;
+    var i: usize = 0;
+    while i < index {
+        if cursor + NPZ_CENTRAL_DIR_HEADER_SIZE > reader.file_len {
+            return error.NumuyaInvalidArgument;
+        }
+        const sig: u32 = try npz_read_u32_le(reader.file_bytes, cursor);
+        if sig != 0x02014b50u32 {
+            return error.NumuyaInvalidArgument;
+        }
+        const name_len: u16 = try npz_read_u16_le(reader.file_bytes, cursor + 28);
+        const extra_len: u16 = try npz_read_u16_le(reader.file_bytes, cursor + 30);
+        const comment_len: u16 = try npz_read_u16_le(reader.file_bytes, cursor + 32);
+        const entry_size: usize = NPZ_CENTRAL_DIR_HEADER_SIZE + name_len + extra_len + comment_len;
+        if entry_size > remaining {
+            return error.NumuyaInvalidArgument;
+        }
+        cursor = cursor + entry_size;
+        remaining = remaining - entry_size;
+        i = i + 1;
+    }
+
+    if cursor + NPZ_CENTRAL_DIR_HEADER_SIZE > reader.file_len {
+        return error.NumuyaInvalidArgument;
+    }
+    return cursor;
+}
+
+export fn npz_reader_entry_count(reader: &NpzReader) usize {
+    return reader.entry_count;
+}
+
+export fn npz_reader_entry_name(reader: &NpzReader, index: usize) !NpyBuffer {
+    const entry_offset: usize = try npz_cd_entry_offset(reader, index);
+    const name_len_u16: u16 = try npz_read_u16_le(reader.file_bytes, entry_offset + 28);
+    const name_len: usize = name_len_u16 as usize;
+    const name_offset: usize = entry_offset + NPZ_CENTRAL_DIR_HEADER_SIZE;
+    if name_offset + name_len > reader.file_len {
+        return error.NumuyaInvalidArgument;
+    }
+    return NpyBuffer{ bytes: &reader.file_bytes[name_offset], len: name_len };
+}
+
+fn npz_reader_entry_data(reader: &NpzReader, index: usize) !NpyBuffer {
+    const entry_offset: usize = try npz_cd_entry_offset(reader, index);
+    const method: u16 = try npz_read_u16_le(reader.file_bytes, entry_offset + 10);
+    if method != 0 {
+        return error.NumuyaInvalidArgument;
+    }
+    const comp_size: u32 = try npz_read_u32_le(reader.file_bytes, entry_offset + 20);
+    const local_offset: u32 = try npz_read_u32_le(reader.file_bytes, entry_offset + 42);
+    const local_offset_usize: usize = local_offset as usize;
+
+    if local_offset_usize + NPZ_LOCAL_HEADER_SIZE > reader.file_len {
+        return error.NumuyaInvalidArgument;
+    }
+    const sig: u32 = try npz_read_u32_le(reader.file_bytes, local_offset_usize);
+    if sig != 0x04034b50u32 {
+        return error.NumuyaInvalidArgument;
+    }
+    const local_name_len_u16: u16 = try npz_read_u16_le(reader.file_bytes, local_offset_usize + 26);
+    const local_extra_len_u16: u16 = try npz_read_u16_le(reader.file_bytes, local_offset_usize + 28);
+    const local_name_len: usize = local_name_len_u16 as usize;
+    const local_extra_len: usize = local_extra_len_u16 as usize;
+    const data_offset: usize = local_offset_usize + NPZ_LOCAL_HEADER_SIZE + local_name_len + local_extra_len;
+    const comp_size_usize: usize = comp_size as usize;
+    if data_offset + comp_size_usize > reader.file_len {
+        return error.NumuyaInvalidArgument;
+    }
+    return NpyBuffer{ bytes: &reader.file_bytes[data_offset], len: comp_size_usize };
+}
+
+export fn npz_reader_load_f64(reader: &NpzReader, allocator: IAllocator, index: usize) !Array<f64> {
+    const buf: NpyBuffer = try npz_reader_entry_data(reader, index);
+    return load_npy_f64_from_buffer(allocator, buf.bytes, buf.len);
+}
+
+export fn npz_reader_close(reader: &NpzReader) void {
+    if reader.file_bytes != null && reader.file_len > 0 {
+        reader.allocator.dealloc(reader.file_bytes);
+    }
+    reader.file_bytes = null;
+    reader.file_len = 0;
+    reader.entry_count = 0;
+    reader.cd_offset = 0;
+    reader.cd_size = 0;
+}

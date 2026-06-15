@@ -232,7 +232,7 @@ fn npy_build_header(shape_value: &Shape, descr: &const byte, header: &byte, capa
     return header_len;
 }
 
-fn npy_validate_magic(data: &byte, len: usize) !void {
+fn npy_validate_magic(data: &const byte, len: usize) !void {
     if len < NPY_MAGIC_LEN + NPY_VERSION_LEN {
         return error.NumuyaInvalidArgument;
     }
@@ -246,7 +246,7 @@ fn npy_validate_magic(data: &byte, len: usize) !void {
     }
 }
 
-fn npy_read_version(data: &byte, len: usize) !NpyVersion {
+fn npy_read_version(data: &const byte, len: usize) !NpyVersion {
     if len < NPY_MAGIC_LEN + NPY_VERSION_LEN {
         return error.NumuyaInvalidArgument;
     }
@@ -256,7 +256,7 @@ fn npy_read_version(data: &byte, len: usize) !NpyVersion {
     };
 }
 
-fn npy_read_header_len(data: &byte, len: usize, version: &NpyVersion) !usize {
+fn npy_read_header_len(data: &const byte, len: usize, version: &NpyVersion) !usize {
     const header_len_size: usize = try npy_header_len_size(version);
     const header_len_offset: usize = NPY_MAGIC_LEN + NPY_VERSION_LEN;
     if header_len_offset + header_len_size > len {
@@ -277,7 +277,7 @@ fn npy_read_header_len(data: &byte, len: usize, version: &NpyVersion) !usize {
     return value as usize;
 }
 
-fn npy_match_string_at(data: &byte, len: usize, offset: usize, text: &const byte) bool {
+fn npy_match_string_at(data: &const byte, len: usize, offset: usize, text: &const byte) bool {
     const text_len: usize = strlen(text);
     if offset + text_len > len {
         return false;
@@ -293,7 +293,7 @@ fn npy_match_string_at(data: &byte, len: usize, offset: usize, text: &const byte
     return true;
 }
 
-fn npy_find_string(data: &byte, len: usize, text: &const byte) !usize {
+fn npy_find_string(data: &const byte, len: usize, text: &const byte) !usize {
     const text_len: usize = strlen(text);
     if text_len == 0 || text_len > len {
         return error.NumuyaInvalidArgument;
@@ -309,7 +309,7 @@ fn npy_find_string(data: &byte, len: usize, text: &const byte) !usize {
     return error.NumuyaInvalidArgument;
 }
 
-fn npy_header_value_start(header: &byte, header_len: usize, key: &const byte) !usize {
+fn npy_header_value_start(header: &const byte, header_len: usize, key: &const byte) !usize {
     const key_offset: usize = try npy_find_string(header, header_len, key);
     var cursor: usize = key_offset + strlen(key);
     while cursor < header_len {
@@ -324,7 +324,7 @@ fn npy_header_value_start(header: &byte, header_len: usize, key: &const byte) !u
 }
 
 fn npy_validate_descr(
-    header: &byte,
+    header: &const byte,
     header_len: usize,
     marker: &const byte,
     alt_marker: &const byte,
@@ -345,7 +345,7 @@ fn npy_validate_descr(
     return error.NumuyaUnsupportedDType;
 }
 
-fn npy_parse_fortran_order(header: &byte, header_len: usize) !bool {
+fn npy_parse_fortran_order(header: &const byte, header_len: usize) !bool {
     const value_offset: usize = try npy_header_value_start(header, header_len, "'fortran_order'");
     if npy_match_string_at(header, header_len, value_offset, "False") {
         return false;
@@ -356,7 +356,7 @@ fn npy_parse_fortran_order(header: &byte, header_len: usize) !bool {
     return error.NumuyaInvalidArgument;
 }
 
-fn npy_parse_shape_dim(header: &byte, header_len: usize, cursor: &usize) !usize {
+fn npy_parse_shape_dim(header: &const byte, header_len: usize, cursor: &usize) !usize {
     if cursor[0] >= header_len {
         return error.NumuyaInvalidArgument;
     }
@@ -379,7 +379,7 @@ fn npy_parse_shape_dim(header: &byte, header_len: usize, cursor: &usize) !usize 
     return value;
 }
 
-fn npy_parse_shape(header: &byte, header_len: usize) !Shape {
+fn npy_parse_shape(header: &const byte, header_len: usize) !Shape {
     const value_offset: usize = try npy_header_value_start(header, header_len, "'shape'");
     if value_offset >= header_len || header[value_offset] != 40 as byte {
         return error.NumuyaInvalidArgument;
@@ -426,7 +426,7 @@ fn npy_parse_shape(header: &byte, header_len: usize) !Shape {
 }
 
 fn npy_parse_metadata(
-    data: &byte,
+    data: &const byte,
     len: usize,
     marker: &const byte,
     alt_marker: &const byte,
@@ -441,7 +441,7 @@ fn npy_parse_metadata(
         return error.NumuyaInvalidArgument;
     }
 
-    const header: &byte = &data[header_offset];
+    const header: &const byte = &data[header_offset];
     try npy_validate_descr(header, header_len, marker, alt_marker);
 
     return NpyArrayMetadata{
@@ -552,6 +552,103 @@ export fn load_npy_f64(allocator: IAllocator, path: &const byte) !Array<f64> {
         strides: result.strides,
         flags: result.flags,
     };
+}
+
+export struct NpyBuffer {
+    bytes: &byte,
+    len: usize,
+}
+
+export fn save_npy_f64_to_buffer(allocator: IAllocator, array_value: &Array<f64>) !NpyBuffer {
+    if array_is_c_contiguous<f64>(array_value) != true {
+        return error.NumuyaInvalidArgument;
+    }
+
+    const offset: usize = array_value.offset as! usize catch {
+        return error.NumuyaInvalidArgument;
+    };
+    const element_count: usize = array_size<f64>(array_value);
+    if offset > array_value.storage.len || element_count > array_value.storage.len - offset {
+        return error.NumuyaInvalidArgument;
+    }
+
+    var header: [byte: NPY_WRITE_HEADER_CAPACITY] = [];
+    const header_len: usize = try npy_build_header(&array_value.shape, "<f8", &header[0], NPY_WRITE_HEADER_CAPACITY);
+    if header_len > NPY_V1_MAX_HEADER_LEN {
+        return error.NumuyaInvalidArgument;
+    }
+
+    var prefix: [byte: NPY_MAGIC_LEN + NPY_VERSION_LEN + NPY_V1_HEADER_LEN_BYTES] = [];
+    var i: usize = 0;
+    while i < NPY_MAGIC_LEN {
+        prefix[i] = try npy_magic_byte(i);
+        i = i + 1;
+    }
+    prefix[NPY_MAGIC_LEN] = 1 as byte;
+    prefix[NPY_MAGIC_LEN + 1] = 0 as byte;
+    prefix[NPY_MAGIC_LEN + NPY_VERSION_LEN] = (header_len & 255usize) as! byte catch {
+        return error.NumuyaInvalidArgument;
+    };
+    prefix[NPY_MAGIC_LEN + NPY_VERSION_LEN + 1] = ((header_len >> 8) & 255usize) as! byte catch {
+        return error.NumuyaInvalidArgument;
+    };
+
+    const prefix_len: usize = @len(prefix);
+    const data_bytes: usize = element_count * NPY_F64_SIZE;
+    const total_len: usize = prefix_len + header_len + data_bytes;
+    const buffer: &byte = try allocator.alloc(total_len);
+
+    mem_copy(buffer, &prefix[0], prefix_len);
+    mem_copy(&buffer[prefix_len], &header[0], header_len);
+    if data_bytes > 0 {
+        mem_copy(&buffer[prefix_len + header_len], &array_value.storage.data[offset] as &const byte, data_bytes);
+    }
+
+    return NpyBuffer{ bytes: buffer, len: total_len };
+}
+
+export fn load_npy_f64_from_buffer(allocator: IAllocator, bytes: &const byte, len: usize) !Array<f64> {
+    const metadata: NpyArrayMetadata = try npy_parse_metadata(bytes, len, "<f8", null);
+    try npy_validate_c_order(&metadata);
+
+    const header_len_size: usize = try npy_header_len_size(&metadata.version);
+    const header_len: usize = try npy_read_header_len(bytes, len, &metadata.version);
+    const data_offset: usize = NPY_MAGIC_LEN + NPY_VERSION_LEN + header_len_size + header_len;
+    if data_offset > len {
+        return error.NumuyaInvalidArgument;
+    }
+
+    const data_len: usize = len - data_offset;
+    if data_len % NPY_F64_SIZE != 0 {
+        return error.NumuyaInvalidArgument;
+    }
+
+    const element_count: usize = try npy_shape_size(&metadata);
+    if data_len / NPY_F64_SIZE != element_count {
+        return error.NumuyaInvalidArgument;
+    }
+
+    var result: Array<f64> = try full_f64(allocator, metadata.shape, 0.0);
+    if data_len > 0 {
+        mem_copy(result.storage.data as &byte, &bytes[data_offset], data_len);
+    }
+
+    storage_retain<f64>(result.storage);
+    return Array<f64>{
+        storage: result.storage,
+        offset: result.offset,
+        shape: result.shape,
+        strides: result.strides,
+        flags: result.flags,
+    };
+}
+
+export fn npy_buffer_drop(allocator: IAllocator, buffer: &NpyBuffer) void {
+    if buffer.bytes != null && buffer.len > 0 {
+        allocator.dealloc(buffer.bytes);
+    }
+    buffer.bytes = null;
+    buffer.len = 0;
 }
 
 export fn save_npy_f32(path: &const byte, array_value: &Array<f32>) !void {

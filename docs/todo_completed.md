@@ -1259,6 +1259,17 @@ NUMUYA_CUDA_REQUIRED=1 LDFLAGS="-lcublasLt -lcublas -lcufft -lcurand -lcuda" ../
 
 ## Phase 24: NumPy 兼容面扩展
 
+- [x] `.npz` zip 容器。
+  - 实现：`src/numuya/io_npy.uya` 新增 `save_npy_f64_to_buffer` / `load_npy_f64_from_buffer`；`src/numuya/io_npz.uya` 新增 ZIP STORED writer/reader，支持多个 f64 数组条目。
+  - 测试：`src/numuya/_tests/test_io_npz.uya` 覆盖 `.npy` buffer roundtrip、`.npz` 写入、entry 读取和两个 f64 数组 roundtrip。
+  - 验证命令：
+    - `../uya/bin/uya check src/numuya/_tests/test_io_npz.uya --manifest-path uya.toml`
+    - `../uya/bin/uya test src/numuya/_tests/test_io_npz.uya --manifest-path uya.toml` — 6/6 通过。
+    - `../uya/bin/uya test src/numuya/_tests/test_io_npy.uya --manifest-path uya.toml` — 27/27 通过。
+    - `make test` — 全部非 CUDA 测试通过。
+
+## Phase 24: NumPy 兼容面扩展
+
 - [x] `squeeze/expand_dims`。
   - 实现：在 `src/numuya/shape_ops.uya` 新增 `expand_dims<T>`、`squeeze<T>`、`squeeze_axis<T>` 三个导出函数；在 `src/numuya/stride.uya` 导出 `make_flags_ref` 供视图构造使用。
   - 测试：在 `src/numuya/_tests/test_shape_ops.uya` 新增 4 个测试用例。

@@ -1,0 +1,167 @@
+use array;
+use creation;
+use indexing;
+use io_npy;
+use io_npz;
+use shape;
+use testing.expect_close_f64;
+use testing.expect_eq_usize;
+use testing.expect_shape_eq;
+
+use std.mem.allocator.IAllocator;
+use std.mem.allocator.MallocAllocator;
+use std.string.strlen;
+use libc.unlink;
+
+const NPZ_ROUNDTRIP_PATH: &const byte = "/tmp/numuya_test_io_npz_roundtrip.npz";
+const NPZ_F64_TOLERANCE: f64 = 1e-12;
+
+fn expect_array1_close_f64(actual: &Array<f64>, expected_values: &[f64]) !void {
+    try expect_eq_usize(actual.shape.rank, 1);
+    try expect_eq_usize(actual.shape.dims[0], expected_values.len);
+
+    var i: usize = 0;
+    while i < expected_values.len {
+        try expect_close_f64(try get1<f64>(actual, i), expected_values[i], NPZ_F64_TOLERANCE);
+        i = i + 1;
+    }
+}
+
+fn expect_array2_close_f64(actual: &Array<f64>, dim0: usize, dim1: usize, expected_values: &[f64]) !void {
+    var expected_shape: [usize: 2] = [dim0, dim1];
+    try expect_shape_eq(actual.shape.dims[0:actual.shape.rank], expected_shape[0:2]);
+
+    var row: usize = 0;
+    while row < dim0 {
+        var col: usize = 0;
+        while col < dim1 {
+            const flat_index: usize = row * dim1 + col;
+            try expect_close_f64(
+                try get2<f64>(actual, row, col),
+                expected_values[flat_index],
+                NPZ_F64_TOLERANCE,
+            );
+            col = col + 1;
+        }
+        row = row + 1;
+    }
+}
+
+fn expect_bytes_eq(actual: &const byte, actual_len: usize, expected: &const byte) !void {
+    const expected_len: usize = strlen(expected);
+    try expect_eq_usize(actual_len, expected_len);
+
+    var i: usize = 0;
+    while i < expected_len {
+        if actual[i] != expected[i] {
+            return error.NumuyaExpectationFailed;
+        }
+        i = i + 1;
+    }
+}
+
+fn write_npz_roundtrip_fixture(allocator: IAllocator) !void {
+    _ = unlink(NPZ_ROUNDTRIP_PATH);
+
+    var source_a: [f64: 4] = [1.0, 2.5, -3.0, 8.25];
+    var source_b: [f64: 6] = [10.0, 20.0, 30.0, 40.0, 50.0, 60.0];
+    var a: Array<f64> = try from_slice<f64>(allocator, source_a[0:4], shape1(4));
+    var b: Array<f64> = try from_slice<f64>(allocator, source_b[0:6], shape2(2, 3));
+
+    var writer: NpzWriter = try npz_writer_open(allocator, NPZ_ROUNDTRIP_PATH);
+    try npz_writer_add_f64(&writer, "first.npy", &a);
+    try npz_writer_add_f64(&writer, "second.npy", &b);
+    try npz_writer_close(&writer);
+}
+
+test "save_npy_f64_to_buffer roundtrips through load_npy_f64_from_buffer" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+
+    var source: [f64: 6] = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
+    var a: Array<f64> = try from_slice<f64>(allocator, source[0:6], shape2(2, 3));
+
+    var buf: NpyBuffer = try save_npy_f64_to_buffer(allocator, &a);
+    try expect_eq_usize(buf.len, 128);
+
+    var b: Array<f64> = try load_npy_f64_from_buffer(allocator, buf.bytes, buf.len);
+    try expect_array2_close_f64(&b, 2, 3, source[0:6]);
+
+    npy_buffer_drop(allocator, &buf);
+}
+
+test "npz_writer produces file readable by Python-style layout" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    errdefer {
+        _ = unlink(NPZ_ROUNDTRIP_PATH);
+    }
+
+    try write_npz_roundtrip_fixture(allocator);
+
+    var reader: NpzReader = try npz_reader_open(allocator, NPZ_ROUNDTRIP_PATH);
+    try expect_eq_usize(npz_reader_entry_count(&reader), 2);
+    npz_reader_close(&reader);
+    _ = unlink(NPZ_ROUNDTRIP_PATH);
+}
+
+test "npz_reader_open succeeds on produced file" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    errdefer {
+        _ = unlink(NPZ_ROUNDTRIP_PATH);
+    }
+
+    try write_npz_roundtrip_fixture(allocator);
+    var reader: NpzReader = try npz_reader_open(allocator, NPZ_ROUNDTRIP_PATH);
+    try expect_eq_usize(npz_reader_entry_count(&reader), 2);
+    npz_reader_close(&reader);
+    _ = unlink(NPZ_ROUNDTRIP_PATH);
+}
+
+test "npz_reader_entry_name returns expected first entry name" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    errdefer {
+        _ = unlink(NPZ_ROUNDTRIP_PATH);
+    }
+
+    try write_npz_roundtrip_fixture(allocator);
+    var reader: NpzReader = try npz_reader_open(allocator, NPZ_ROUNDTRIP_PATH);
+    var name0: NpyBuffer = try npz_reader_entry_name(&reader, 0);
+    try expect_bytes_eq(name0.bytes, name0.len, "first.npy");
+    npz_reader_close(&reader);
+    _ = unlink(NPZ_ROUNDTRIP_PATH);
+}
+
+test "npz_reader_load_f64 roundtrips first array" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    errdefer {
+        _ = unlink(NPZ_ROUNDTRIP_PATH);
+    }
+
+    var source_a: [f64: 4] = [1.0, 2.5, -3.0, 8.25];
+    try write_npz_roundtrip_fixture(allocator);
+    var reader: NpzReader = try npz_reader_open(allocator, NPZ_ROUNDTRIP_PATH);
+    var loaded_a: Array<f64> = try npz_reader_load_f64(&reader, allocator, 0);
+    try expect_array1_close_f64(&loaded_a, source_a[0:4]);
+    npz_reader_close(&reader);
+    _ = unlink(NPZ_ROUNDTRIP_PATH);
+}
+
+test "npz_reader_load_f64 roundtrips second array" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    errdefer {
+        _ = unlink(NPZ_ROUNDTRIP_PATH);
+    }
+
+    var source_b: [f64: 6] = [10.0, 20.0, 30.0, 40.0, 50.0, 60.0];
+    try write_npz_roundtrip_fixture(allocator);
+    var reader: NpzReader = try npz_reader_open(allocator, NPZ_ROUNDTRIP_PATH);
+    var loaded_b: Array<f64> = try npz_reader_load_f64(&reader, allocator, 1);
+    try expect_array2_close_f64(&loaded_b, 2, 3, source_b[0:6]);
+    npz_reader_close(&reader);
+    _ = unlink(NPZ_ROUNDTRIP_PATH);
+}
