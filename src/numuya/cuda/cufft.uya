@@ -1,62 +1,166 @@
+/* cufft.uya — Pure Uya cuFFT backend.
+ *
+ * Replaces cufft_stub.c with pure Uya logic:
+ * - dlopen libcufft.so via dl_stub.c passthrough
+ * - dlsym function pointer caching
+ * - indirect calls via numuya_call_N helpers
+ * - cuFFT type constants hardcoded (CUFFT_Z2Z = 105, CUFFT_SUCCESS = 0)
+ *
+ * dl_stub.c is the only C helper. Zero cuFFT business logic in C.
+ */
+
 use errors;
 
 export error NumuyaCufftUnavailable;
 export error NumuyaCufftError;
 
-@c_import("cufft_stub.c", "", "-ldl");
+@c_import("dl_stub.c", "", "-ldl");
 
-extern fn numuya_cufft_available() i32;
-extern fn numuya_cufft_plan_z2z_1d(n: i32, handle: &usize) i32;
-extern fn numuya_cufft_destroy(handle: usize) i32;
-extern fn numuya_cufft_set_stream(handle: usize, stream: usize) i32;
-extern fn numuya_cufft_exec_z2z(handle: usize, idata: usize, odata: usize, direction: i32) i32;
+/* dlopen/dlsym passthrough */
+extern fn numuya_dlopen(filename: &byte, flags: i32) usize;
+extern fn numuya_dlsym(handle: usize, symbol: &byte) usize;
+
+/* Generic indirect-call helpers */
+extern fn numuya_call_1(func_ptr: usize, arg0: usize) i32;
+extern fn numuya_call_2(func_ptr: usize, arg0: usize, arg1: usize) i32;
+extern fn numuya_call_4(func_ptr: usize, arg0: usize, arg1: usize, arg2: usize, arg3: usize) i32;
+
+/* cuFFT status codes (cufftResult) */
+const CUFFT_SUCCESS: i32 = 0;
+
+/* cuFFT type constants (hardcoded from cufft.h) */
+const CUFFT_Z2Z: usize = 105;
+
+/* ============================================================
+ * Function pointer cache
+ * ============================================================ */
+
+var cufft_handle: usize = 0;
+var cufft_loaded: bool = false;
+
+var pfn_cufftPlan1d: usize = 0;
+var pfn_cufftDestroy: usize = 0;
+var pfn_cufftExecZ2Z: usize = 0;
+var pfn_cufftSetStream: usize = 0;
+
+/* ============================================================
+ * Load libcufft.so
+ * ============================================================ */
+
+fn cufft_load() i32 {
+    if cufft_loaded {
+        if cufft_handle != 0 {
+            return 0;
+        }
+        return 1; /* unavailable */
+    }
+    cufft_loaded = true;
+
+    /* RTLD_NOW | RTLD_NODELETE = 2 | 4096 = 4098 */
+    cufft_handle = numuya_dlopen("libcufft.so.10" as &byte, 4098 as i32);
+    if cufft_handle == 0 {
+        cufft_handle = numuya_dlopen("libcufft.so.11" as &byte, 4098 as i32);
+    }
+    if cufft_handle == 0 {
+        cufft_handle = numuya_dlopen("libcufft.so.12" as &byte, 4098 as i32);
+    }
+    if cufft_handle == 0 {
+        cufft_handle = numuya_dlopen("libcufft.so.1" as &byte, 4098 as i32);
+    }
+    if cufft_handle == 0 {
+        cufft_handle = numuya_dlopen("libcufft.so" as &byte, 4098 as i32);
+    }
+    if cufft_handle == 0 {
+        return 1; /* unavailable */
+    }
+
+    pfn_cufftPlan1d = numuya_dlsym(cufft_handle, "cufftPlan1d" as &byte);
+    pfn_cufftDestroy = numuya_dlsym(cufft_handle, "cufftDestroy" as &byte);
+    pfn_cufftExecZ2Z = numuya_dlsym(cufft_handle, "cufftExecZ2Z" as &byte);
+    pfn_cufftSetStream = numuya_dlsym(cufft_handle, "cufftSetStream" as &byte);
+
+    if pfn_cufftPlan1d == 0 ||
+        pfn_cufftDestroy == 0 ||
+        pfn_cufftExecZ2Z == 0 ||
+        pfn_cufftSetStream == 0 {
+        cufft_handle = 0;
+        return 1; /* unavailable */
+    }
+
+    return 0; /* OK */
+}
+
+/* ============================================================
+ * Exported public API
+ * ============================================================ */
 
 export fn cufft_is_available() bool {
-    const status: i32 = numuya_cufft_available();
+    const status: i32 = cufft_load();
     return status == 0;
 }
 
 export fn cufft_plan_z2z_1d(n: i32) !usize {
-    var handle: usize = 0;
-    const status: i32 = numuya_cufft_plan_z2z_1d(n, &handle);
-    if status == 0 {
-        return handle;
-    } else if status == 1 {
+    const load_status: i32 = cufft_load();
+    if load_status == 1 {
         return error.NumuyaCufftUnavailable;
-    } else {
+    }
+    if load_status != 0 {
         return error.NumuyaCufftError;
     }
+
+    /* cufftPlan1d(&plan, n, CUFFT_Z2Z, 1) */
+    var plan: usize = 0;
+    const status: i32 = numuya_call_4(pfn_cufftPlan1d, &plan as usize, n as usize, CUFFT_Z2Z, 1 as usize);
+    if status != CUFFT_SUCCESS {
+        return error.NumuyaCufftError;
+    }
+    return plan;
 }
 
 export fn cufft_destroy(handle: usize) !void {
-    const status: i32 = numuya_cufft_destroy(handle);
-    if status == 0 {
+    if handle == 0 {
         return;
-    } else if status == 1 {
+    }
+    const load_status: i32 = cufft_load();
+    if load_status == 1 {
         return error.NumuyaCufftUnavailable;
-    } else {
+    }
+    if load_status != 0 {
+        return error.NumuyaCufftError;
+    }
+
+    const status: i32 = numuya_call_1(pfn_cufftDestroy, handle);
+    if status != CUFFT_SUCCESS {
         return error.NumuyaCufftError;
     }
 }
 
 export fn cufft_set_stream(handle: usize, stream: usize) !void {
-    const status: i32 = numuya_cufft_set_stream(handle, stream);
-    if status == 0 {
-        return;
-    } else if status == 1 {
+    const load_status: i32 = cufft_load();
+    if load_status == 1 {
         return error.NumuyaCufftUnavailable;
-    } else {
+    }
+    if load_status != 0 {
+        return error.NumuyaCufftError;
+    }
+
+    const status: i32 = numuya_call_2(pfn_cufftSetStream, handle, stream);
+    if status != CUFFT_SUCCESS {
         return error.NumuyaCufftError;
     }
 }
 
 export fn cufft_exec_z2z(handle: usize, idata: usize, odata: usize, direction: i32) !void {
-    const status: i32 = numuya_cufft_exec_z2z(handle, idata, odata, direction);
-    if status == 0 {
-        return;
-    } else if status == 1 {
+    const load_status: i32 = cufft_load();
+    if load_status == 1 {
         return error.NumuyaCufftUnavailable;
-    } else {
+    }
+    if load_status != 0 {
+        return error.NumuyaCufftError;
+    }
+
+    const status: i32 = numuya_call_4(pfn_cufftExecZ2Z, handle, idata, odata, direction as usize);
+    if status != CUFFT_SUCCESS {
         return error.NumuyaCufftError;
     }
 }

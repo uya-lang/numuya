@@ -1,7 +1,323 @@
+/* driver.uya — Pure Uya CUDA Driver API.
+ *
+ * Replaces the previous 650-line driver_stub.c with pure Uya logic:
+ * - dlopen libcuda.so via dl_stub.c passthrough
+ * - dlsym function pointer caching with _v2 version fallback
+ * - stream-context association table
+ * - default context creation
+ * - indirect-call helpers via dl_stub.c
+ *
+ * dl_stub.c is the only C helper.
+ */
+
 use errors;
+use std;
 
 export error NumuyaGpuUnavailable;
 export error NumuyaCudaError;
+
+@c_import("dl_stub.c", "", "-ldl");
+
+/* dlopen/dlsym/dlclose passthrough from dl_stub.c */
+extern fn numuya_dlopen(filename: &byte, flags: i32) usize;
+extern fn numuya_dlsym(handle: usize, symbol: &byte) usize;
+extern fn numuya_dlclose(handle: usize) i32;
+extern fn numuya_dlerror() &byte;
+
+/* Generic indirect-call helpers from dl_stub.c */
+extern fn numuya_call_0(func_ptr: usize) i32;
+extern fn numuya_call_1(func_ptr: usize, arg0: usize) i32;
+extern fn numuya_call_2(func_ptr: usize, arg0: usize, arg1: usize) i32;
+extern fn numuya_call_3(func_ptr: usize, arg0: usize, arg1: usize, arg2: usize) i32;
+extern fn numuya_call_4(func_ptr: usize, arg0: usize, arg1: usize, arg2: usize, arg3: usize) i32;
+extern fn numuya_call_5(func_ptr: usize, arg0: usize, arg1: usize, arg2: usize, arg3: usize, arg4: usize) i32;
+extern fn numuya_call_6(func_ptr: usize, arg0: usize, arg1: usize, arg2: usize, arg3: usize, arg4: usize, arg5: usize) i32;
+/* cuLaunchKernel专用: 自动添加 extra=NULL */
+extern fn numuya_cuda_launch_kernel(func_ptr: usize, a0: usize, a1: usize, a2: usize, a3: usize, a4: usize, a5: usize, a6: usize, a7: usize, a8: usize, a9: usize) i32;
+
+/* CUDA Driver API status codes */
+const NUMUYA_CUDA_OK: i32 = 0;
+const NUMUYA_CUDA_UNAVAILABLE: i32 = 1;
+const NUMUYA_CUDA_ERROR: i32 = 2;
+const NUMUYA_CUDA_DEVICE_MISMATCH: i32 = 3;
+
+/* CU_DEVICE_ATTRIBUTE constants */
+const CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR: i32 = 75;
+const CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MINOR: i32 = 76;
+
+/* ============================================================
+ * Function pointer cache
+ * ============================================================ */
+
+var cuda_handle: usize = 0;
+
+var pfn_cuInit: usize = 0;
+var pfn_cuDeviceGet: usize = 0;
+var pfn_cuDeviceGetAttribute: usize = 0;
+var pfn_cuDeviceGetName: usize = 0;
+var pfn_cuDeviceTotalMem: usize = 0;
+var pfn_cuDriverGetVersion: usize = 0;
+var pfn_cuCtxCreate: usize = 0;
+var pfn_cuCtxDestroy: usize = 0;
+var pfn_cuCtxSetCurrent: usize = 0;
+var pfn_cuStreamCreate: usize = 0;
+var pfn_cuStreamSynchronize: usize = 0;
+var pfn_cuStreamDestroy: usize = 0;
+var pfn_cuMemAlloc: usize = 0;
+var pfn_cuMemFree: usize = 0;
+var pfn_cuMemcpyHtoD: usize = 0;
+var pfn_cuMemcpyDtoH: usize = 0;
+var pfn_cuMemcpyHtoDAsync: usize = 0;
+var pfn_cuMemcpyDtoHAsync: usize = 0;
+var pfn_cuModuleLoadData: usize = 0;
+var pfn_cuModuleGetFunction: usize = 0;
+var pfn_cuModuleUnload: usize = 0;
+var pfn_cuLaunchKernel: usize = 0;
+
+var current_context: usize = 0;
+
+/* ============================================================
+ * Stream-context association table
+ * ============================================================ */
+
+const MAX_STREAMS: usize = 256;
+
+struct StreamEntry {
+    handle: usize,
+    context: usize,
+}
+
+var stream_entries: [StreamEntry: 256] = [];
+var stream_count: usize = 0;
+
+fn stream_record(context: usize, stream: usize) void {
+    var i: usize = 0;
+    while i < MAX_STREAMS {
+        if stream_entries[i].handle == 0 {
+            stream_entries[i].handle = stream;
+            stream_entries[i].context = context;
+            if i >= stream_count {
+                stream_count = i + 1;
+            }
+            return;
+        }
+        i = i + 1;
+    }
+}
+
+fn stream_get_context(stream: usize) usize {
+    var i: usize = 0;
+    while i < stream_count {
+        if stream_entries[i].handle == stream {
+            return stream_entries[i].context;
+        }
+        i = i + 1;
+    }
+    return 0;
+}
+
+fn stream_remove(stream: usize) void {
+    var i: usize = 0;
+    while i < MAX_STREAMS {
+        if stream_entries[i].handle == stream {
+            stream_entries[i].handle = 0;
+            stream_entries[i].context = 0;
+            return;
+        }
+        i = i + 1;
+    }
+}
+
+/* ============================================================
+ * dlsym helper with _v2 fallback
+ * ============================================================ */
+
+fn dlsym_v2_fallback(handle: usize, name_v2: &byte, name: &byte) usize {
+    var ptr: usize = numuya_dlsym(handle, name_v2);
+    if ptr != 0 {
+        return ptr;
+    }
+    return numuya_dlsym(handle, name);
+}
+
+/* ============================================================
+ * Load libcuda.so
+ * ============================================================ */
+
+fn cuda_load() i32 {
+    if cuda_handle != 0 {
+        return NUMUYA_CUDA_OK;
+    }
+
+    /* RTLD_NOW | RTLD_NODELETE = 2 | 4096 = 4098 */
+    cuda_handle = numuya_dlopen("libcuda.so.1" as &byte, 4098 as i32);
+    if cuda_handle == 0 {
+        cuda_handle = numuya_dlopen("libcuda.so" as &byte, 4098 as i32);
+    }
+    if cuda_handle == 0 {
+        return NUMUYA_CUDA_UNAVAILABLE;
+    }
+
+    pfn_cuInit = numuya_dlsym(cuda_handle, "cuInit" as &byte);
+    pfn_cuDeviceGet = numuya_dlsym(cuda_handle, "cuDeviceGet" as &byte);
+    pfn_cuDeviceGetAttribute = numuya_dlsym(cuda_handle, "cuDeviceGetAttribute" as &byte);
+    pfn_cuDeviceGetName = numuya_dlsym(cuda_handle, "cuDeviceGetName" as &byte);
+    pfn_cuDriverGetVersion = numuya_dlsym(cuda_handle, "cuDriverGetVersion" as &byte);
+
+    pfn_cuDeviceTotalMem = dlsym_v2_fallback(cuda_handle, "cuDeviceTotalMem_v2" as &byte, "cuDeviceTotalMem" as &byte);
+    pfn_cuCtxCreate = dlsym_v2_fallback(cuda_handle, "cuCtxCreate_v2" as &byte, "cuCtxCreate" as &byte);
+    pfn_cuCtxDestroy = dlsym_v2_fallback(cuda_handle, "cuCtxDestroy_v2" as &byte, "cuCtxDestroy" as &byte);
+    pfn_cuCtxSetCurrent = numuya_dlsym(cuda_handle, "cuCtxSetCurrent" as &byte);
+    pfn_cuStreamCreate = numuya_dlsym(cuda_handle, "cuStreamCreate" as &byte);
+    pfn_cuStreamSynchronize = numuya_dlsym(cuda_handle, "cuStreamSynchronize" as &byte);
+    pfn_cuStreamDestroy = dlsym_v2_fallback(cuda_handle, "cuStreamDestroy_v2" as &byte, "cuStreamDestroy" as &byte);
+    pfn_cuMemAlloc = dlsym_v2_fallback(cuda_handle, "cuMemAlloc_v2" as &byte, "cuMemAlloc" as &byte);
+    pfn_cuMemFree = dlsym_v2_fallback(cuda_handle, "cuMemFree_v2" as &byte, "cuMemFree" as &byte);
+    pfn_cuMemcpyHtoD = dlsym_v2_fallback(cuda_handle, "cuMemcpyHtoD_v2" as &byte, "cuMemcpyHtoD" as &byte);
+    pfn_cuMemcpyDtoH = dlsym_v2_fallback(cuda_handle, "cuMemcpyDtoH_v2" as &byte, "cuMemcpyDtoH" as &byte);
+    pfn_cuMemcpyHtoDAsync = dlsym_v2_fallback(cuda_handle, "cuMemcpyHtoDAsync_v2" as &byte, "cuMemcpyHtoDAsync" as &byte);
+    pfn_cuMemcpyDtoHAsync = dlsym_v2_fallback(cuda_handle, "cuMemcpyDtoHAsync_v2" as &byte, "cuMemcpyDtoHAsync" as &byte);
+
+    pfn_cuModuleLoadData = numuya_dlsym(cuda_handle, "cuModuleLoadData" as &byte);
+    pfn_cuModuleGetFunction = numuya_dlsym(cuda_handle, "cuModuleGetFunction" as &byte);
+    pfn_cuModuleUnload = numuya_dlsym(cuda_handle, "cuModuleUnload" as &byte);
+    pfn_cuLaunchKernel = numuya_dlsym(cuda_handle, "cuLaunchKernel" as &byte);
+
+    if pfn_cuInit == 0 ||
+        pfn_cuDeviceGet == 0 ||
+        pfn_cuDeviceGetAttribute == 0 ||
+        pfn_cuDeviceTotalMem == 0 ||
+        pfn_cuCtxCreate == 0 ||
+        pfn_cuCtxDestroy == 0 ||
+        pfn_cuCtxSetCurrent == 0 ||
+        pfn_cuStreamCreate == 0 ||
+        pfn_cuStreamSynchronize == 0 ||
+        pfn_cuStreamDestroy == 0 ||
+        pfn_cuMemAlloc == 0 ||
+        pfn_cuMemFree == 0 ||
+        pfn_cuMemcpyHtoD == 0 ||
+        pfn_cuMemcpyDtoH == 0 ||
+        pfn_cuMemcpyHtoDAsync == 0 ||
+        pfn_cuMemcpyDtoHAsync == 0 ||
+        pfn_cuModuleLoadData == 0 ||
+        pfn_cuModuleGetFunction == 0 ||
+        pfn_cuModuleUnload == 0 ||
+        pfn_cuLaunchKernel == 0 {
+        return NUMUYA_CUDA_UNAVAILABLE;
+    }
+
+    return NUMUYA_CUDA_OK;
+}
+
+/* ============================================================
+ * Indirect CUDA function calls via numuya_call_N helpers
+ * ============================================================ */
+
+fn call_cuInit(flags: u32) i32 {
+    return numuya_call_1(pfn_cuInit, flags as usize);
+}
+
+fn call_cuDeviceGet(device_out: &i32, ordinal: i32) i32 {
+    return numuya_call_2(pfn_cuDeviceGet, device_out as usize, ordinal as usize);
+}
+
+fn call_cuDeviceGetAttribute(value_out: &i32, attrib: i32, device: i32) i32 {
+    return numuya_call_3(pfn_cuDeviceGetAttribute, value_out as usize, attrib as usize, device as usize);
+}
+
+fn call_cuDeviceGetName(name_buf: &byte, len: i32, device: i32) i32 {
+    return numuya_call_3(pfn_cuDeviceGetName, name_buf as usize, len as usize, device as usize);
+}
+
+fn call_cuDeviceTotalMem(bytes_out: &usize, device: i32) i32 {
+    return numuya_call_2(pfn_cuDeviceTotalMem, bytes_out as usize, device as usize);
+}
+
+fn call_cuDriverGetVersion(version_out: &i32) i32 {
+    return numuya_call_1(pfn_cuDriverGetVersion, version_out as usize);
+}
+
+fn call_cuCtxCreate(ctx_out: &usize, flags: u32, device: i32) i32 {
+    return numuya_call_3(pfn_cuCtxCreate, ctx_out as usize, flags as usize, device as usize);
+}
+
+fn call_cuCtxDestroy(ctx: usize) i32 {
+    return numuya_call_1(pfn_cuCtxDestroy, ctx);
+}
+
+fn call_cuCtxSetCurrent(ctx: usize) i32 {
+    return numuya_call_1(pfn_cuCtxSetCurrent, ctx);
+}
+
+fn call_cuStreamCreate(stream_out: &usize, flags: u32) i32 {
+    return numuya_call_2(pfn_cuStreamCreate, stream_out as usize, flags as usize);
+}
+
+fn call_cuStreamSynchronize(stream: usize) i32 {
+    return numuya_call_1(pfn_cuStreamSynchronize, stream);
+}
+
+fn call_cuStreamDestroy(stream: usize) i32 {
+    return numuya_call_1(pfn_cuStreamDestroy, stream);
+}
+
+fn call_cuMemAlloc(ptr_out: &usize, size: usize) i32 {
+    return numuya_call_2(pfn_cuMemAlloc, ptr_out as usize, size);
+}
+
+fn call_cuMemFree(ptr: usize) i32 {
+    return numuya_call_1(pfn_cuMemFree, ptr);
+}
+
+fn call_cuMemcpyHtoD(dst: usize, src: &byte, size: usize) i32 {
+    return numuya_call_3(pfn_cuMemcpyHtoD, dst, src as usize, size);
+}
+
+fn call_cuMemcpyDtoH(dst: &byte, src: usize, size: usize) i32 {
+    return numuya_call_3(pfn_cuMemcpyDtoH, dst as usize, src, size);
+}
+
+fn call_cuMemcpyHtoDAsync(dst: usize, src: &byte, size: usize, stream: usize) i32 {
+    return numuya_call_4(pfn_cuMemcpyHtoDAsync, dst, src as usize, size, stream);
+}
+
+fn call_cuMemcpyDtoHAsync(dst: &byte, src: usize, size: usize, stream: usize) i32 {
+    return numuya_call_4(pfn_cuMemcpyDtoHAsync, dst as usize, src, size, stream);
+}
+
+fn call_cuModuleLoadData(module_out: &usize, image: &byte) i32 {
+    return numuya_call_2(pfn_cuModuleLoadData, module_out as usize, image as usize);
+}
+
+fn call_cuModuleGetFunction(func_out: &usize, module: usize, name: &byte) i32 {
+    return numuya_call_3(pfn_cuModuleGetFunction, func_out as usize, module, name as usize);
+}
+
+fn call_cuModuleUnload(module: usize) i32 {
+    return numuya_call_1(pfn_cuModuleUnload, module);
+}
+
+fn call_cuLaunchKernel(
+    func: usize,
+    grid_x: u32, grid_y: u32, grid_z: u32,
+    block_x: u32, block_y: u32, block_z: u32,
+    shared_mem: u32,
+    stream: usize,
+    kernel_params: usize
+) i32 {
+    return numuya_cuda_launch_kernel(pfn_cuLaunchKernel,
+        func,
+        grid_x as usize, grid_y as usize, grid_z as usize,
+        block_x as usize, block_y as usize, block_z as usize,
+        shared_mem as usize,
+        stream,
+        kernel_params
+    );
+}
+
+/* ============================================================
+ * Exported public API
+ * ============================================================ */
 
 export struct CudaDevice {
     ordinal: usize,
@@ -10,110 +326,162 @@ export struct CudaDevice {
     total_memory_bytes: usize,
 }
 
-@c_import("driver_stub.c", "", "-ldl");
-
-extern fn numuya_cuda_init() i32;
-extern fn numuya_cuda_get_device(ordinal: i32, major: &i32, minor: &i32, total_memory_bytes: &usize) i32;
-extern fn numuya_cuda_get_device_name(ordinal: i32, name: &byte, len: i32) i32;
-extern fn numuya_cuda_get_driver_version(version: &i32) i32;
-extern fn numuya_cuda_create_context(ordinal: i32, context: &usize) i32;
-extern fn numuya_cuda_destroy_context(context: usize) i32;
-extern fn numuya_cuda_set_current_context(context: usize) i32;
-extern fn numuya_cuda_create_stream(context: usize, stream: &usize) i32;
-extern fn numuya_cuda_synchronize_stream(context: usize, stream: usize) i32;
-extern fn numuya_cuda_destroy_stream(context: usize, stream: usize) i32;
-extern fn numuya_cuda_malloc(size: usize, ptr: &usize) i32;
-extern fn numuya_cuda_free(ptr: usize) i32;
-extern fn numuya_cuda_memcpy_htod(dst: usize, src: &byte, size: usize) i32;
-extern fn numuya_cuda_memcpy_dtoh(dst: &byte, src: usize, size: usize) i32;
-extern fn numuya_cuda_memcpy_htod_async(dst: usize, src: &byte, size: usize, stream: usize) i32;
-extern fn numuya_cuda_memcpy_dtoh_async(dst: &byte, src: usize, size: usize, stream: usize) i32;
-
-const NUMUYA_CUDA_OK: i32 = 0;
-const NUMUYA_CUDA_UNAVAILABLE: i32 = 1;
-const NUMUYA_CUDA_ERROR: i32 = 2;
-const NUMUYA_CUDA_DEVICE_MISMATCH: i32 = 3;
-
 export fn cuda_init() !void {
-    const status: i32 = numuya_cuda_init();
-    if status == NUMUYA_CUDA_OK {
-        return;
-    } else if status == NUMUYA_CUDA_UNAVAILABLE {
-        return error.NumuyaGpuUnavailable;
-    } else {
+    const status: i32 = cuda_load();
+    if status != NUMUYA_CUDA_OK {
+        if status == NUMUYA_CUDA_UNAVAILABLE {
+            return error.NumuyaGpuUnavailable;
+        }
         return error.NumuyaCudaError;
+    }
+
+    const cu_res: i32 = call_cuInit(0 as u32);
+    if cu_res != 0 {
+        return error.NumuyaCudaError;
+    }
+
+    if current_context == 0 {
+        var device: i32 = 0;
+        const dev_res: i32 = call_cuDeviceGet(&device, 0);
+        if dev_res == 0 {
+            var ctx: usize = 0;
+            const ctx_res: i32 = call_cuCtxCreate(&ctx, 0 as u32, device);
+            if ctx_res == 0 {
+                current_context = ctx;
+                call_cuCtxSetCurrent(ctx);
+            }
+        }
     }
 }
 
 export fn cuda_get_device(ordinal: usize) !CudaDevice {
-    var major: i32 = 0;
-    var minor: i32 = 0;
-    var total_memory_bytes: usize = 0;
-    const status: i32 = numuya_cuda_get_device(ordinal as i32, &major, &minor, &total_memory_bytes);
-    if status == NUMUYA_CUDA_OK {
-        return CudaDevice{
-            ordinal: ordinal,
-            major: major as usize,
-            minor: minor as usize,
-            total_memory_bytes: total_memory_bytes,
-        };
-    } else if status == NUMUYA_CUDA_UNAVAILABLE {
-        return error.NumuyaGpuUnavailable;
-    } else {
+    const load_status: i32 = cuda_load();
+    if load_status != NUMUYA_CUDA_OK {
+        if load_status == NUMUYA_CUDA_UNAVAILABLE {
+            return error.NumuyaGpuUnavailable;
+        }
         return error.NumuyaCudaError;
     }
+
+    var device: i32 = 0;
+    var res: i32 = call_cuDeviceGet(&device, ordinal as i32);
+    if res != 0 {
+        return error.NumuyaCudaError;
+    }
+
+    var major_val: i32 = 0;
+    var minor_val: i32 = 0;
+    res = call_cuDeviceGetAttribute(&major_val, CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR, device);
+    if res != 0 {
+        return error.NumuyaCudaError;
+    }
+    res = call_cuDeviceGetAttribute(&minor_val, CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MINOR, device);
+    if res != 0 {
+        return error.NumuyaCudaError;
+    }
+
+    var memory: usize = 0;
+    res = call_cuDeviceTotalMem(&memory, device);
+    if res != 0 {
+        return error.NumuyaCudaError;
+    }
+
+    return CudaDevice{
+        ordinal: ordinal,
+        major: major_val as usize,
+        minor: minor_val as usize,
+        total_memory_bytes: memory,
+    };
 }
 
 export fn cuda_get_device_name(ordinal: usize, name: &byte, max_len: usize) !void {
     if max_len == 0 {
         return;
     }
-    const len_i32: i32 = max_len as i32;
-    const status: i32 = numuya_cuda_get_device_name(ordinal as i32, name, len_i32);
-    if status == NUMUYA_CUDA_OK {
-        return;
-    } else if status == NUMUYA_CUDA_UNAVAILABLE {
-        return error.NumuyaGpuUnavailable;
-    } else {
+    const load_status: i32 = cuda_load();
+    if load_status != NUMUYA_CUDA_OK {
+        if load_status == NUMUYA_CUDA_UNAVAILABLE {
+            return error.NumuyaGpuUnavailable;
+        }
+        return error.NumuyaCudaError;
+    }
+    if pfn_cuDeviceGetName == 0 {
+        return error.NumuyaCudaError;
+    }
+
+    var device: i32 = 0;
+    var res: i32 = call_cuDeviceGet(&device, ordinal as i32);
+    if res != 0 {
+        return error.NumuyaCudaError;
+    }
+
+    res = call_cuDeviceGetName(name, max_len as i32, device);
+    if res != 0 {
         return error.NumuyaCudaError;
     }
 }
 
 export fn cuda_get_driver_version() !i32 {
-    var version: i32 = 0;
-    const status: i32 = numuya_cuda_get_driver_version(&version);
-    if status == NUMUYA_CUDA_OK {
-        return version;
-    } else if status == NUMUYA_CUDA_UNAVAILABLE {
-        return error.NumuyaGpuUnavailable;
-    } else {
+    const load_status: i32 = cuda_load();
+    if load_status != NUMUYA_CUDA_OK {
+        if load_status == NUMUYA_CUDA_UNAVAILABLE {
+            return error.NumuyaGpuUnavailable;
+        }
         return error.NumuyaCudaError;
     }
+    if pfn_cuDriverGetVersion == 0 {
+        return error.NumuyaCudaError;
+    }
+
+    var version: i32 = 0;
+    const res: i32 = call_cuDriverGetVersion(&version);
+    if res != 0 {
+        return error.NumuyaCudaError;
+    }
+    return version;
 }
 
 export fn cuda_create_context(ordinal: usize) !usize {
-    var context: usize = 0;
-    const status: i32 = numuya_cuda_create_context(ordinal as i32, &context);
-    if status == NUMUYA_CUDA_OK {
-        return context;
-    } else if status == NUMUYA_CUDA_UNAVAILABLE {
-        return error.NumuyaGpuUnavailable;
-    } else {
+    const load_status: i32 = cuda_load();
+    if load_status != NUMUYA_CUDA_OK {
+        if load_status == NUMUYA_CUDA_UNAVAILABLE {
+            return error.NumuyaGpuUnavailable;
+        }
         return error.NumuyaCudaError;
     }
+
+    var device: i32 = 0;
+    var res: i32 = call_cuDeviceGet(&device, ordinal as i32);
+    if res != 0 {
+        return error.NumuyaCudaError;
+    }
+
+    var ctx: usize = 0;
+    res = call_cuCtxCreate(&ctx, 0 as u32, device);
+    if res != 0 {
+        return error.NumuyaCudaError;
+    }
+    return ctx;
 }
 
 export fn cuda_destroy_context(context: usize) !void {
     if context == 0 {
         return error.NumuyaInvalidArgument;
     }
-    const status: i32 = numuya_cuda_destroy_context(context);
-    if status == NUMUYA_CUDA_OK {
-        return;
-    } else if status == NUMUYA_CUDA_UNAVAILABLE {
-        return error.NumuyaGpuUnavailable;
-    } else {
+    const load_status: i32 = cuda_load();
+    if load_status != NUMUYA_CUDA_OK {
+        if load_status == NUMUYA_CUDA_UNAVAILABLE {
+            return error.NumuyaGpuUnavailable;
+        }
         return error.NumuyaCudaError;
+    }
+
+    const res: i32 = call_cuCtxDestroy(context);
+    if res != 0 {
+        return error.NumuyaCudaError;
+    }
+    if current_context == context {
+        current_context = 0;
     }
 }
 
@@ -121,45 +489,74 @@ export fn cuda_set_current_context(context: usize) !void {
     if context == 0 {
         return error.NumuyaInvalidArgument;
     }
-    const status: i32 = numuya_cuda_set_current_context(context);
-    if status == NUMUYA_CUDA_OK {
-        return;
-    } else if status == NUMUYA_CUDA_UNAVAILABLE {
-        return error.NumuyaGpuUnavailable;
-    } else {
+    const load_status: i32 = cuda_load();
+    if load_status != NUMUYA_CUDA_OK {
+        if load_status == NUMUYA_CUDA_UNAVAILABLE {
+            return error.NumuyaGpuUnavailable;
+        }
         return error.NumuyaCudaError;
     }
+
+    const res: i32 = call_cuCtxSetCurrent(context);
+    if res != 0 {
+        return error.NumuyaCudaError;
+    }
+    current_context = context;
 }
 
 export fn cuda_create_stream(context: usize) !usize {
     if context == 0 {
         return error.NumuyaInvalidArgument;
     }
-    var stream: usize = 0;
-    const status: i32 = numuya_cuda_create_stream(context, &stream);
-    if status == NUMUYA_CUDA_OK {
-        return stream;
-    } else if status == NUMUYA_CUDA_UNAVAILABLE {
-        return error.NumuyaGpuUnavailable;
-    } else if status == NUMUYA_CUDA_DEVICE_MISMATCH {
-        return error.NumuyaDeviceMismatch;
-    } else {
+    const load_status: i32 = cuda_load();
+    if load_status != NUMUYA_CUDA_OK {
+        if load_status == NUMUYA_CUDA_UNAVAILABLE {
+            return error.NumuyaGpuUnavailable;
+        }
         return error.NumuyaCudaError;
     }
+
+    var set_res: i32 = call_cuCtxSetCurrent(context);
+    if set_res != 0 {
+        return error.NumuyaCudaError;
+    }
+    current_context = context;
+
+    var stream: usize = 0;
+    var res: i32 = call_cuStreamCreate(&stream, 0 as u32);
+    if res != 0 {
+        return error.NumuyaCudaError;
+    }
+
+    stream_record(context, stream);
+    return stream;
 }
 
 export fn cuda_synchronize_stream(context: usize, stream: usize) !void {
     if context == 0 || stream == 0 {
         return error.NumuyaInvalidArgument;
     }
-    const status: i32 = numuya_cuda_synchronize_stream(context, stream);
-    if status == NUMUYA_CUDA_OK {
-        return;
-    } else if status == NUMUYA_CUDA_UNAVAILABLE {
-        return error.NumuyaGpuUnavailable;
-    } else if status == NUMUYA_CUDA_DEVICE_MISMATCH {
+    const load_status: i32 = cuda_load();
+    if load_status != NUMUYA_CUDA_OK {
+        if load_status == NUMUYA_CUDA_UNAVAILABLE {
+            return error.NumuyaGpuUnavailable;
+        }
+        return error.NumuyaCudaError;
+    }
+
+    const owning_context: usize = stream_get_context(stream);
+    if owning_context != 0 && owning_context != context {
         return error.NumuyaDeviceMismatch;
-    } else {
+    }
+
+    var set_res: i32 = call_cuCtxSetCurrent(context);
+    if set_res != 0 {
+        return error.NumuyaCudaError;
+    }
+    current_context = context;
+
+    const res: i32 = call_cuStreamSynchronize(stream);
+    if res != 0 {
         return error.NumuyaCudaError;
     }
 }
@@ -168,43 +565,69 @@ export fn cuda_destroy_stream(context: usize, stream: usize) !void {
     if context == 0 || stream == 0 {
         return error.NumuyaInvalidArgument;
     }
-    const status: i32 = numuya_cuda_destroy_stream(context, stream);
-    if status == NUMUYA_CUDA_OK {
-        return;
-    } else if status == NUMUYA_CUDA_UNAVAILABLE {
-        return error.NumuyaGpuUnavailable;
-    } else if status == NUMUYA_CUDA_DEVICE_MISMATCH {
-        return error.NumuyaDeviceMismatch;
-    } else {
+    const load_status: i32 = cuda_load();
+    if load_status != NUMUYA_CUDA_OK {
+        if load_status == NUMUYA_CUDA_UNAVAILABLE {
+            return error.NumuyaGpuUnavailable;
+        }
         return error.NumuyaCudaError;
     }
+
+    const owning_context: usize = stream_get_context(stream);
+    if owning_context != 0 && owning_context != context {
+        return error.NumuyaDeviceMismatch;
+    }
+
+    var set_res: i32 = call_cuCtxSetCurrent(context);
+    if set_res != 0 {
+        return error.NumuyaCudaError;
+    }
+    current_context = context;
+
+    const res: i32 = call_cuStreamDestroy(stream);
+    if res != 0 {
+        return error.NumuyaCudaError;
+    }
+    stream_remove(stream);
 }
 
 export fn cuda_driver_malloc(size: usize) !usize {
     if size == 0 {
-        return (0 as! usize).value;
+        return 0 as usize;
     }
-    var ptr: usize = 0;
-    const status: i32 = numuya_cuda_malloc(size, &ptr);
-    if status == NUMUYA_CUDA_OK {
-        return ptr;
-    } else if status == NUMUYA_CUDA_UNAVAILABLE {
-        return error.NumuyaGpuUnavailable;
-    } else {
+    const load_status: i32 = cuda_load();
+    if load_status != NUMUYA_CUDA_OK {
+        if load_status == NUMUYA_CUDA_UNAVAILABLE {
+            return error.NumuyaGpuUnavailable;
+        }
         return error.NumuyaCudaError;
     }
+    if current_context == 0 {
+        return error.NumuyaCudaError;
+    }
+
+    var ptr: usize = 0;
+    const res: i32 = call_cuMemAlloc(&ptr, size);
+    if res != 0 {
+        return error.NumuyaCudaError;
+    }
+    return ptr;
 }
 
 export fn cuda_driver_free(ptr: usize) !void {
     if ptr == 0 {
         return;
     }
-    const status: i32 = numuya_cuda_free(ptr);
-    if status == NUMUYA_CUDA_OK {
-        return;
-    } else if status == NUMUYA_CUDA_UNAVAILABLE {
-        return error.NumuyaGpuUnavailable;
-    } else {
+    const load_status: i32 = cuda_load();
+    if load_status != NUMUYA_CUDA_OK {
+        if load_status == NUMUYA_CUDA_UNAVAILABLE {
+            return error.NumuyaGpuUnavailable;
+        }
+        return error.NumuyaCudaError;
+    }
+
+    const res: i32 = call_cuMemFree(ptr);
+    if res != 0 {
         return error.NumuyaCudaError;
     }
 }
@@ -213,12 +636,19 @@ export fn cuda_memcpy_htod(dst: usize, src: &byte, size: usize) !void {
     if size == 0 {
         return;
     }
-    const status: i32 = numuya_cuda_memcpy_htod(dst, src, size);
-    if status == NUMUYA_CUDA_OK {
-        return;
-    } else if status == NUMUYA_CUDA_UNAVAILABLE {
-        return error.NumuyaGpuUnavailable;
-    } else {
+    const load_status: i32 = cuda_load();
+    if load_status != NUMUYA_CUDA_OK {
+        if load_status == NUMUYA_CUDA_UNAVAILABLE {
+            return error.NumuyaGpuUnavailable;
+        }
+        return error.NumuyaCudaError;
+    }
+    if current_context == 0 {
+        return error.NumuyaCudaError;
+    }
+
+    const res: i32 = call_cuMemcpyHtoD(dst, src, size);
+    if res != 0 {
         return error.NumuyaCudaError;
     }
 }
@@ -227,12 +657,19 @@ export fn cuda_memcpy_dtoh(dst: &byte, src: usize, size: usize) !void {
     if size == 0 {
         return;
     }
-    const status: i32 = numuya_cuda_memcpy_dtoh(dst, src, size);
-    if status == NUMUYA_CUDA_OK {
-        return;
-    } else if status == NUMUYA_CUDA_UNAVAILABLE {
-        return error.NumuyaGpuUnavailable;
-    } else {
+    const load_status: i32 = cuda_load();
+    if load_status != NUMUYA_CUDA_OK {
+        if load_status == NUMUYA_CUDA_UNAVAILABLE {
+            return error.NumuyaGpuUnavailable;
+        }
+        return error.NumuyaCudaError;
+    }
+    if current_context == 0 {
+        return error.NumuyaCudaError;
+    }
+
+    const res: i32 = call_cuMemcpyDtoH(dst, src, size);
+    if res != 0 {
         return error.NumuyaCudaError;
     }
 }
@@ -241,12 +678,19 @@ export fn cuda_memcpy_htod_async(dst: usize, src: &byte, size: usize, stream: us
     if size == 0 {
         return;
     }
-    const status: i32 = numuya_cuda_memcpy_htod_async(dst, src, size, stream);
-    if status == NUMUYA_CUDA_OK {
-        return;
-    } else if status == NUMUYA_CUDA_UNAVAILABLE {
-        return error.NumuyaGpuUnavailable;
-    } else {
+    const load_status: i32 = cuda_load();
+    if load_status != NUMUYA_CUDA_OK {
+        if load_status == NUMUYA_CUDA_UNAVAILABLE {
+            return error.NumuyaGpuUnavailable;
+        }
+        return error.NumuyaCudaError;
+    }
+    if current_context == 0 {
+        return error.NumuyaCudaError;
+    }
+
+    const res: i32 = call_cuMemcpyHtoDAsync(dst, src, size, stream);
+    if res != 0 {
         return error.NumuyaCudaError;
     }
 }
@@ -255,12 +699,108 @@ export fn cuda_memcpy_dtoh_async(dst: &byte, src: usize, size: usize, stream: us
     if size == 0 {
         return;
     }
-    const status: i32 = numuya_cuda_memcpy_dtoh_async(dst, src, size, stream);
-    if status == NUMUYA_CUDA_OK {
+    const load_status: i32 = cuda_load();
+    if load_status != NUMUYA_CUDA_OK {
+        if load_status == NUMUYA_CUDA_UNAVAILABLE {
+            return error.NumuyaGpuUnavailable;
+        }
+        return error.NumuyaCudaError;
+    }
+    if current_context == 0 {
+        return error.NumuyaCudaError;
+    }
+
+    const res: i32 = call_cuMemcpyDtoHAsync(dst, src, size, stream);
+    if res != 0 {
+        return error.NumuyaCudaError;
+    }
+}
+
+/* Module/launch functions */
+
+export fn cuda_module_load_data(context: usize, image: &const byte) !usize {
+    const load_status: i32 = cuda_load();
+    if load_status != NUMUYA_CUDA_OK {
+        if load_status == NUMUYA_CUDA_UNAVAILABLE {
+            return error.NumuyaGpuUnavailable;
+        }
+        return error.NumuyaCudaError;
+    }
+
+    var set_res: i32 = call_cuCtxSetCurrent(context);
+    if set_res != 0 {
+        return error.NumuyaCudaError;
+    }
+    current_context = context;
+
+    var module: usize = 0;
+    var res: i32 = call_cuModuleLoadData(&module, image as &byte);
+    if res != 0 {
+        return error.NumuyaCudaError;
+    }
+    return module;
+}
+
+export fn cuda_module_get_function(module: usize, name: &const byte) !usize {
+    const load_status: i32 = cuda_load();
+    if load_status != NUMUYA_CUDA_OK {
+        if load_status == NUMUYA_CUDA_UNAVAILABLE {
+            return error.NumuyaGpuUnavailable;
+        }
+        return error.NumuyaCudaError;
+    }
+
+    var func: usize = 0;
+    const res: i32 = call_cuModuleGetFunction(&func, module, name as &byte);
+    if res != 0 {
+        return error.NumuyaCudaError;
+    }
+    return func;
+}
+
+export fn cuda_module_unload(module: usize) !void {
+    if module == 0 {
         return;
-    } else if status == NUMUYA_CUDA_UNAVAILABLE {
-        return error.NumuyaGpuUnavailable;
-    } else {
+    }
+    const load_status: i32 = cuda_load();
+    if load_status != NUMUYA_CUDA_OK {
+        if load_status == NUMUYA_CUDA_UNAVAILABLE {
+            return error.NumuyaGpuUnavailable;
+        }
+        return error.NumuyaCudaError;
+    }
+
+    const res: i32 = call_cuModuleUnload(module);
+    if res != 0 {
+        return error.NumuyaCudaError;
+    }
+}
+
+export fn cuda_launch_kernel(
+    func: usize,
+    grid_dim_x: u32, grid_dim_y: u32, grid_dim_z: u32,
+    block_dim_x: u32, block_dim_y: u32, block_dim_z: u32,
+    shared_mem_bytes: u32,
+    stream: usize,
+    args: &usize
+) !void {
+    const load_status: i32 = cuda_load();
+    if load_status != NUMUYA_CUDA_OK {
+        if load_status == NUMUYA_CUDA_UNAVAILABLE {
+            return error.NumuyaGpuUnavailable;
+        }
+        return error.NumuyaCudaError;
+    }
+
+    const res: i32 = call_cuLaunchKernel(
+        func,
+        grid_dim_x, grid_dim_y, grid_dim_z,
+        block_dim_x, block_dim_y, block_dim_z,
+        shared_mem_bytes,
+        stream,
+        args as usize
+    );
+    if res != 0 {
         return error.NumuyaCudaError;
     }
 }

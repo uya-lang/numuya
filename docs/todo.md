@@ -45,6 +45,7 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 ## 每次提交前检查
 
 - [ ] CUDA kernel source-of-truth 是 PTX/Uya 生成资产；没有把必需实现藏在 `.cu`/`nvcc` 路径。
+- [ ] CUDA backend host 侧用纯 Uya 实现（`driver.uya`、`cublaslt.uya`、`cufft.uya`、`curand.uya`），通过 `dl_stub.c`（唯一 C helper，仅 dlopen/dlsym passthrough + `numuya_call_0`~`numuya_call_6` / `numuya_cuda_launch_kernel` / `numuya_cublaslt_matmul` 通用间接调用 helper）动态加载 Driver API 与可选 vendor 库；dl_stub.c 不含 CUDA 类型、不含函数指针缓存、不含版本兼容逻辑、不硬链接 CUDA 库。所有函数指针缓存、版本兼容、stream-context 管理、错误转换、vendor 常量均在纯 Uya 中硬编码。边界已在 `docs/design.md` §13.4.1 显式说明。`driver_stub.c`/`cublaslt_stub.c`/`cufft_stub.c`/`curand_stub.c` 已删除。
 - [ ] DeviceArray view/drop 路径经过 DeviceStorage refcount 测试。
 - [ ] host-return `_auto` API 与 location-preserving `_on` API 都有测试。
 - [ ] 没有硬编码只服务当前测试输入的分支。

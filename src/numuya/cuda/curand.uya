@@ -1,25 +1,143 @@
+/* curand.uya — Pure Uya cuRAND backend.
+ *
+ * Replaces curand_stub.c with pure Uya logic:
+ * - dlopen libcurand.so via dl_stub.c passthrough
+ * - dlsym function pointer caching
+ * - indirect calls via numuya_call_N helpers
+ * - cuRAND type constants hardcoded (CURAND_RNG_PSEUDO_DEFAULT = 100)
+ *
+ * dl_stub.c is the only C helper. Zero cuRAND business logic in C.
+ */
+
 use errors;
 
 export error NumuyaCurandUnavailable;
 export error NumuyaCurandError;
 
-@c_import("curand_stub.c", "", "-ldl");
+@c_import("dl_stub.c", "", "-ldl");
 
-extern fn numuya_curand_available() i32;
-extern fn numuya_curand_random_f32(stream: usize, ptr: usize, n: usize, seed: u64) i32;
+/* dlopen/dlsym passthrough */
+extern fn numuya_dlopen(filename: &byte, flags: i32) usize;
+extern fn numuya_dlsym(handle: usize, symbol: &byte) usize;
+
+/* Generic indirect-call helpers */
+extern fn numuya_call_1(func_ptr: usize, arg0: usize) i32;
+extern fn numuya_call_2(func_ptr: usize, arg0: usize, arg1: usize) i32;
+extern fn numuya_call_3(func_ptr: usize, arg0: usize, arg1: usize, arg2: usize) i32;
+
+/* cuRAND status codes (curandStatus_t) */
+const CURAND_STATUS_SUCCESS: i32 = 0;
+
+/* cuRAND type constants (hardcoded from curand.h) */
+const CURAND_RNG_PSEUDO_DEFAULT: usize = 100;
+
+/* ============================================================
+ * Function pointer cache
+ * ============================================================ */
+
+var curand_handle: usize = 0;
+var curand_loaded: bool = false;
+
+var pfn_curandCreateGenerator: usize = 0;
+var pfn_curandDestroyGenerator: usize = 0;
+var pfn_curandSetStream: usize = 0;
+var pfn_curandSetPseudoRandomGeneratorSeed: usize = 0;
+var pfn_curandGenerateUniform: usize = 0;
+
+/* ============================================================
+ * Load libcurand.so
+ * ============================================================ */
+
+fn curand_load() i32 {
+    if curand_loaded {
+        if curand_handle != 0 {
+            return 0;
+        }
+        return 1; /* unavailable */
+    }
+    curand_loaded = true;
+
+    /* RTLD_NOW | RTLD_NODELETE = 2 | 4096 = 4098 */
+    curand_handle = numuya_dlopen("libcurand.so.10" as &byte, 4098 as i32);
+    if curand_handle == 0 {
+        curand_handle = numuya_dlopen("libcurand.so.11" as &byte, 4098 as i32);
+    }
+    if curand_handle == 0 {
+        curand_handle = numuya_dlopen("libcurand.so.1" as &byte, 4098 as i32);
+    }
+    if curand_handle == 0 {
+        curand_handle = numuya_dlopen("libcurand.so" as &byte, 4098 as i32);
+    }
+    if curand_handle == 0 {
+        return 1; /* unavailable */
+    }
+
+    pfn_curandCreateGenerator = numuya_dlsym(curand_handle, "curandCreateGenerator" as &byte);
+    pfn_curandDestroyGenerator = numuya_dlsym(curand_handle, "curandDestroyGenerator" as &byte);
+    pfn_curandSetStream = numuya_dlsym(curand_handle, "curandSetStream" as &byte);
+    pfn_curandSetPseudoRandomGeneratorSeed = numuya_dlsym(curand_handle, "curandSetPseudoRandomGeneratorSeed" as &byte);
+    pfn_curandGenerateUniform = numuya_dlsym(curand_handle, "curandGenerateUniform" as &byte);
+
+    if pfn_curandCreateGenerator == 0 ||
+        pfn_curandDestroyGenerator == 0 ||
+        pfn_curandSetStream == 0 ||
+        pfn_curandSetPseudoRandomGeneratorSeed == 0 ||
+        pfn_curandGenerateUniform == 0 {
+        curand_handle = 0;
+        return 1; /* unavailable */
+    }
+
+    return 0; /* OK */
+}
+
+/* ============================================================
+ * Exported public API
+ * ============================================================ */
 
 export fn curand_is_available() bool {
-    const status: i32 = numuya_curand_available();
+    const status: i32 = curand_load();
     return status == 0;
 }
 
 export fn curand_random_f32(stream: usize, ptr: usize, n: usize, seed: u64) !void {
-    const status: i32 = numuya_curand_random_f32(stream, ptr, n, seed);
-    if status == 0 {
-        return;
-    } else if status == 1 {
+    const load_status: i32 = curand_load();
+    if load_status == 1 {
         return error.NumuyaCurandUnavailable;
-    } else {
+    }
+    if load_status != 0 {
         return error.NumuyaCurandError;
     }
+
+    /* curandCreateGenerator(&generator, CURAND_RNG_PSEUDO_DEFAULT) */
+    var generator: usize = 0;
+    var status: i32 = numuya_call_2(pfn_curandCreateGenerator, &generator as usize, CURAND_RNG_PSEUDO_DEFAULT);
+    if status != CURAND_STATUS_SUCCESS {
+        return error.NumuyaCurandError;
+    }
+
+    /* curandSetStream(generator, stream) — only if stream != 0 */
+    if stream != 0 {
+        status = numuya_call_2(pfn_curandSetStream, generator, stream);
+        if status != CURAND_STATUS_SUCCESS {
+            numuya_call_1(pfn_curandDestroyGenerator, generator);
+            return error.NumuyaCurandError;
+        }
+    }
+
+    /* curandSetPseudoRandomGeneratorSeed(generator, seed) */
+    status = numuya_call_2(pfn_curandSetPseudoRandomGeneratorSeed, generator, seed as usize);
+    if status != CURAND_STATUS_SUCCESS {
+        numuya_call_1(pfn_curandDestroyGenerator, generator);
+        return error.NumuyaCurandError;
+    }
+
+    /* curandGenerateUniform(generator, ptr, n) */
+    status = numuya_call_3(pfn_curandGenerateUniform, generator, ptr, n);
+    if status != CURAND_STATUS_SUCCESS {
+        numuya_call_1(pfn_curandDestroyGenerator, generator);
+        return error.NumuyaCurandError;
+    }
+
+    /* curandDestroyGenerator(generator) */
+    numuya_call_1(pfn_curandDestroyGenerator, generator);
 }

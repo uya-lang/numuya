@@ -776,7 +776,7 @@ export fn main() i32 {
 - 所有分配必须有 drop/release 路径测试。
 - 不要把 `usize` 与 `isize` 混用；shape/size 用 `usize`，stride/offset/axis 用 `isize`。
 - CPU core 不要使用 Python、NumPy、BLAS、LAPACK、libm 或 C helper。
-- CUDA backend 只允许 Uya `extern` 直连 CUDA Driver API；可选 cuBLAS/cuFFT/cuRAND 必须由配置显式开启，且不得通过 C/C++ helper 间接调用。
+- CUDA backend host 侧用纯 Uya 编写：`driver.uya`、`cublaslt.uya`、`cufft.uya`、`curand.uya` 通过 `dl_stub.c`（唯一的 C helper，仅暴露 `dlopen/dlsym/dlclose` passthrough + `numuya_call_0`~`numuya_call_6` / `numuya_cuda_launch_kernel` / `numuya_cublaslt_matmul` 通用间接调用 helper）以 `dlopen/dlsym` 动态加载 CUDA Driver API 与可选 vendor 库。所有函数指针缓存、版本兼容（`_v2` 回退）、stream-context 关联表、默认 context 创建、错误转换、vendor 常量等业务逻辑均在纯 Uya 中实现。可选 cuBLAS/cuFFT/cuRAND 必须由 `BackendConfig.prefer_vendor_libs=true` 显式开启，纯 Uya CUDA kernel backend 始终可通过测试。`driver_stub.c`/`cublaslt_stub.c`/`cufft_stub.c`/`curand_stub.c` 已删除。
 - 可以使用 Uya 标准库：`std.mem.allocator`、`std.testing`、`std.collections.vec` 等。
 - SIMD 只能作为优化层；标量实现和测试必须先完整存在。
 - 性能优化必须保持与标量路径同测试。
@@ -841,12 +841,12 @@ export fn main() i32 {
 
 ### 13.1 约束与边界
 
-CPU core 仍然是纯 Uya backend。CUDA backend 的 host 侧也必须用 Uya 编写，通过 `extern` 直接绑定 CUDA Driver API：
+CPU core 仍然是纯 Uya backend。CUDA backend 的 host 侧也用纯 Uya 编写，通过 `dl_stub.c` 提供的 `dlopen/dlsym` passthrough 和通用间接调用 helper 来动态加载 CUDA Driver API：
 
-- 允许：`libcuda.so` Driver API，例如 `cuInit`、`cuDeviceGet`、`cuCtxCreate`、`cuMemAlloc`、`cuMemcpyHtoDAsync`、`cuLaunchKernel`。
+- 允许：`dl_stub.c` 提供纯 FFI passthrough（`dlopen/dlsym/dlclose` + `numuya_call_0`~`numuya_call_6` / `numuya_cuda_launch_kernel` 通用间接调用），不含任何 CUDA 业务逻辑。Uya 层 (`driver.uya`) 通过 `@c_import("dl_stub.c", "", "-ldl")` 绑定 passthrough 函数，然后在纯 Uya 中做 dlsym 函数指针缓存、版本兼容、stream-context 管理、错误转换等所有业务逻辑。找不到 `libcuda.so` 时返回 unavailable，无 GPU 环境也能构建运行。
 - 允许：把 PTX/cubin 作为项目资产或 Uya 字节数组嵌入，由 Uya host code 加载。
 - 不允许：用 Python/NumPy/PyTorch 作为运行期依赖。
-- 不允许：写 C/C++ helper 包一层 CUDA 再给 Uya 调用。
+- 不允许：写包含业务逻辑或硬链接 CUDA 库的 C/C++ helper；`dl_stub.c` 仅允许做 dlopen/dlsym passthrough 和通用间接调用（不含 CUDA 类型、不含函数指针缓存、不含版本兼容逻辑）。
 - 不允许：把 `.cu`/CUDA C++ 当作必须的 kernel 源码；`nvcc` 只能用于实验对照，不进入 TDD 主路径。
 - 可选：`cuBLAS/cuBLASLt`、`cuFFT`、`cuRAND` 作为 vendor-performance backend，必须有明确 feature flag，并且纯 Uya CUDA kernel backend 仍可通过测试。若用户要求“最大吞吐”，matmul/FFT/random 可优先走 vendor backend。
 - cuBLASLt 通过 `BackendConfig.prefer_vendor_libs=true` 启用；`BackendConfig.allow_tf32=true` 控制是否使用 TF32 计算类型。实现使用运行时 `dlopen` 加载 `libcublasLt`，无硬链接依赖；加载失败时自动回退到纯 CUDA kernel。
@@ -929,14 +929,39 @@ export fn backend_is_cuda_available() bool;
 
 ### 13.4 CUDA Driver 封装
 
-`src/numuya/cuda/driver.uya` 只做薄绑定与错误转换：
+#### 13.4.1 C FFI 层 (`dl_stub.c`)
+
+`src/numuya/cuda/dl_stub.c` 是唯一的 C helper，仅提供 FFI passthrough：
+
+- `numuya_dlopen` / `numuya_dlsym` / `numuya_dlclose` / `numuya_dlerror`：对 POSIX `dlopen/dlsym/dlclose/dlerror` 的 passthrough，不添加任何逻辑。
+- `numuya_call_0` ~ `numuya_call_6`：通用函数指针间接调用 helper（0~6 个参数），所有参数以 `unsigned long` 传递，返回值以 `int` 返回。用于通过 dlsym 获得的 CUDA API 函数指针做 ABI 安全的间接调用。
+- `numuya_cuda_launch_kernel`：`cuLaunchKernel` 专用 helper（10 个参数 + 自动添加 `extra=NULL` 作为第 11 个参数）。
+
+边界规则：
+
+- `dl_stub.c` **不得**包含任何 CUDA 类型、函数指针缓存、版本兼容、stream-context 管理等业务逻辑。
+- `dl_stub.c` **不得**硬链接 `libcuda.so`；所有动态加载由 Uya 层通过 `numuya_dlopen`/`numuya_dlsym` 完成。
+- Uya 层 (`driver.uya`) 通过 `@c_import("dl_stub.c", "", "-ldl")` 绑定 passthrough 函数。
+- 间接调用 helper 的存在是因为 Uya `@asm` 每条指令最多 8 个输入操作数，而 `cuLaunchKernel` 有 10+ 个参数。
+
+#### 13.4.2 Uya 封装层
+
+`src/numuya/cuda/driver.uya` 实现所有 CUDA Driver API 的业务逻辑（纯 Uya）：
+
+- dlopen 加载：通过 `numuya_dlopen("libcuda.so.1")` / `numuya_dlopen("libcuda.so")` 动态加载 `libcuda.so`，找不到时返回 `NumuyaGpuUnavailable` 错误。
+- dlsym 函数指针缓存：所有 CUDA Driver API 调用都通过模块级 `var pfn_cuInit` 等函数指针变量进行，在 `cuda_load()` 中通过 `numuya_dlsym` 统一加载。
+- 版本兼容：对有 `_v2` 后缀的 API（如 `cuMemAlloc_v2`）先通过 `dlsym_v2_fallback()` 尝试加载 `_v2` 版本，失败后回退无后缀版本。
+- 流-上下文关联表：用 `StreamEntry` 数组记录 stream 属于哪个 context，检测跨 context 操作并返回 `NumuyaDeviceMismatch` 错误。
+- 默认 context 创建：`cuda_init()` 在成功 `cuInit(0)` 后为设备 0 自动创建默认 context。
+- 状态码映射：将 CUDA Driver API 返回值（CUresult）映射为 Uya error 类型（`NumuyaGpuUnavailable` / `NumuyaCudaError` / `NumuyaDeviceMismatch`）。
+- 间接调用：通过 `numuya_call_N` helper 对 dlsym 获得的函数指针做类型安全封装调用，`cuLaunchKernel` 用 `numuya_cuda_launch_kernel`（自动添加 `extra=NULL`）。
 
 ```uya
 export struct CudaDevice {
-    ordinal: i32,
-    compute_major: i32,
-    compute_minor: i32,
-    total_mem: usize,
+    ordinal: usize,
+    major: usize,
+    minor: usize,
+    total_memory_bytes: usize,
 }
 
 export struct CudaContext {
