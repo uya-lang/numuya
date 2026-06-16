@@ -1,10 +1,11 @@
 # NumUya TDD Todo
 
-本文档是实现顺序。每个条目都必须先写测试，确认失败，再实现。状态标记约定：
+本文档列出未完成项和待优化项。已完成项见 `docs/completed.md`。
 
+状态标记约定：
 - `[ ]` 未开始
 - `[~]` 进行中
-- `[x]` 已完成
+- `[x]` 已完成（移至 completed.md）
 - `[f]` 暂时失败，需要记录 blocker 和最小复现
 
 通用命令：
@@ -25,28 +26,18 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 - 外部 consumer fixture 才使用 `use numuya.*`，用于验证其他项目通过 UPM 使用 NumUya。
 - `_tests`、`_tools`、`_benchmarks` 是内部模块，外部 consumer fixture 不得导入 `numuya._tests.*`、`numuya._tools.*` 或 `numuya._benchmarks.*`。
 
-## Phase 3: 创建数组与基础 get/set
+## 待优化项
 
-- 注：当前 Uya codegen 对导出泛型 `!Array<T>` 路径仍有实例化限制；后续 `empty<T>/full<T>/from_slice<T>` 先用失败测试锁定可行写法，必要时抽最小复现。
-
-## Phase 10: Statistics
-
-## Phase 19: SIMD 与性能
-
-## Phase 22: CUDA ufunc 与 reduction
-
-
-## Phase 23: CUDA linalg、random、benchmark
-
-## Phase 24: NumPy 兼容面扩展
-
-
+- [ ] SIMD `numuya_simd_*` 当前为标量循环占位，替换为 `@vector` 内建（依赖 Uya 编译器支持）
+- [ ] GPU axis reduction (`sum_axis/mean_axis/argmax`) 当前为 D2H→CPU→H2D fallback，需实现纯 GPU kernel
+- [ ] GPU sub/neg/div 无 strided/broadcast 路径（当前仅 contiguous），需扩展类似 add_f64_strided
+- [ ] sub/neg/div GPU ufunc 测试（当前仅编译通过，需添加 GPU 端测试）
+- [ ] Complex dtype（FFT 当前用 re/im 分离绕过）
+- [ ] `arange_f64` 支持 negative step（当前有代码但未测试负步长路径）
 
 ## 每次提交前检查
 
 - [ ] CUDA kernel source-of-truth 是 PTX/Uya 生成资产；没有把必需实现藏在 `.cu`/`nvcc` 路径。
-- [ ] CUDA backend host 侧用纯 Uya 实现（`driver.uya`、`cublaslt.uya`、`cufft.uya`、`curand.uya`），通过 `dl_stub.c`（唯一 C helper，仅 dlopen/dlsym passthrough + `numuya_call_0`~`numuya_call_6` / `numuya_cuda_launch_kernel` / `numuya_cublaslt_matmul` 通用间接调用 helper）动态加载 Driver API 与可选 vendor 库；dl_stub.c 不含 CUDA 类型、不含函数指针缓存、不含版本兼容逻辑、不硬链接 CUDA 库。所有函数指针缓存、版本兼容、stream-context 管理、错误转换、vendor 常量均在纯 Uya 中硬编码。边界已在 `docs/design.md` §13.4.1 显式说明。`driver_stub.c`/`cublaslt_stub.c`/`cufft_stub.c`/`curand_stub.c` 已删除。
-- [ ] DeviceArray view/drop 路径经过 DeviceStorage refcount 测试。
-- [ ] host-return `_auto` API 与 location-preserving `_on` API 都有测试。
+- [ ] CUDA backend host 侧用纯 Uya 实现（`driver.uya`、`cublaslt.uya`、`cufft.uya`、`curand.uya`），通过 `dl_stub.c`（唯一 C helper）动态加载。所有 vendor stub C 文件已删除。
 - [ ] 没有硬编码只服务当前测试输入的分支。
 - [ ] 文档中的 public API 与实际实现一致。

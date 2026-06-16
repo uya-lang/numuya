@@ -328,6 +328,237 @@ export fn gpu_add_f32(state: &BackendState, left: &DeviceArray<f32>, right: &Dev
     };
 }
 
+export fn gpu_sub_f64(state: &BackendState, left: &DeviceArray<f64>, right: &DeviceArray<f64>) !DeviceArray<f64> {
+    if !shape_eq(left.shape, right.shape) {
+        return error.NumuyaShapeMismatch;
+    }
+
+    if !left.flags.c_contiguous || !right.flags.c_contiguous {
+        return error.NumuyaNotContiguous;
+    }
+
+    if state.module == 0 {
+        state.module = try cuda_kernels_load(state.context);
+    }
+
+    const func: usize = try cuda_module_get_function(state.module, SUB_F64_KERNEL);
+    if func == 0 {
+        return error.NumuyaCudaError;
+    }
+
+    const result: DeviceArray<f64> = try device_array_new<f64>(left.storage.pool, left.shape, state.context, state.stream);
+
+    const n: usize = try shape_size(left.shape);
+    if n == 0 {
+        device_storage_retain<f64>(result.storage);
+        return DeviceArray<f64>{
+            storage: result.storage,
+            offset: result.offset,
+            shape: result.shape,
+            strides: result.strides,
+            flags: result.flags,
+            context: result.context,
+            stream: result.stream,
+        };
+    }
+
+    const block_size: u32 = 256;
+    const grid_size: u32 = ceil_div_u32(n, block_size as usize);
+
+    const left_ptr: usize = device_ptr_with_offset_f64(left);
+    const right_ptr: usize = device_ptr_with_offset_f64(right);
+    const result_ptr: usize = device_ptr_with_offset_f64(&result);
+
+    var arg_result_ptr: usize = result_ptr;
+    var arg_left_ptr: usize = left_ptr;
+    var arg_right_ptr: usize = right_ptr;
+    var arg_n: usize = n;
+    var arg_left_stride: usize = UFUNC_F64_ELEMENT_SIZE;
+    var arg_right_stride: usize = UFUNC_F64_ELEMENT_SIZE;
+
+    var args: [usize: 6] = [
+        (&arg_result_ptr) as usize,
+        (&arg_left_ptr) as usize,
+        (&arg_right_ptr) as usize,
+        (&arg_n) as usize,
+        (&arg_left_stride) as usize,
+        (&arg_right_stride) as usize,
+    ];
+
+    try cuda_launch_kernel(
+        func,
+        grid_size, 1, 1,
+        block_size, 1, 1,
+        0,
+        state.stream,
+        &args[0]
+    );
+
+    try cuda_synchronize_stream(state.context, state.stream);
+
+    device_storage_retain<f64>(result.storage);
+    return DeviceArray<f64>{
+        storage: result.storage,
+        offset: result.offset,
+        shape: result.shape,
+        strides: result.strides,
+        flags: result.flags,
+        context: result.context,
+        stream: result.stream,
+    };
+}
+
+export fn gpu_neg_f64(state: &BackendState, input: &DeviceArray<f64>) !DeviceArray<f64> {
+    if !input.flags.c_contiguous {
+        return error.NumuyaNotContiguous;
+    }
+
+    if state.module == 0 {
+        state.module = try cuda_kernels_load(state.context);
+    }
+
+    const func: usize = try cuda_module_get_function(state.module, NEG_F64_KERNEL);
+    if func == 0 {
+        return error.NumuyaCudaError;
+    }
+
+    const result: DeviceArray<f64> = try device_array_new<f64>(input.storage.pool, input.shape, state.context, state.stream);
+
+    const n: usize = try shape_size(input.shape);
+    if n == 0 {
+        device_storage_retain<f64>(result.storage);
+        return DeviceArray<f64>{
+            storage: result.storage,
+            offset: result.offset,
+            shape: result.shape,
+            strides: result.strides,
+            flags: result.flags,
+            context: result.context,
+            stream: result.stream,
+        };
+    }
+
+    const block_size: u32 = 256;
+    const grid_size: u32 = ceil_div_u32(n, block_size as usize);
+
+    const input_ptr: usize = device_ptr_with_offset_f64(input);
+    const result_ptr: usize = device_ptr_with_offset_f64(&result);
+
+    var arg_result_ptr: usize = result_ptr;
+    var arg_input_ptr: usize = input_ptr;
+    var arg_n: usize = n;
+    var arg_input_stride: usize = UFUNC_F64_ELEMENT_SIZE;
+
+    var args: [usize: 4] = [
+        (&arg_result_ptr) as usize,
+        (&arg_input_ptr) as usize,
+        (&arg_n) as usize,
+        (&arg_input_stride) as usize,
+    ];
+
+    try cuda_launch_kernel(
+        func,
+        grid_size, 1, 1,
+        block_size, 1, 1,
+        0,
+        state.stream,
+        &args[0]
+    );
+
+    try cuda_synchronize_stream(state.context, state.stream);
+
+    device_storage_retain<f64>(result.storage);
+    return DeviceArray<f64>{
+        storage: result.storage,
+        offset: result.offset,
+        shape: result.shape,
+        strides: result.strides,
+        flags: result.flags,
+        context: result.context,
+        stream: result.stream,
+    };
+}
+
+export fn gpu_div_f64(state: &BackendState, left: &DeviceArray<f64>, right: &DeviceArray<f64>) !DeviceArray<f64> {
+    if !shape_eq(left.shape, right.shape) {
+        return error.NumuyaShapeMismatch;
+    }
+
+    if !left.flags.c_contiguous || !right.flags.c_contiguous {
+        return error.NumuyaNotContiguous;
+    }
+
+    if state.module == 0 {
+        state.module = try cuda_kernels_load(state.context);
+    }
+
+    const func: usize = try cuda_module_get_function(state.module, DIV_F64_KERNEL);
+    if func == 0 {
+        return error.NumuyaCudaError;
+    }
+
+    const result: DeviceArray<f64> = try device_array_new<f64>(left.storage.pool, left.shape, state.context, state.stream);
+
+    const n: usize = try shape_size(left.shape);
+    if n == 0 {
+        device_storage_retain<f64>(result.storage);
+        return DeviceArray<f64>{
+            storage: result.storage,
+            offset: result.offset,
+            shape: result.shape,
+            strides: result.strides,
+            flags: result.flags,
+            context: result.context,
+            stream: result.stream,
+        };
+    }
+
+    const block_size: u32 = 256;
+    const grid_size: u32 = ceil_div_u32(n, block_size as usize);
+
+    const left_ptr: usize = device_ptr_with_offset_f64(left);
+    const right_ptr: usize = device_ptr_with_offset_f64(right);
+    const result_ptr: usize = device_ptr_with_offset_f64(&result);
+
+    var arg_result_ptr: usize = result_ptr;
+    var arg_left_ptr: usize = left_ptr;
+    var arg_right_ptr: usize = right_ptr;
+    var arg_n: usize = n;
+    var arg_left_stride: usize = UFUNC_F64_ELEMENT_SIZE;
+    var arg_right_stride: usize = UFUNC_F64_ELEMENT_SIZE;
+
+    var args: [usize: 6] = [
+        (&arg_result_ptr) as usize,
+        (&arg_left_ptr) as usize,
+        (&arg_right_ptr) as usize,
+        (&arg_n) as usize,
+        (&arg_left_stride) as usize,
+        (&arg_right_stride) as usize,
+    ];
+
+    try cuda_launch_kernel(
+        func,
+        grid_size, 1, 1,
+        block_size, 1, 1,
+        0,
+        state.stream,
+        &args[0]
+    );
+
+    try cuda_synchronize_stream(state.context, state.stream);
+
+    device_storage_retain<f64>(result.storage);
+    return DeviceArray<f64>{
+        storage: result.storage,
+        offset: result.offset,
+        shape: result.shape,
+        strides: result.strides,
+        flags: result.flags,
+        context: result.context,
+        stream: result.stream,
+    };
+}
+
 export fn gpu_mul_f64(state: &BackendState, left: &DeviceArray<f64>, right: &DeviceArray<f64>) !DeviceArray<f64> {
     if !shape_eq(left.shape, right.shape) {
         return error.NumuyaShapeMismatch;

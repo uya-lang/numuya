@@ -13,3 +13,4 @@ export error NumuyaGpuUnavailable;
 export error NumuyaGpuOutOfMemory;
 export error NumuyaCudaError;
 export error NumuyaDeviceMismatch;
+export error NumuyaInvalidStep;

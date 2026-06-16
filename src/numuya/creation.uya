@@ -134,3 +134,69 @@ export fn full_f64(allocator: IAllocator, shape_value: Shape, value: f64) !Array
     const array_value: Array<f64> = try full<f64>(allocator, shape_value, value);
     return array_value;
 }
+
+/* Return evenly spaced values within a given interval.
+ * arange_f64(start, stop, step) produces [start, start+step, ..., start+k*step]
+ * where start+k*step < stop and start+(k+1)*step >= stop.
+ */
+export fn arange_f64(allocator: IAllocator, start: f64, stop: f64, step: f64) !Array<f64> {
+    if step == 0.0 {
+        return error.NumuyaInvalidStep;
+    }
+    /* Compute length: max(0, ceil((stop - start) / step)) for positive step,
+     *                 max(0, ceil((start - stop) / -step)) for negative step. */
+    var diff: f64 = stop - start;
+    var n: usize = 0;
+    if step > 0.0 {
+        if diff > 0.0 {
+            /* ceil(diff / step) without libc ceil: n = trunc(diff/step) + 1 if remainder exists */
+            var quotient: f64 = diff / step;
+            n = quotient as! usize catch { return error.NumuyaShapeOverflow; };
+            /* If truncation lost remainder, add 1 */
+            if (n as f64) * step < diff {
+                n = n + 1;
+            }
+        }
+    } else {
+        /* negative step */
+        if diff < 0.0 {
+            var quotient: f64 = diff / step;
+            n = quotient as! usize catch { return error.NumuyaShapeOverflow; };
+            if (n as f64) * step > diff {
+                n = n + 1;
+            }
+        }
+    }
+    var array_value: Array<f64> = try empty<f64>(allocator, shape1(n));
+    var i: usize = 0;
+    while i < n {
+        array_value.storage.data[i] = start + (i as f64) * step;
+        i = i + 1;
+    }
+    return array_value;
+}
+
+/* Return evenly spaced numbers over a specified interval.
+ * linspace_f64(start, stop, num) produces num evenly spaced samples
+ * from start to stop inclusive. If num == 1, returns [start].
+ */
+export fn linspace_f64(allocator: IAllocator, start: f64, stop: f64, num: usize) !Array<f64> {
+    if num == 0 {
+        var empty_arr: Array<f64> = try empty<f64>(allocator, shape1(0));
+        return empty_arr;
+    }
+    var array_value: Array<f64> = try empty<f64>(allocator, shape1(num));
+    if num == 1 {
+        array_value.storage.data[0] = start;
+        return array_value;
+    }
+    var step: f64 = (stop - start) / ((num - 1) as f64);
+    var i: usize = 0;
+    while i < num {
+        array_value.storage.data[i] = start + (i as f64) * step;
+        i = i + 1;
+    }
+    /* Ensure exact endpoint */
+    array_value.storage.data[num - 1] = stop;
+    return array_value;
+}
