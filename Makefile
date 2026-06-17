@@ -53,6 +53,7 @@ test: bootstrap-upm
 	done
 
 test-cuda: bootstrap-upm
+	@echo "CUDA driver tests use the pure NumUya CUDA kernel backend; vendor libraries stay disabled."
 	@test -n "$(CUDA_TESTS)" || { echo "no cuda test files found"; exit 1; }
 	@for test in $(CUDA_TESTS); do \
 		echo "NUMUYA_CUDA_REQUIRED=1 LDFLAGS=\"-lcuda\" $(UYA) test $$test --manifest-path $(MANIFEST)"; \
@@ -60,10 +61,11 @@ test-cuda: bootstrap-upm
 	done
 
 test-cuda-vendor: bootstrap-upm
+	@echo "CUDA vendor tests explicitly enable cuBLAS/cuFFT/cuRAND coverage."
 	@test -n "$(CUDA_TESTS)" || { echo "no cuda test files found"; exit 1; }
 	@for test in $(CUDA_TESTS); do \
-		echo "NUMUYA_CUDA_REQUIRED=1 LDFLAGS=\"-lcublasLt -lcublas -lcufft -lcurand -lcuda\" $(UYA) test $$test --manifest-path $(MANIFEST)"; \
-		NUMUYA_CUDA_REQUIRED=1 LDFLAGS="-lcublasLt -lcublas -lcufft -lcurand -lcuda" $(UYA) test "$$test" --manifest-path $(MANIFEST) || exit $$?; \
+		echo "NUMUYA_CUDA_REQUIRED=1 NUMUYA_CUDA_VENDOR=1 LDFLAGS=\"-lcublasLt -lcublas -lcufft -lcurand -lcuda\" $(UYA) test $$test --manifest-path $(MANIFEST)"; \
+		NUMUYA_CUDA_REQUIRED=1 NUMUYA_CUDA_VENDOR=1 LDFLAGS="-lcublasLt -lcublas -lcufft -lcurand -lcuda" $(UYA) test "$$test" --manifest-path $(MANIFEST) || exit $$?; \
 	done
 
 check-one: require-upm

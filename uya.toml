@@ -4,4 +4,8 @@ version = "0.1.0"
 source-dir = "src/numuya"
 uya_min_version = "0.10.0"
 
+# CUDA and optional vendor libraries are runtime capabilities, not UPM
+# package dependencies. libcuda/cuBLAS/cuFFT/cuRAND are loaded through
+# explicit CUDA Makefile targets and BackendConfig.prefer_vendor_libs.
+
 [dependencies]

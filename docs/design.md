@@ -10,7 +10,7 @@
 
 - 用纯 Uya 复刻 NumPy 的核心能力：`ndarray`、shape/stride/view、broadcasting、ufunc、reduction、indexing、sorting/searching、linear algebra、random、FFT、`.npy` I/O。
 - API 靠近 NumPy 的命名和语义，同时利用 Uya 的泛型、显式错误联合、无 GC、编译期安全证明和 SIMD 内建，做得更明确、更少魔法。
-- 默认实现不依赖 Python、CPython C API、NumPy、BLAS、LAPACK、libm 或其他外部数值库。后续可加可选 backend，但纯 Uya backend 必须始终可用，且测试必须能只跑纯 Uya backend。
+- 默认 CPU 实现不依赖 Python、CPython C API、NumPy、BLAS、LAPACK、libm 或其他外部数值库。CUDA host 侧只允许极薄的运行时 `dlopen` shim 做 ABI 适配；纯 Uya CPU backend 与纯 CUDA kernel backend 必须始终可用，且测试必须能只跑非 vendor backend。
 - 必须能充分使用本机 NVIDIA GeForce RTX 3060：提供 CUDA backend，热路径支持 device array、异步拷贝、memory pool、stream、fused elementwise、GPU reduction、GPU matmul、GPU random，并保留 CPU fallback。
 - 错误全部显式返回 `!T`，不使用 panic 式控制流。
 - 内存所有权、view 生命周期、shape 溢出、广播失败、axis 越界都必须有测试覆盖。
@@ -58,6 +58,7 @@ numuya/
       backend.uya
       cuda/
         driver.uya
+        dl_stub.c          # only C helper: dlopen/dlsym passthrough + generic indirect calls
         context.uya
         memory.uya
         module.uya
@@ -68,7 +69,10 @@ numuya/
         ufunc.uya
         reductions.uya
         linalg.uya
+        cublaslt.uya
         random.uya
+        curand.uya
+        cufft.uya
         ptx/
           core_sm86.ptx
           matmul_sm86.ptx
@@ -776,7 +780,8 @@ export fn main() i32 {
 - 所有分配必须有 drop/release 路径测试。
 - 不要把 `usize` 与 `isize` 混用；shape/size 用 `usize`，stride/offset/axis 用 `isize`。
 - CPU core 不要使用 Python、NumPy、BLAS、LAPACK、libm 或 C helper。
-- CUDA backend host 侧用纯 Uya 编写：`driver.uya`、`cublaslt.uya`、`cufft.uya`、`curand.uya` 通过 `dl_stub.c`（唯一的 C helper，仅暴露 `dlopen/dlsym/dlclose` passthrough + `numuya_call_0`~`numuya_call_6` / `numuya_cuda_launch_kernel` / `numuya_cublaslt_matmul` 通用间接调用 helper）以 `dlopen/dlsym` 动态加载 CUDA Driver API 与可选 vendor 库。所有函数指针缓存、版本兼容（`_v2` 回退）、stream-context 关联表、默认 context 创建、错误转换、vendor 常量等业务逻辑均在纯 Uya 中实现。可选 cuBLAS/cuFFT/cuRAND 必须由 `BackendConfig.prefer_vendor_libs=true` 显式开启，纯 Uya CUDA kernel backend 始终可通过测试。`driver_stub.c`/`cublaslt_stub.c`/`cufft_stub.c`/`curand_stub.c` 已删除。
+- CUDA kernel backend 不要使用 Python、NumPy、PyTorch、`.cu`/`nvcc` 必需路径，或承载数值算法的 C/C++ helper。
+- CUDA backend host 侧用纯 Uya 编写：`driver.uya`、`cublaslt.uya`、`cufft.uya`、`curand.uya` 通过 `dl_stub.c`（唯一的 C helper，仅暴露 `dlopen/dlsym/dlclose` passthrough + `numuya_call_0`~`numuya_call_6` / `numuya_cuda_launch_kernel` / `numuya_cublaslt_matmul` 通用间接调用 helper）以 `dlopen/dlsym` 动态加载 CUDA Driver API 与可选 vendor 库。所有函数指针缓存、版本兼容（`_v2` 回退）、stream-context 关联表、默认 context 创建、错误转换、vendor 常量等业务逻辑均在纯 Uya 中实现。可选 cuBLAS/cuFFT/cuRAND 必须由 `BackendConfig.prefer_vendor_libs=true` 或 `make test-cuda-vendor` 显式开启，纯 Uya CUDA kernel backend 始终可通过测试。`driver_stub.c`/`cublaslt_stub.c`/`cufft_stub.c`/`curand_stub.c` 已删除。
 - 可以使用 Uya 标准库：`std.mem.allocator`、`std.testing`、`std.collections.vec` 等。
 - SIMD 只能作为优化层；标量实现和测试必须先完整存在。
 - 性能优化必须保持与标量路径同测试。
@@ -843,13 +848,14 @@ export fn main() i32 {
 
 CPU core 仍然是纯 Uya backend。CUDA backend 的 host 侧也用纯 Uya 编写，通过 `dl_stub.c` 提供的 `dlopen/dlsym` passthrough 和通用间接调用 helper 来动态加载 CUDA Driver API：
 
+- 允许：`libcuda.so` Driver API，例如 `cuInit`、`cuDeviceGet`、`cuCtxCreate`、`cuMemAlloc`、`cuMemcpyHtoDAsync`、`cuLaunchKernel`。
 - 允许：`dl_stub.c` 提供纯 FFI passthrough（`dlopen/dlsym/dlclose` + `numuya_call_0`~`numuya_call_6` / `numuya_cuda_launch_kernel` 通用间接调用），不含任何 CUDA 业务逻辑。Uya 层 (`driver.uya`) 通过 `@c_import("dl_stub.c", "", "-ldl")` 绑定 passthrough 函数，然后在纯 Uya 中做 dlsym 函数指针缓存、版本兼容、stream-context 管理、错误转换等所有业务逻辑。找不到 `libcuda.so` 时返回 unavailable，无 GPU 环境也能构建运行。
 - 允许：把 PTX/cubin 作为项目资产或 Uya 字节数组嵌入，由 Uya host code 加载。
 - 不允许：用 Python/NumPy/PyTorch 作为运行期依赖。
 - 不允许：写包含业务逻辑或硬链接 CUDA 库的 C/C++ helper；`dl_stub.c` 仅允许做 dlopen/dlsym passthrough 和通用间接调用（不含 CUDA 类型、不含函数指针缓存、不含版本兼容逻辑）。
 - 不允许：把 `.cu`/CUDA C++ 当作必须的 kernel 源码；`nvcc` 只能用于实验对照，不进入 TDD 主路径。
 - 可选：`cuBLAS/cuBLASLt`、`cuFFT`、`cuRAND` 作为 vendor-performance backend，必须有明确 feature flag，并且纯 Uya CUDA kernel backend 仍可通过测试。若用户要求“最大吞吐”，matmul/FFT/random 可优先走 vendor backend。
-- cuBLASLt 通过 `BackendConfig.prefer_vendor_libs=true` 启用；`BackendConfig.allow_tf32=true` 控制是否使用 TF32 计算类型。实现使用运行时 `dlopen` 加载 `libcublasLt`，无硬链接依赖；加载失败时自动回退到纯 CUDA kernel。
+- cuBLASLt/cuFFT/cuRAND 通过 `BackendConfig.prefer_vendor_libs=true` 启用；`BackendConfig.allow_tf32=true` 控制 cuBLASLt 是否使用 TF32 计算类型。实现使用运行时 `dlopen` 加载 vendor libraries，无硬链接依赖；加载失败时自动回退到纯 CUDA kernel 或返回对应 unavailable 错误。
 
 RTX 3060 的 FP64 吞吐远低于 FP32/TF32/F16。策略：
 
@@ -986,6 +992,7 @@ export fn cuda_synchronize_stream(stream: &CudaStream) !void;
 
 Driver 调用规则：
 
+- `dl_stub.c` 的边界由 13.4.1 定义；除通用 FFI passthrough 与间接调用 ABI 适配外，不得加入 CUDA 业务逻辑。
 - 所有需要 context 的 Driver API 调用前必须确保对应 context 为 current；封装层提供 `cuda_with_context(ctx, fn_ptr, context_ptr)` 或等价内部 helper。
 - 每个 create API 必须有 destroy API，且 destroy 允许重复调用空 handle。
 - stream 归属单个 context，不允许跨 backend 使用。
@@ -1118,7 +1125,7 @@ CUDA 测试分三档：
 
 - `make test`：不要求 GPU；CUDA 不可用时相关测试必须 skip 或不进入默认集合。
 - `make test-cuda`：要求本机 RTX 3060 可用；设置 `NUMUYA_CUDA_REQUIRED=1`，任何 CUDA 初始化失败都算失败。
-- `make test-cuda-vendor`：额外链接 cuBLAS/cuFFT/cuRAND，设置 `NUMUYA_CUDA_VENDOR=1`。
+- `make test-cuda-vendor`：显式开启 vendor backend 覆盖，链接/加载 cuBLAS/cuFFT/cuRAND，设置 `NUMUYA_CUDA_VENDOR=1`；普通 `make test-cuda` 仍必须验证纯 CUDA kernel backend 可用。
 
 链接约定：
 
@@ -1127,6 +1134,8 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 LDFLAGS="-lcuda" NUMUYA_CUDA_REQUIRED=1 ../uya/bin/uya test src/numuya/_tests/test_cuda_driver.uya --manifest-path uya.toml
 LDFLAGS="-lcuda -lcublasLt -lcublas -lcufft -lcurand" NUMUYA_CUDA_VENDOR=1 ../uya/bin/uya test src/numuya/_tests/test_cuda_linalg.uya --manifest-path uya.toml
 ```
+
+`uya.toml` 不声明 CUDA toolkit、cuBLAS、cuFFT 或 cuRAND 为 package dependency。CUDA/vendor availability 是运行时能力：Driver API 由纯 Uya `driver.uya` 经 `dl_stub.c` passthrough 动态加载，vendor libraries 只有在 `BackendConfig.prefer_vendor_libs=true` 或 `make test-cuda-vendor` 下才进入对应路径。
 
 CUDA 测试必须打印或断言：
 

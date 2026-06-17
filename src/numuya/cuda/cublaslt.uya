@@ -36,12 +36,12 @@ extern fn numuya_cublaslt_matmul(func_ptr: usize,
 const CUBLAS_STATUS_SUCCESS: i32 = 0;
 
 /* cuBLASLt type constants (hardcoded from cublasLt.h / cuda.h) */
-const CUBLAS_COMPUTE_32F: usize = 0;
-const CUBLAS_COMPUTE_32F_FAST_TF32: usize = 131;
+const CUBLAS_COMPUTE_32F: usize = 68;
+const CUBLAS_COMPUTE_32F_FAST_TF32: usize = 77;
 const CUDA_R_32F: usize = 0;
 const CUBLAS_OP_N: usize = 0;
-const CUBLASLT_MATMUL_DESC_TRANSA: usize = 0;
-const CUBLASLT_MATMUL_DESC_TRANSB: usize = 1;
+const CUBLASLT_MATMUL_DESC_TRANSA: usize = 3;
+const CUBLASLT_MATMUL_DESC_TRANSB: usize = 4;
 
 /* ============================================================
  * Function pointer cache
@@ -178,16 +178,16 @@ export fn cublaslt_matmul_f32(
     }
 
     /* Set transa = CUBLAS_OP_N */
-    var transa: usize = CUBLAS_OP_N;
-    status = numuya_call_4(pfn_cublasLtMatmulDescSetAttribute, desc, CUBLASLT_MATMUL_DESC_TRANSA, &transa as usize, 8 as usize);
+    var transa: i32 = CUBLAS_OP_N as i32;
+    status = numuya_call_4(pfn_cublasLtMatmulDescSetAttribute, desc, CUBLASLT_MATMUL_DESC_TRANSA, &transa as usize, 4 as usize);
     if status != CUBLAS_STATUS_SUCCESS {
         numuya_call_1(pfn_cublasLtMatmulDescDestroy, desc);
         return error.NumuyaCublasltError;
     }
 
     /* Set transb = CUBLAS_OP_N */
-    var transb: usize = CUBLAS_OP_N;
-    status = numuya_call_4(pfn_cublasLtMatmulDescSetAttribute, desc, CUBLASLT_MATMUL_DESC_TRANSB, &transb as usize, 8 as usize);
+    var transb: i32 = CUBLAS_OP_N as i32;
+    status = numuya_call_4(pfn_cublasLtMatmulDescSetAttribute, desc, CUBLASLT_MATMUL_DESC_TRANSB, &transb as usize, 4 as usize);
     if status != CUBLAS_STATUS_SUCCESS {
         numuya_call_1(pfn_cublasLtMatmulDescDestroy, desc);
         return error.NumuyaCublasltError;
