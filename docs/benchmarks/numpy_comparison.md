@@ -49,6 +49,14 @@
   - `p95`
 - 原始 JSON 必须保留全部单次样本，便于复算统计值。
 
+### 3.5 正确性护栏
+
+- 跑任何 CPU benchmark 前，先执行 `make bench-guardrails-cpu`；它固定包含 `make test` 和 benchmark workload 的 Python spot-check。
+- 跑任何 GPU benchmark 前，先执行 `make bench-guardrails-gpu`；它固定包含 `make test-cuda` 和 GPU spot-check。
+- 若本轮要走 vendor 路径，先执行 `make bench-guardrails-gpu-vendor`，确保 `make test-cuda-vendor` 先通过。
+- `benchmarks/python/spotcheck_benchmarks.py` 会先跑 `src/numuya/_tools/bench_spotcheck.uya`，再对 `add`、`mul`、`sum`、`matmul`、`random` 做小尺寸 spot-check；GPU 侧额外校验 `add`、`sum`，并在可用时附带 `CuPy` 一致性检查。
+- spot-check 是 benchmark 前置护栏，不替代常规 correctness test，也不能替代最终原始 benchmark 结果。
+
 ### 4. 线程与 CPU backend 规则
 
 运行 CPU benchmark 前固定导出以下环境变量，并把最终值写入结果元数据：

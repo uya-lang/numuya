@@ -1,0 +1,118 @@
+use array;
+use backend;
+use creation;
+use cuda.auto;
+use indexing;
+use linalg;
+use random;
+use reductions;
+use shape;
+use ufunc;
+
+use libc.syscall;
+use std.mem.allocator.IAllocator;
+use std.mem.allocator.MallocAllocator;
+
+extern "libc" fn snprintf(buf: &byte, size: usize, format: &const byte, ...) i32;
+
+fn write_str(text: &const byte) void {
+    const len: usize = strlen(text);
+    _ = sys_write(1, text, len) catch { return; };
+}
+
+fn write_f64(value: f64) void {
+    var buf: [byte: 64] = [];
+    _ = snprintf(&buf[0], 64, "%.12f", value);
+    const len: usize = strlen(&buf[0]);
+    _ = sys_write(1, &buf[0], len) catch { return; };
+}
+
+fn write_case_prefix(suite: &const byte, operation: &const byte) void {
+    write_str("SPOTCHECK|suite=");
+    write_str(suite);
+    write_str("|operation=");
+    write_str(operation);
+    write_str("|values=");
+}
+
+fn write_vector_case(suite: &const byte, operation: &const byte, values: &Array<f64>) !void {
+    write_case_prefix(suite, operation);
+    var i: usize = 0;
+    while i < values.shape.dims[0] {
+        if i > 0 {
+            write_str(",");
+        }
+        write_f64(try get1<f64>(values, i));
+        i = i + 1;
+    }
+    write_str("\n");
+}
+
+fn write_matrix_case(suite: &const byte, operation: &const byte, values: &Array<f64>) !void {
+    write_case_prefix(suite, operation);
+    var row: usize = 0;
+    while row < values.shape.dims[0] {
+        if row > 0 {
+            write_str(";");
+        }
+        var col: usize = 0;
+        while col < values.shape.dims[1] {
+            if col > 0 {
+                write_str(",");
+            }
+            write_f64(try get2<f64>(values, row, col));
+            col = col + 1;
+        }
+        row = row + 1;
+    }
+    write_str("\n");
+}
+
+fn write_scalar_case(suite: &const byte, operation: &const byte, value: f64) void {
+    write_case_prefix(suite, operation);
+    write_f64(value);
+    write_str("\n");
+}
+
+export fn main() i32 {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+
+    var left_data: [f64: 6] = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
+    var right_data: [f64: 6] = [10.0, 20.0, 30.0, 40.0, 50.0, 60.0];
+    var left: Array<f64> = from_slice<f64>(allocator, left_data[0:6], shape2(2, 3)) catch { return 1; };
+    var right: Array<f64> = from_slice<f64>(allocator, right_data[0:6], shape2(2, 3)) catch { return 1; };
+
+    var add_result: Array<f64> = add_f64(&left, &right) catch { return 1; };
+    write_matrix_case("cpu", "add", &add_result) catch { return 1; };
+
+    var mul_result: Array<f64> = mul_f64(&left, &right) catch { return 1; };
+    write_matrix_case("cpu", "mul", &mul_result) catch { return 1; };
+
+    const sum_result: f64 = sum_all_f64(&left) catch { return 1; };
+    write_scalar_case("cpu", "sum", sum_result);
+
+    var mat_left_data: [f64: 4] = [1.0, 2.0, 3.0, 4.0];
+    var mat_right_data: [f64: 4] = [5.0, 6.0, 7.0, 8.0];
+    var mat_left: Array<f64> = from_slice<f64>(allocator, mat_left_data[0:4], shape2(2, 2)) catch { return 1; };
+    var mat_right: Array<f64> = from_slice<f64>(allocator, mat_right_data[0:4], shape2(2, 2)) catch { return 1; };
+    var matmul_result: Array<f64> = matmul_f64(&mat_left, &mat_right) catch { return 1; };
+    write_matrix_case("cpu", "matmul", &matmul_result) catch { return 1; };
+
+    var rng: PCG64 = pcg64_seed(42u64, 54u64);
+    var random_result: Array<f64> = random_array_f64(allocator, &rng, shape1(5)) catch { return 1; };
+    write_vector_case("cpu", "random", &random_result) catch { return 1; };
+
+    write_str("SPOTCHECK|suite=gpu|available=");
+    if backend_is_cuda_available() {
+        write_str("true\n");
+        var gpu_add_result: Array<f64> = add_f64_auto(&left, &right) catch { return 1; };
+        write_matrix_case("gpu", "add", &gpu_add_result) catch { return 1; };
+        const gpu_sum_result: f64 = sum_all_f64_auto(&left) catch { return 1; };
+        write_scalar_case("gpu", "sum", gpu_sum_result);
+    } else {
+        write_str("false\n");
+    }
+
+    return 0;
+}

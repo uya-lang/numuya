@@ -66,6 +66,22 @@ class PythonBenchmarkScriptsTest(unittest.TestCase):
         self.assertRegex(makefile, r"(?m)^bench-numpy-gpu-ref:")
         self.assertRegex(makefile, r"(?m)^bench-compare:")
 
+    def test_makefile_exposes_benchmark_guardrail_targets(self) -> None:
+        makefile = (ROOT / "Makefile").read_text(encoding="utf-8")
+        self.assertRegex(makefile, r"(?m)^bench-spotcheck:")
+        self.assertRegex(makefile, r"(?m)^bench-spotcheck-gpu:")
+        self.assertRegex(makefile, r"(?m)^bench-guardrails-cpu:")
+        self.assertRegex(makefile, r"(?m)^bench-guardrails-gpu:")
+        self.assertRegex(makefile, r"(?m)^bench-guardrails-gpu-vendor:")
+
+    def test_spotcheck_script_reports_cpu_and_gpu_consistency(self) -> None:
+        payload = self.run_script("benchmarks/python/spotcheck_benchmarks.py")
+        self.assertEqual(payload["benchmark"], "spotcheck")
+        self.assertIn("cpu_workloads", payload)
+        self.assertIn("gpu_workloads", payload)
+        self.assertTrue(all(row["match"] for row in payload["cpu_workloads"]))
+        self.assertTrue(all("operation" in row for row in payload["gpu_workloads"]))
+
     def test_numpy_comparison_doc_freezes_v1_matrix(self) -> None:
         doc = (ROOT / "docs/benchmarks/numpy_comparison.md").read_text(encoding="utf-8")
         self.assertIn("第一版固定测试矩阵", doc)
@@ -78,6 +94,12 @@ class PythonBenchmarkScriptsTest(unittest.TestCase):
         self.assertIn("`f32`，元素数 `1e6`、`1e7`", doc)
         self.assertIn("小数据传输敏感", doc)
         self.assertIn("大数据算力敏感", doc)
+
+    def test_numpy_comparison_doc_mentions_correctness_guardrails(self) -> None:
+        doc = (ROOT / "docs/benchmarks/numpy_comparison.md").read_text(encoding="utf-8")
+        self.assertIn("bench-guardrails-cpu", doc)
+        self.assertIn("bench-guardrails-gpu", doc)
+        self.assertIn("spot-check", doc)
 
 
 if __name__ == "__main__":

@@ -8,7 +8,7 @@ TESTS := $(sort $(wildcard src/numuya/_tests/test_*.uya))
 BENCH ?= src/numuya/_benchmarks/bench_simd.uya
 BENCHES := $(sort $(wildcard src/numuya/_benchmarks/bench_*.uya))
 
-.PHONY: bootstrap-upm upm-install test-one test test-cuda test-cuda-vendor check-one check-cpu-core-deps verify-upm-consumer require-upm bench bench-numpy-cpu bench-numpy-gpu-ref bench-compare cuda-ptx-embed cuda-cubin-embed cuda-ptx-validate
+.PHONY: bootstrap-upm upm-install test-one test test-cuda test-cuda-vendor check-one check-cpu-core-deps verify-upm-consumer require-upm bench bench-numpy-cpu bench-numpy-gpu-ref bench-compare bench-spotcheck bench-spotcheck-gpu bench-guardrails-cpu bench-guardrails-gpu bench-guardrails-gpu-vendor cuda-ptx-embed cuda-cubin-embed cuda-ptx-validate
 
 require-upm:
 	@test -x "$(UPM)" || { echo "missing executable $(UPM)"; exit 1; }
@@ -91,6 +91,18 @@ bench-numpy-cpu:
 
 bench-numpy-gpu-ref:
 	python benchmarks/python/bench_gpu_reference.py
+
+bench-spotcheck: require-upm
+	python benchmarks/python/spotcheck_benchmarks.py --json
+
+bench-spotcheck-gpu: require-upm
+	python benchmarks/python/spotcheck_benchmarks.py --json
+
+bench-guardrails-cpu: test bench-spotcheck
+
+bench-guardrails-gpu: test-cuda bench-spotcheck-gpu
+
+bench-guardrails-gpu-vendor: test-cuda-vendor bench-spotcheck-gpu
 
 bench-compare: bench bench-numpy-cpu bench-numpy-gpu-ref
 

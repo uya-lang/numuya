@@ -40,11 +40,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
   - `NumUya CUDA kernel-only` 单独报告，不伪造“NumPy GPU”数据。
 - 如环境允许，可额外记录 `CuPy` 作为同机 GPU reference，但必须单列展示，不能替代 NumPy baseline。
 
-- [ ] 增加正确性护栏，确保 benchmark 不是“跑得快但算错了”。
-  - benchmark 前先跑 `make test`。
-  - GPU benchmark 前先跑 `make test-cuda`；若要走 vendor 路径，再跑 `make test-cuda-vendor`。
-  - Python 对照脚本对每个 workload 先做小尺寸 spot-check，比对 NumUya / NumPy / CuPy（如有）结果一致性。
-
 - [ ] 固定原始结果与汇总产物位置。
   - 原始结果建议落到 `benchmarks/results/2026-06-18/` 这类按日期命名的目录。
   - 汇总文档建议新增 `docs/benchmarks/numpy_comparison.md`。

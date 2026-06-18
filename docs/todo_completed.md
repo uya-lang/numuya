@@ -1502,3 +1502,12 @@ NUMUYA_CUDA_REQUIRED=1 LDFLAGS="-lcublasLt -lcublas -lcufft -lcurand -lcuda" ../
   - 实现：`docs/benchmarks/numpy_comparison.md` 新增“第一版固定测试矩阵”章节，固定 elementwise/reduction、matmul、random fill 的主表档位，并要求缺失项显式标注 `missing`。
   - 验证：`python3 -m unittest tests.test_python_benchmarks.PythonBenchmarkScriptsTest.test_numpy_comparison_doc_freezes_v1_matrix` -> OK
   - 验证：`python3 -m unittest tests/test_python_benchmarks.py` -> OK
+
+### Phase 24: NumPy 性能对比（CPU / GPU）
+- [x] 增加正确性护栏，确保 benchmark 不是“跑得快但算错了”。
+  - 实现：新增 `src/numuya/_tools/bench_spotcheck.uya` 与 `benchmarks/python/spotcheck_benchmarks.py`，在 benchmark 前对 `add`、`mul`、`sum`、`matmul`、`random` 做小尺寸 spot-check；GPU 侧额外校验 `add`、`sum`，并在 `CuPy` 可用时记录一致性。
+  - 实现：`Makefile` 新增 `bench-spotcheck`、`bench-spotcheck-gpu`、`bench-guardrails-cpu`、`bench-guardrails-gpu`、`bench-guardrails-gpu-vendor`，把 `make test` / `make test-cuda` / `make test-cuda-vendor` 与 spot-check 串成 benchmark 前置护栏。
+  - 实现：`docs/benchmarks/numpy_comparison.md` 新增“正确性护栏”章节，固定 benchmark 前的测试与 spot-check 顺序。
+  - 验证：`python3 -m unittest tests/test_python_benchmarks.py` -> OK
+  - 验证：`make bench-guardrails-cpu` -> 通过；跑完整非 CUDA 测试集后执行 `python benchmarks/python/spotcheck_benchmarks.py --json`，`cpu_workloads` 的 `add/mul/sum/matmul/random` 全部 `match=true`
+  - 验证：`make bench-guardrails-gpu` -> 通过；跑完整 CUDA 测试集后执行 `python benchmarks/python/spotcheck_benchmarks.py --json`，`gpu_workloads` 的 `add/sum` 全部 `match=true`，当前环境 `available=true`
