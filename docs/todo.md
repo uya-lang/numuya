@@ -40,12 +40,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
   - `NumUya CUDA kernel-only` 单独报告，不伪造“NumPy GPU”数据。
 - 如环境允许，可额外记录 `CuPy` 作为同机 GPU reference，但必须单列展示，不能替代 NumPy baseline。
 
-- [ ] 固定第一版测试矩阵，避免反复改口径。
-  - elementwise / reduction：`f32`、`f64`，长度至少覆盖 `1e4`、`1e6`、`1e7` 三档。
-  - matmul：至少覆盖 `256x256`、`1024x1024`、`2048x2048`；CPU/GPU 使用相同 dtype 和 shape。
-  - random fill：至少覆盖 `f32`、`1e6` 和 `1e7` 元素两档。
-  - GPU 额外区分“小数据传输敏感”与“大数据算力敏感”两类 case。
-
 - [ ] 增加正确性护栏，确保 benchmark 不是“跑得快但算错了”。
   - benchmark 前先跑 `make test`。
   - GPU benchmark 前先跑 `make test-cuda`；若要走 vendor 路径，再跑 `make test-cuda-vendor`。

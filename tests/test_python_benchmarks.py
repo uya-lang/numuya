@@ -66,6 +66,19 @@ class PythonBenchmarkScriptsTest(unittest.TestCase):
         self.assertRegex(makefile, r"(?m)^bench-numpy-gpu-ref:")
         self.assertRegex(makefile, r"(?m)^bench-compare:")
 
+    def test_numpy_comparison_doc_freezes_v1_matrix(self) -> None:
+        doc = (ROOT / "docs/benchmarks/numpy_comparison.md").read_text(encoding="utf-8")
+        self.assertIn("第一版固定测试矩阵", doc)
+        self.assertIn("elementwise / reduction", doc)
+        self.assertIn("长度档位：`1e4`、`1e6`、`1e7`", doc)
+        self.assertIn("matmul", doc)
+        self.assertIn("`256x256`、`1024x1024`、`2048x2048`", doc)
+        self.assertIn("CPU / GPU 使用相同 dtype 和 shape", doc)
+        self.assertIn("random fill", doc)
+        self.assertIn("`f32`，元素数 `1e6`、`1e7`", doc)
+        self.assertIn("小数据传输敏感", doc)
+        self.assertIn("大数据算力敏感", doc)
+
 
 if __name__ == "__main__":
     unittest.main()

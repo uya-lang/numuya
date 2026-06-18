@@ -1492,3 +1492,13 @@ NUMUYA_CUDA_REQUIRED=1 LDFLAGS="-lcublasLt -lcublas -lcufft -lcurand -lcuda" ../
   - `Makefile` 建议新增 `bench-numpy-cpu`、`bench-numpy-gpu-ref`、`bench-compare` 目标。
   - 验证：`python -m unittest tests.test_python_benchmarks`
   - 结果：通过（5 tests, 4.209s）。
+### Phase 24: NumPy 性能对比（CPU / GPU）
+
+- [x] 固定第一版测试矩阵，避免反复改口径。
+  - elementwise / reduction：`f32`、`f64`，长度至少覆盖 `1e4`、`1e6`、`1e7` 三档。
+  - matmul：至少覆盖 `256x256`、`1024x1024`、`2048x2048`；CPU/GPU 使用相同 dtype 和 shape。
+  - random fill：至少覆盖 `f32`、`1e6` 和 `1e7` 元素两档。
+  - GPU 额外区分“小数据传输敏感”与“大数据算力敏感”两类 case。
+  - 实现：`docs/benchmarks/numpy_comparison.md` 新增“第一版固定测试矩阵”章节，固定 elementwise/reduction、matmul、random fill 的主表档位，并要求缺失项显式标注 `missing`。
+  - 验证：`python3 -m unittest tests.test_python_benchmarks.PythonBenchmarkScriptsTest.test_numpy_comparison_doc_freezes_v1_matrix` -> OK
+  - 验证：`python3 -m unittest tests/test_python_benchmarks.py` -> OK

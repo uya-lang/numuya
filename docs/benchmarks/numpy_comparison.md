@@ -12,31 +12,28 @@
   - `NumUya CUDA kernel-only` 单列报告，只用于说明设备端纯计算能力，不伪造 `NumPy GPU`。
 - 如果同机环境安装了 `cupy`，可额外追加 `CuPy reference` 表；它必须与 NumPy 主表分开，不能替代 `NumPy CPU baseline`。
 
-### 2. 固定 workload 与 dtype
+### 2. 第一版固定测试矩阵
 
-首轮 Python 对照和 NumUya 对照必须覆盖相同 workload：
+首轮 Python 对照和 NumUya 对照必须覆盖相同 workload，且第一版主表矩阵固定如下；后续若要扩项，只能新增附表，不能覆盖这套主矩阵。
 
-- elementwise：`add`、`mul`
-- reduction：`sum`
-- linear algebra：`matmul`
-- random：`random`
-
-固定 dtype 与 shape：
-
-- `add` / `mul`
+- elementwise / reduction
+  - operation：elementwise 固定 `add`、`mul`；reduction 固定 `sum`
   - dtype：`f32`、`f64`
-  - shape：`16_777_216` elements 的 contiguous 1-D array
-- `sum`
-  - dtype：`f32`、`f64`
-  - shape：`16_777_216` elements 的 contiguous 1-D array
-- `matmul`
-  - dtype：`f32`
-  - shape：`1024x1024`、`2048x2048`
-- `random`
-  - dtype：`f32`
-  - shape：`16_777_216` elements 的 contiguous 1-D array
+  - 长度档位：`1e4`、`1e6`、`1e7`
+  - 数据布局：contiguous 1-D array
+- matmul
+  - operation：`matmul`
+  - shape：`256x256`、`1024x1024`、`2048x2048`
+  - CPU / GPU 使用相同 dtype 和 shape
+  - 第一版 dtype 固定 `f32`；若后续补 `f64`，必须单列为扩展项
+- random fill
+  - operation：`random`
+  - dtype：`f32`，元素数 `1e6`、`1e7`
+- GPU 额外分类
+  - 小数据传输敏感：优先使用 `1e4` elementwise / reduction 与 `256x256` matmul，突出 launch + H2D/D2H 开销
+  - 大数据算力敏感：优先使用 `1e7` elementwise / reduction、`2048x2048` matmul 与 `1e7` random fill，突出 kernel / memory throughput
 
-如果后续需要增加 workload 或 shape，必须在结果中单列为扩展项，不能覆盖本规则的固定主表。
+如果某个实现暂时缺少上述 workload，结果中必须明确标注 `missing`，并在报告里解释缺口，而不是私自缩减矩阵口径。
 
 ### 3. 固定 warmup、repeat 与统计
 
