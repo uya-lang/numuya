@@ -1519,3 +1519,16 @@ NUMUYA_CUDA_REQUIRED=1 LDFLAGS="-lcublasLt -lcublas -lcufft -lcurand -lcuda" ../
   - 汇总文档固定为 `docs/benchmarks/numpy_comparison.md`，文档新增“固定产物位置”章节并补齐汇总表必填字段。
   - 验证：`python3 -m unittest tests.test_python_benchmarks.PythonBenchmarkScriptsTest.test_numpy_comparison_doc_freezes_artifact_locations` -> OK
   - 验证：`python3 -m unittest tests.test_python_benchmarks.PythonBenchmarkScriptsTest.test_makefile_exposes_numpy_comparison_targets tests.test_python_benchmarks.PythonBenchmarkScriptsTest.test_numpy_comparison_doc_freezes_v1_matrix tests.test_python_benchmarks.PythonBenchmarkScriptsTest.test_numpy_comparison_doc_mentions_correctness_guardrails tests.test_python_benchmarks.PythonBenchmarkScriptsTest.test_numpy_comparison_doc_freezes_artifact_locations` -> OK
+## 2026-06-18
+
+### Phase 24: NumPy 性能对比（CPU / GPU）
+
+- [x] 添加汇总报告生成任务。
+  - 建议新增 `benchmarks/python/summarize_benchmarks.py`，读取 NumUya 与 Python 对照脚本输出的 JSON 结果。
+  - 建议新增 `make bench-report` 目标，负责把原始结果汇总成 `Markdown + JSON summary`。
+  - 汇总逻辑必须统一计算 speedup、带宽/吞吐单位、缺失项标记和环境信息，避免手工抄表。
+  - 报告生成时必须显式区分 `CPU`、`CUDA end-to-end`、`CUDA kernel-only`、`CuPy reference`（如有）。
+  - 若某个 workload 缺少对照组或运行失败，报告中必须保留该项并标注 `missing` / `failed`，不能静默跳过。
+  - 验证：
+    - `python -m unittest tests.test_python_benchmarks` -> `Ran 12 tests in 8.902s`, `OK`
+    - `make bench-report` -> 生成 `benchmarks/results/latest/benchmark_summary.json` 与 `benchmarks/results/latest/benchmark_summary.md`（验证后已清理临时产物）

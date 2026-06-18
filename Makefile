@@ -8,7 +8,7 @@ TESTS := $(sort $(wildcard src/numuya/_tests/test_*.uya))
 BENCH ?= src/numuya/_benchmarks/bench_simd.uya
 BENCHES := $(sort $(wildcard src/numuya/_benchmarks/bench_*.uya))
 
-.PHONY: bootstrap-upm upm-install test-one test test-cuda test-cuda-vendor check-one check-cpu-core-deps verify-upm-consumer require-upm bench bench-numpy-cpu bench-numpy-gpu-ref bench-compare bench-spotcheck bench-spotcheck-gpu bench-guardrails-cpu bench-guardrails-gpu bench-guardrails-gpu-vendor cuda-ptx-embed cuda-cubin-embed cuda-ptx-validate
+.PHONY: bootstrap-upm upm-install test-one test test-cuda test-cuda-vendor check-one check-cpu-core-deps verify-upm-consumer require-upm bench bench-numpy-cpu bench-numpy-gpu-ref bench-compare bench-report bench-spotcheck bench-spotcheck-gpu bench-guardrails-cpu bench-guardrails-gpu bench-guardrails-gpu-vendor cuda-ptx-embed cuda-cubin-embed cuda-ptx-validate
 
 require-upm:
 	@test -x "$(UPM)" || { echo "missing executable $(UPM)"; exit 1; }
@@ -105,6 +105,9 @@ bench-guardrails-gpu: test-cuda bench-spotcheck-gpu
 bench-guardrails-gpu-vendor: test-cuda-vendor bench-spotcheck-gpu
 
 bench-compare: bench bench-numpy-cpu bench-numpy-gpu-ref
+
+bench-report:
+	python benchmarks/python/summarize_benchmarks.py --input-dir benchmarks/results/latest --output-dir benchmarks/results/latest
 
 verify-upm-consumer: require-upm
 	$(UPM) install --manifest-path $(CONSUMER_MANIFEST)

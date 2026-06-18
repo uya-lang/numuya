@@ -1,6 +1,7 @@
 import json
 import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -74,6 +75,10 @@ class PythonBenchmarkScriptsTest(unittest.TestCase):
         self.assertRegex(makefile, r"(?m)^bench-guardrails-gpu:")
         self.assertRegex(makefile, r"(?m)^bench-guardrails-gpu-vendor:")
 
+    def test_makefile_exposes_benchmark_report_target(self) -> None:
+        makefile = (ROOT / "Makefile").read_text(encoding="utf-8")
+        self.assertRegex(makefile, r"(?m)^bench-report:")
+
     def test_spotcheck_script_reports_cpu_and_gpu_consistency(self) -> None:
         payload = self.run_script("benchmarks/python/spotcheck_benchmarks.py")
         self.assertEqual(payload["benchmark"], "spotcheck")
@@ -117,6 +122,208 @@ class PythonBenchmarkScriptsTest(unittest.TestCase):
         self.assertIn("benchmark 运行日期", doc)
         self.assertIn("硬件/驱动/版本信息", doc)
         self.assertIn("非同类设备对比，仅作端到端参考", doc)
+
+    def test_summarize_benchmarks_generates_markdown_and_json(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmpdir = Path(tmp)
+            input_dir = tmpdir / "inputs"
+            output_dir = tmpdir / "outputs"
+            input_dir.mkdir()
+            output_dir.mkdir()
+
+            (input_dir / "numpy_cpu.json").write_text(
+                json.dumps(
+                    {
+                        "benchmark": "numpy_cpu",
+                        "metadata": {
+                            "python_version": "3.12.0",
+                            "numpy_version": "2.0.0",
+                            "blas": "OpenBLAS",
+                            "thread_env": {"OMP_NUM_THREADS": "1"},
+                            "machine": "x86_64",
+                            "platform": "Linux",
+                            "numuya_commit": "abc123",
+                            "run_date": "2026-06-18",
+                            "command": "python benchmarks/python/bench_numpy_cpu.py --json",
+                        },
+                        "results": [
+                            {
+                                "operation": "add",
+                                "shape": [1000000],
+                                "dtype": "float64",
+                                "iterations": 200,
+                                "total_ns": 2000000,
+                                "ns_per_iter": 10000.0,
+                            },
+                            {
+                                "operation": "sum",
+                                "shape": [1000000],
+                                "dtype": "float64",
+                                "iterations": 400,
+                                "total_ns": 3200000,
+                                "ns_per_iter": 8000.0,
+                            },
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (input_dir / "gpu_reference.json").write_text(
+                json.dumps(
+                    {
+                        "benchmark": "gpu_reference",
+                        "metadata": {
+                            "python_version": "3.12.0",
+                            "numpy_version": "2.0.0",
+                            "cupy_version": "13.0.0",
+                            "thread_env": {"OMP_NUM_THREADS": "1"},
+                            "machine": "x86_64",
+                            "platform": "Linux",
+                            "numuya_commit": "abc123",
+                            "run_date": "2026-06-18",
+                            "command": "python benchmarks/python/bench_gpu_reference.py --json",
+                        },
+                        "numpy_cpu_baseline": [
+                            {
+                                "operation": "add",
+                                "shape": [1000000],
+                                "dtype": "float64",
+                                "iterations": 200,
+                                "total_ns": 2000000,
+                                "ns_per_iter": 10000.0,
+                            }
+                        ],
+                        "gpu_reference": {
+                            "available": True,
+                            "device_name": "Mock GPU",
+                            "results": [
+                                {
+                                    "operation": "add",
+                                    "shape": [1000000],
+                                    "dtype": "float64",
+                                    "iterations": 200,
+                                    "total_ns": 1000000,
+                                    "ns_per_iter": 5000.0,
+                                }
+                            ],
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (input_dir / "numuya_cpu.json").write_text(
+                json.dumps(
+                    {
+                        "benchmark": "numuya_cpu",
+                        "metadata": {
+                            "numuya_commit": "abc123",
+                            "run_date": "2026-06-18",
+                            "command": "../uya/bin/uya run src/numuya/_benchmarks/bench_simd.uya --manifest-path uya.toml",
+                        },
+                        "results": [
+                            {
+                                "operation": "add",
+                                "mode": "cpu",
+                                "dtype": "float64",
+                                "shape": [1000000],
+                                "iterations": 100,
+                                "metric": "throughput",
+                                "unit": "ns/iter",
+                                "total_ns": 700000,
+                                "ns_per_iter": 7000.0,
+                            },
+                            {
+                                "operation": "sum",
+                                "mode": "cpu",
+                                "dtype": "float64",
+                                "shape": [1000000],
+                                "iterations": 100,
+                                "metric": "throughput",
+                                "unit": "ns/iter",
+                                "total_ns": 0,
+                                "ns_per_iter": 0.0,
+                                "status": "failed",
+                            },
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (input_dir / "numuya_cuda.json").write_text(
+                json.dumps(
+                    {
+                        "benchmark": "numuya_cuda",
+                        "metadata": {
+                            "gpu_name": "Mock GPU",
+                            "cuda_driver_version": "555.1",
+                            "numuya_commit": "abc123",
+                            "run_date": "2026-06-18",
+                            "command": "../uya/bin/uya run src/numuya/_benchmarks/bench_cuda.uya --manifest-path uya.toml",
+                        },
+                        "results": [
+                            {
+                                "operation": "add",
+                                "mode": "end-to-end",
+                                "dtype": "float64",
+                                "shape": [1000000],
+                                "iterations": 100,
+                                "metric": "throughput",
+                                "unit": "GB/s",
+                                "total_ns": 900000,
+                                "throughput": 32.0,
+                            },
+                            {
+                                "operation": "add",
+                                "mode": "kernel-only",
+                                "dtype": "float64",
+                                "shape": [1000000],
+                                "iterations": 100,
+                                "metric": "throughput",
+                                "unit": "GB/s",
+                                "total_ns": 600000,
+                                "throughput": 48.0,
+                            },
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    str(ROOT / "benchmarks/python/summarize_benchmarks.py"),
+                    "--input-dir",
+                    str(input_dir),
+                    "--output-dir",
+                    str(output_dir),
+                ],
+                check=True,
+                capture_output=True,
+                text=True,
+                cwd=ROOT,
+            )
+            self.assertEqual(completed.stderr, "")
+
+            summary_json = json.loads((output_dir / "benchmark_summary.json").read_text(encoding="utf-8"))
+            summary_md = (output_dir / "benchmark_summary.md").read_text(encoding="utf-8")
+
+            self.assertEqual(summary_json["metadata"]["run_date"], "2026-06-18")
+            self.assertEqual(
+                [section["category"] for section in summary_json["sections"]],
+                ["CPU", "CUDA end-to-end", "CUDA kernel-only", "CuPy reference"],
+            )
+            cpu_rows = summary_json["sections"][0]["rows"]
+            self.assertEqual(cpu_rows[0]["speedup_vs_numpy_cpu"], 1.43)
+            self.assertEqual(cpu_rows[1]["status"], "failed")
+            self.assertEqual(cpu_rows[1]["baseline_status"], "ok")
+            self.assertEqual(summary_json["sections"][1]["rows"][0]["speedup_vs_numpy_cpu"], 1.11)
+            self.assertEqual(summary_json["sections"][3]["rows"][0]["speedup_vs_numpy_cpu"], 2.0)
+            self.assertIn("missing", summary_md)
+            self.assertIn("failed", summary_md)
+            self.assertIn("CUDA end-to-end", summary_md)
+            self.assertIn("CUDA kernel-only", summary_md)
+            self.assertIn("CuPy reference", summary_md)
 
 
 if __name__ == "__main__":
