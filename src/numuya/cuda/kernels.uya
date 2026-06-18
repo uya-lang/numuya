@@ -8,6 +8,7 @@ export const ADD_F64_STRIDED_KERNEL: &const byte = "numuya_add_f64_strided" as &
 export const SUB_F64_KERNEL: &const byte = "numuya_sub_f64" as &const byte;
 export const NEG_F64_KERNEL: &const byte = "numuya_neg_f64" as &const byte;
 export const DIV_F64_KERNEL: &const byte = "numuya_div_f64" as &const byte;
+export const MUL_F32_KERNEL: &const byte = "numuya_mul_f32" as &const byte;
 export const MUL_F64_KERNEL: &const byte = "numuya_mul_f64" as &const byte;
 export const SUM_ALL_F32_KERNEL: &const byte = "numuya_sum_all_f32" as &const byte;
 export const SUM_ALL_F32_FINALIZE_KERNEL: &const byte = "numuya_sum_all_f32_finalize" as &const byte;
@@ -34,6 +35,7 @@ fn module_has_required_core_kernels(module: usize) bool {
         && module_has_function(module, SUB_F64_KERNEL)
         && module_has_function(module, NEG_F64_KERNEL)
         && module_has_function(module, DIV_F64_KERNEL)
+        && module_has_function(module, MUL_F32_KERNEL)
         && module_has_function(module, MUL_F64_KERNEL)
         && module_has_function(module, SUM_ALL_F32_KERNEL)
         && module_has_function(module, SUM_ALL_F32_FINALIZE_KERNEL)

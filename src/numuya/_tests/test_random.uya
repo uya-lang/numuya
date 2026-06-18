@@ -14,6 +14,16 @@ fn expect_eq_u64(actual: u64, expected: u64) !void {
     }
 }
 
+fn expect_eq_f32(actual: f32, expected: f32, tolerance: f32) !void {
+    var diff: f32 = actual - expected;
+    if diff < 0.0 {
+        diff = 0.0 - diff;
+    }
+    if diff > tolerance {
+        return error.NumuyaExpectationFailed;
+    }
+}
+
 test "random test file imports random module" {
 }
 
@@ -56,6 +66,25 @@ test "random_f64 returns values in half open interval zero one" {
     }
 }
 
+test "random_f32 returns deterministic values in half open interval zero one" {
+    var rng_a: PCG64 = pcg64_seed(12345, 1);
+    var rng_b: PCG64 = pcg64_seed(12345, 1);
+
+    var i: usize = 0;
+    while i < 100 {
+        const value_a: f32 = random_f32(&rng_a);
+        const value_b: f32 = random_f32(&rng_b);
+        if value_a < 0.0 {
+            return error.NumuyaExpectationFailed;
+        }
+        if value_a >= 1.0 {
+            return error.NumuyaExpectationFailed;
+        }
+        try expect_eq_f32(value_a, value_b, 1e-6);
+        i = i + 1;
+    }
+}
+
 test "random_array_f64 produces array with requested shape and values in range" {
     var malloc_allocator: MallocAllocator = MallocAllocator{};
     var allocator: IAllocator = malloc_allocator;
@@ -72,6 +101,29 @@ test "random_array_f64 produces array with requested shape and values in range" 
     var i: usize = 0;
     while i < 6 {
         const value: f64 = array_value.storage.data[i];
+        if value < 0.0 || value >= 1.0 {
+            return error.NumuyaExpectationFailed;
+        }
+        i = i + 1;
+    }
+}
+
+test "random_array_f32 produces array with requested shape and values in range" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var rng: PCG64 = pcg64_seed(42, 0);
+
+    const array_value: Array<f32> = try random_array_f32(allocator, &rng, shape2(2, 3));
+
+    try expect_eq_usize(array_rank<f32>(&array_value), 2);
+    try expect_eq_usize(array_size<f32>(&array_value), 6);
+    if shape_eq(array_value.shape, shape2(2, 3)) != true {
+        return error.NumuyaExpectationFailed;
+    }
+
+    var i: usize = 0;
+    while i < 6 {
+        const value: f32 = array_value.storage.data[i];
         if value < 0.0 || value >= 1.0 {
             return error.NumuyaExpectationFailed;
         }

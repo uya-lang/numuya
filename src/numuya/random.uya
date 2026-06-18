@@ -9,6 +9,7 @@ use libc.math;
 
 const PCG64_MULTIPLIER: u64 = 6364136223846793005;
 const PCG64_DENOMINATOR: f64 = 18446744073709551616.0;
+const PCG64_F32_SCALE: f32 = 0.000000059604644775390625 as f32;
 const TWO_PI: f64 = 6.283185307179586476925286766559;
 
 export struct PCG64 {
@@ -41,6 +42,11 @@ export fn random_f64(rng: &PCG64) f64 {
     return (value as f64) / PCG64_DENOMINATOR;
 }
 
+export fn random_f32(rng: &PCG64) f32 {
+    const value: u64 = random_u64(rng) >> 40;
+    return (value as f32) * PCG64_F32_SCALE;
+}
+
 export fn random_array_f64(allocator: IAllocator, rng: &PCG64, shape_value: Shape) !Array<f64> {
     var result: Array<f64> = try empty<f64>(allocator, shape_value);
     materialize_storage_release<f64>(&result);
@@ -53,6 +59,26 @@ export fn random_array_f64(allocator: IAllocator, rng: &PCG64, shape_value: Shap
 
     storage_retain<f64>(result.storage);
     return Array<f64>{
+        storage: result.storage,
+        offset: result.offset,
+        shape: result.shape,
+        strides: result.strides,
+        flags: result.flags,
+    };
+}
+
+export fn random_array_f32(allocator: IAllocator, rng: &PCG64, shape_value: Shape) !Array<f32> {
+    var result: Array<f32> = try empty<f32>(allocator, shape_value);
+    materialize_storage_release<f32>(&result);
+
+    var i: usize = 0;
+    while i < result.storage.len {
+        result.storage.data[i] = random_f32(rng);
+        i = i + 1;
+    }
+
+    storage_retain<f32>(result.storage);
+    return Array<f32>{
         storage: result.storage,
         offset: result.offset,
         shape: result.shape,

@@ -269,6 +269,56 @@ END:
     ret;
 }
 
+.visible .entry numuya_mul_f32(
+    .param .u64 numuya_mul_f32_param_0,
+    .param .u64 numuya_mul_f32_param_1,
+    .param .u64 numuya_mul_f32_param_2,
+    .param .u64 numuya_mul_f32_param_3,
+    .param .u64 numuya_mul_f32_param_4,
+    .param .u64 numuya_mul_f32_param_5
+)
+{
+    .reg .u32   r32_0, r32_1, r32_2;
+    .reg .u64   r64_0, r64_1, r64_2, r64_3, r64_4, r64_5, r64_6, r64_7, r64_8;
+    .reg .f32   f32_0, f32_1, f32_2;
+    .reg .pred  p;
+
+    ld.param.u64    r64_0, [numuya_mul_f32_param_0];
+    ld.param.u64    r64_1, [numuya_mul_f32_param_1];
+    ld.param.u64    r64_2, [numuya_mul_f32_param_2];
+    ld.param.u64    r64_3, [numuya_mul_f32_param_3];
+    ld.param.u64    r64_4, [numuya_mul_f32_param_4];
+    ld.param.u64    r64_5, [numuya_mul_f32_param_5];
+
+    mov.u32         r32_0, %tid.x;
+    cvt.u64.u32     r64_6, r32_0;
+    mov.u32         r32_1, %ctaid.x;
+    cvt.u64.u32     r64_7, r32_1;
+    mov.u32         r32_2, %ntid.x;
+    cvt.u64.u32     r64_8, r32_2;
+    mad.lo.u64      r64_6, r64_7, r64_8, r64_6;
+
+    setp.ge.u64     p, r64_6, r64_3;
+    @p bra          MUL_F32_END;
+
+    mul.lo.u64      r64_7, r64_6, r64_4;
+    add.u64         r64_7, r64_1, r64_7;
+    ld.f32          f32_0, [r64_7];
+
+    mul.lo.u64      r64_7, r64_6, r64_5;
+    add.u64         r64_7, r64_2, r64_7;
+    ld.f32          f32_1, [r64_7];
+
+    mul.f32         f32_2, f32_0, f32_1;
+
+    mul.lo.u64      r64_7, r64_6, 4;
+    add.u64         r64_7, r64_0, r64_7;
+    st.f32          [r64_7], f32_2;
+
+MUL_F32_END:
+    ret;
+}
+
 .visible .entry numuya_sub_f64(
     .param .u64 numuya_sub_f64_param_0,
     .param .u64 numuya_sub_f64_param_1,

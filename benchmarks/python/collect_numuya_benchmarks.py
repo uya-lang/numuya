@@ -6,6 +6,8 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
+from _bench_common import BenchSpec, median, percentile, throughput_for
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
@@ -38,16 +40,54 @@ def parse_bench_json_line(line: str) -> dict[str, Any]:
             continue
         key, value = chunk.split("=", 1)
         payload[key] = value
-    return {
+    samples_ns = [int(part) for part in payload.get("samples_ns", "").split(",") if part]
+    has_explicit_samples = bool(samples_ns)
+    repeat = int(payload.get("repeat", payload.get("iterations", len(samples_ns) or "0")))
+    total_ns = int(payload["total_ns"]) if "total_ns" in payload else sum(samples_ns)
+    if not samples_ns and repeat > 0:
+        samples_ns = [total_ns // repeat]
+    ns_per_iter = float(payload.get("ns_per_iter", "0") or 0)
+    if has_explicit_samples:
+        ns_per_iter = median(samples_ns)
+    elif ns_per_iter <= 0 and repeat > 0:
+        ns_per_iter = total_ns / repeat
+    row: dict[str, Any] = {
         "operation": payload["operation"],
         "mode": payload["mode"],
         "metric": payload["metric"],
         "dtype": payload["dtype"],
         "shape": parse_shape(payload["shape"]),
-        "iterations": int(payload["iterations"]),
-        "total_ns": int(payload["total_ns"]),
-        "ns_per_iter": int(payload["total_ns"]) / int(payload["iterations"]),
+        "warmup": int(payload.get("warmup", "0")),
+        "repeat": repeat,
+        "iterations": repeat,
+        "samples_ns": samples_ns,
+        "total_ns": total_ns,
+        "ns_per_iter": ns_per_iter,
     }
+    if "throughput" not in payload and ns_per_iter > 0:
+        spec = BenchSpec(
+            operation=row["operation"],
+            dtype=row["dtype"],
+            shape=tuple(row["shape"]),
+            warmup=row["warmup"],
+            repeat=row["repeat"],
+        )
+        metric, unit, throughput = throughput_for(spec, ns_per_iter)
+        row["metric"] = metric if metric != "latency" else row["metric"]
+        row["unit"] = unit
+        row["throughput"] = throughput
+    for key in ("median", "best", "p95", "throughput"):
+        if key in payload and payload[key] != "":
+            row[key] = float(payload[key])
+    if "median" not in row:
+        row["median"] = median(samples_ns) if has_explicit_samples else ns_per_iter
+    if "best" not in row:
+        row["best"] = min(samples_ns) if has_explicit_samples and samples_ns else ns_per_iter
+    if "p95" not in row:
+        row["p95"] = percentile(samples_ns, 95.0) if has_explicit_samples else ns_per_iter
+    if "unit" in payload:
+        row["unit"] = payload["unit"]
+    return row
 
 
 def main() -> None:

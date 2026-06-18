@@ -6,8 +6,10 @@ use storage;
 use std.mem.allocator.IAllocator;
 
 type F64x4 = @vector(f64, 4);
+type F32x8 = @vector(f32, 8);
 
 const REDUCTIONS_SIMD_F64_LANES: usize = 4;
+const REDUCTIONS_SIMD_F32_LANES: usize = 8;
 
 fn numuya_simd_sum_f64(data: &f64, n: usize) f64 {
     var i: usize = 0;
@@ -18,6 +20,22 @@ fn numuya_simd_sum_f64(data: &f64, n: usize) f64 {
         i = i + REDUCTIONS_SIMD_F64_LANES;
     }
     var total: f64 = @vector.reduce_add(total_vec);
+    while i < n {
+        total = total + data[i];
+        i = i + 1;
+    }
+    return total;
+}
+
+fn numuya_simd_sum_f32(data: &f32, n: usize) f32 {
+    var i: usize = 0;
+    var total_vec: F32x8 = @vector.splat(0.0 as f32);
+    while i + REDUCTIONS_SIMD_F32_LANES <= n {
+        const chunk: F32x8 = @vector.load(&data[i]);
+        total_vec = total_vec + chunk;
+        i = i + REDUCTIONS_SIMD_F32_LANES;
+    }
+    var total: f32 = @vector.reduce_add(total_vec);
     while i < n {
         total = total + data[i];
         i = i + 1;
@@ -185,6 +203,67 @@ export fn sum_all_f64(array_value: &Array<f64>) !f64 {
     if array_is_c_contiguous<f64>(array_value) {
         const base: usize = try offset_as_usize(array_value.offset);
         total = numuya_simd_sum_f64(&array_value.storage.data[base], size);
+    } else {
+        var indices: [usize: NUMUYA_MAX_DIMS] = [0: NUMUYA_MAX_DIMS];
+        var linear: usize = 0;
+        while linear < size {
+            try linear_to_indices(&array_value.shape, linear, indices[0:array_value.shape.rank]);
+            const idx: usize = try physical_index_ref(&array_value.shape, &array_value.strides, array_value.offset, indices[0:array_value.shape.rank]);
+            total = total + array_value.storage.data[idx];
+            linear = linear + 1;
+        }
+    }
+
+    return total;
+}
+
+export fn sum_all_f32_scalar(array_value: &Array<f32>) !f32 {
+    try validate_array<f32>(array_value);
+    const size: usize = try array_size_safe<f32>(array_value);
+
+    var total: f32 = 0.0;
+    if size == 0 {
+        return total;
+    }
+
+    const base: usize = try offset_as_usize(array_value.offset);
+    var i: usize = 0;
+    while i < size {
+        total = total + array_value.storage.data[base + i];
+        i = i + 1;
+    }
+
+    return total;
+}
+
+export fn sum_all_f32_simd(array_value: &Array<f32>) !f32 {
+    try validate_array<f32>(array_value);
+    const size: usize = try array_size_safe<f32>(array_value);
+
+    if size == 0 {
+        return 0.0 as f32;
+    }
+
+    if !array_is_c_contiguous<f32>(array_value) {
+        return error.NumuyaNotContiguous;
+    }
+
+    const base: usize = try offset_as_usize(array_value.offset);
+    return numuya_simd_sum_f32(&array_value.storage.data[base], size);
+}
+
+export fn sum_all_f32(array_value: &Array<f32>) !f32 {
+    try validate_array<f32>(array_value);
+    const size: usize = try array_size_safe<f32>(array_value);
+
+    var total: f32 = 0.0;
+    if size == 0 {
+        return total;
+    }
+
+    if array_is_c_contiguous<f32>(array_value) {
+        const base: usize = try offset_as_usize(array_value.offset);
+        total = numuya_simd_sum_f32(&array_value.storage.data[base], size);
     } else {
         var indices: [usize: NUMUYA_MAX_DIMS] = [0: NUMUYA_MAX_DIMS];
         var linear: usize = 0;

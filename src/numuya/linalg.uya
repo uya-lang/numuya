@@ -7,6 +7,10 @@ use storage;
 
 use std.mem.allocator.IAllocator;
 
+type LinalgF32x4 = @vector(f32, 4);
+
+const LINALG_F32_LANES: usize = 4;
+
 fn require_nonzero_rows_cols(rows: usize, cols: usize) !void {
     if rows == 0 || cols == 0 {
         return error.NumuyaInvalidArgument;
@@ -187,17 +191,126 @@ export fn dot_f64(a: &Array<f64>, b: &Array<f64>) !Array<f64> {
     return Array<f64>{ storage: out_storage, offset: out_offset, shape: out_shape, strides: out_strides, flags: out_flags };
 }
 
-fn require_matmul_args(a: &Array<f64>, b: &Array<f64>) !void {
+fn linalg_offset_as_usize(offset: isize) !usize {
+    if offset < 0 {
+        return error.NumuyaIndexOutOfBounds;
+    }
+    return (offset as! usize).value;
+}
+
+fn matmul_contiguous_impl<T>(a: &Array<T>, b: &Array<T>, zero: T) !Array<T> {
+    const a_rows: usize = a.shape.dims[0];
+    const a_cols: usize = a.shape.dims[1];
+    const b_cols: usize = b.shape.dims[1];
+    const a_base: usize = try linalg_offset_as_usize(a.offset);
+    const b_base: usize = try linalg_offset_as_usize(b.offset);
+
+    var result: Array<T> = try empty<T>(a.storage.allocator, shape2(a_rows, b_cols));
+
+    var idx: usize = 0;
+    while idx < a_rows * b_cols {
+        result.storage.data[idx] = zero;
+        idx = idx + 1;
+    }
+
+    var i: usize = 0;
+    while i < a_rows {
+        const a_row: usize = a_base + i * a_cols;
+        const out_row: usize = i * b_cols;
+        var k: usize = 0;
+        while k < a_cols {
+            const a_value: T = a.storage.data[a_row + k];
+            const b_row: usize = b_base + k * b_cols;
+            var j: usize = 0;
+            while j < b_cols {
+                const out_idx: usize = out_row + j;
+                result.storage.data[out_idx] = result.storage.data[out_idx] + a_value * b.storage.data[b_row + j];
+                j = j + 1;
+            }
+            k = k + 1;
+        }
+        i = i + 1;
+    }
+
+    const out_storage: &Storage<T> = result.storage;
+    const out_offset: isize = result.offset;
+    const out_shape: Shape = result.shape;
+    const out_strides: Strides = result.strides;
+    const out_flags: ArrayFlags = result.flags;
+    result.storage = null;
+    return Array<T>{ storage: out_storage, offset: out_offset, shape: out_shape, strides: out_strides, flags: out_flags };
+}
+
+fn matmul_f32_accumulate_lanes(out_ptr: &f32, b_ptr: &f32, a_value: f32) void {
+    const a_vec: LinalgF32x4 = @vector.splat(a_value);
+    const b_vec: LinalgF32x4 = @vector.load(b_ptr);
+    const out_vec: LinalgF32x4 = @vector.load(out_ptr);
+    @vector.store(out_ptr, out_vec + a_vec * b_vec);
+}
+
+fn matmul_f32_contiguous(a: &Array<f32>, b: &Array<f32>) !Array<f32> {
+    const a_rows: usize = a.shape.dims[0];
+    const a_cols: usize = a.shape.dims[1];
+    const b_cols: usize = b.shape.dims[1];
+    const a_base: usize = try linalg_offset_as_usize(a.offset);
+    const b_base: usize = try linalg_offset_as_usize(b.offset);
+
+    var result: Array<f32> = try empty<f32>(a.storage.allocator, shape2(a_rows, b_cols));
+
+    var idx: usize = 0;
+    while idx < a_rows * b_cols {
+        result.storage.data[idx] = 0.0;
+        idx = idx + 1;
+    }
+
+    var i: usize = 0;
+    while i < a_rows {
+        const a_row: usize = a_base + i * a_cols;
+        const out_row: usize = i * b_cols;
+        var k: usize = 0;
+        while k < a_cols {
+            const a_value: f32 = a.storage.data[a_row + k];
+            const b_row: usize = b_base + k * b_cols;
+            var j: usize = 0;
+            while j + LINALG_F32_LANES <= b_cols {
+                matmul_f32_accumulate_lanes(
+                    (&result.storage.data[out_row + j]) as &f32,
+                    (&b.storage.data[b_row + j]) as &f32,
+                    a_value,
+                );
+                j = j + LINALG_F32_LANES;
+            }
+            while j < b_cols {
+                const out_idx: usize = out_row + j;
+                result.storage.data[out_idx] = result.storage.data[out_idx] + a_value * b.storage.data[b_row + j];
+                j = j + 1;
+            }
+            k = k + 1;
+        }
+        i = i + 1;
+    }
+
+    const out_storage: &Storage<f32> = result.storage;
+    const out_offset: isize = result.offset;
+    const out_shape: Shape = result.shape;
+    const out_strides: Strides = result.strides;
+    const out_flags: ArrayFlags = result.flags;
+    result.storage = null;
+    return Array<f32>{ storage: out_storage, offset: out_offset, shape: out_shape, strides: out_strides, flags: out_flags };
+}
+
+fn matmul_impl<T>(a: &Array<T>, b: &Array<T>, zero: T) !Array<T> {
     if a.shape.rank != 2 || b.shape.rank != 2 {
         return error.NumuyaInvalidArgument;
     }
     if a.shape.dims[1] != b.shape.dims[0] {
         return error.NumuyaShapeMismatch;
     }
-}
 
-fn matmul_impl<T>(a: &Array<T>, b: &Array<T>, zero: T) !Array<T> {
-    try require_matmul_args(a, b);
+    if array_is_c_contiguous<T>(a) && array_is_c_contiguous<T>(b) {
+        return matmul_contiguous_impl<T>(a, b, zero);
+    }
+
     const a_rows: usize = a.shape.dims[0];
     const a_cols: usize = a.shape.dims[1];
     const b_cols: usize = b.shape.dims[1];
@@ -244,6 +357,34 @@ export fn matmul_f64(a: &Array<f64>, b: &Array<f64>) !Array<f64> {
     const out_flags: ArrayFlags = result.flags;
     result.storage = null;
     return Array<f64>{ storage: out_storage, offset: out_offset, shape: out_shape, strides: out_strides, flags: out_flags };
+}
+
+export fn matmul_f32(a: &Array<f32>, b: &Array<f32>) !Array<f32> {
+    if a.shape.rank != 2 || b.shape.rank != 2 {
+        return error.NumuyaInvalidArgument;
+    }
+    if a.shape.dims[1] != b.shape.dims[0] {
+        return error.NumuyaShapeMismatch;
+    }
+    if array_is_c_contiguous<f32>(a) && array_is_c_contiguous<f32>(b) {
+        var fast_result: Array<f32> = try matmul_f32_contiguous(a, b);
+        const fast_out_storage: &Storage<f32> = fast_result.storage;
+        const fast_out_offset: isize = fast_result.offset;
+        const fast_out_shape: Shape = fast_result.shape;
+        const fast_out_strides: Strides = fast_result.strides;
+        const fast_out_flags: ArrayFlags = fast_result.flags;
+        fast_result.storage = null;
+        return Array<f32>{ storage: fast_out_storage, offset: fast_out_offset, shape: fast_out_shape, strides: fast_out_strides, flags: fast_out_flags };
+    }
+
+    var result: Array<f32> = try matmul_impl<f32>(a, b, 0.0);
+    const out_storage: &Storage<f32> = result.storage;
+    const out_offset: isize = result.offset;
+    const out_shape: Shape = result.shape;
+    const out_strides: Strides = result.strides;
+    const out_flags: ArrayFlags = result.flags;
+    result.storage = null;
+    return Array<f32>{ storage: out_storage, offset: out_offset, shape: out_shape, strides: out_strides, flags: out_flags };
 }
 
 fn require_square_matrix(a: &Array<f64>) !void {

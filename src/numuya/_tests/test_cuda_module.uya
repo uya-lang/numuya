@@ -15,6 +15,9 @@ test "kernel name constants are non-empty" {
     if ADD_F64_KERNEL[0] == 0 {
         return error.NumuyaExpectationFailed;
     }
+    if MUL_F32_KERNEL[0] == 0 {
+        return error.NumuyaExpectationFailed;
+    }
     if MUL_F64_KERNEL[0] == 0 {
         return error.NumuyaExpectationFailed;
     }
@@ -61,6 +64,10 @@ test "cuda_kernels_load loads embedded PTX and resolves kernel functions on sm_8
     }
     const mul_func: usize = try cuda_module_get_function(module, MUL_F64_KERNEL);
     if mul_func == 0 {
+        return error.NumuyaExpectationFailed;
+    }
+    const mul_f32_func: usize = try cuda_module_get_function(module, MUL_F32_KERNEL);
+    if mul_f32_func == 0 {
         return error.NumuyaExpectationFailed;
     }
     const sum_func: usize = try cuda_module_get_function(module, SUM_ALL_F64_KERNEL);

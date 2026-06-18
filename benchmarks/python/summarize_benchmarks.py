@@ -5,6 +5,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+from _bench_common import FIXED_SPECS
+
 
 SECTION_ORDER = [
     ("CPU", "cpu"),
@@ -12,6 +14,8 @@ SECTION_ORDER = [
     ("CUDA kernel-only", "kernel-only"),
     ("CuPy reference", "cupy"),
 ]
+
+FIXED_KEYS = [(spec.operation, spec.dtype, tuple(spec.shape)) for spec in FIXED_SPECS]
 
 
 def parse_args() -> argparse.Namespace:
@@ -41,6 +45,17 @@ def round_or_none(value: float | None) -> float | None:
     return round(value, 2)
 
 
+def dedupe_preserve_order(values: list[str]) -> list[str]:
+    seen: set[str] = set()
+    result: list[str] = []
+    for value in values:
+        if value in seen:
+            continue
+        seen.add(value)
+        result.append(value)
+    return result
+
+
 def baseline_status(row: dict[str, Any] | None) -> str:
     if row is None:
         return "missing"
@@ -58,6 +73,10 @@ def row_status(row: dict[str, Any] | None) -> str:
 def extract_latency_ns(row: dict[str, Any] | None) -> float | None:
     if row is None or row.get("status") == "failed":
         return None
+    for key in ("median", "ns_per_iter"):
+        value = row.get(key)
+        if isinstance(value, (int, float)) and value > 0:
+            return float(value)
     value = row.get("ns_per_iter")
     if isinstance(value, (int, float)) and value > 0:
         return float(value)
@@ -80,17 +99,25 @@ def make_row(
     category: str,
     row: dict[str, Any] | None,
     baseline: dict[str, Any] | None,
+    key: tuple[str, str, tuple[int, ...]],
 ) -> dict[str, Any]:
     target = row or {}
+    operation, dtype, shape = key
     return {
         "category": category,
-        "operation": target.get("operation") or (baseline.get("operation") if baseline else ""),
-        "dtype": target.get("dtype") or (baseline.get("dtype") if baseline else ""),
-        "shape": target.get("shape") or (baseline.get("shape") if baseline else []),
+        "operation": target.get("operation") or (baseline.get("operation") if baseline else operation),
+        "dtype": target.get("dtype") or (baseline.get("dtype") if baseline else dtype),
+        "shape": target.get("shape") or (baseline.get("shape") if baseline else list(shape)),
         "status": row_status(row),
         "baseline_status": baseline_status(baseline),
         "total_ns": target.get("total_ns") if row else None,
         "ns_per_iter": target.get("ns_per_iter") if row else None,
+        "warmup": target.get("warmup") if row else None,
+        "repeat": target.get("repeat") or target.get("iterations") if row else None,
+        "median": target.get("median") or target.get("ns_per_iter") if row else None,
+        "best": target.get("best") if row else None,
+        "p95": target.get("p95") if row else None,
+        "samples_ns": target.get("samples_ns") if row else None,
         "metric": target.get("metric", "latency"),
         "unit": target.get("unit", "ns/iter"),
         "throughput": target.get("throughput"),
@@ -103,6 +130,13 @@ def union_keys(*indexes: dict[tuple[str, str, tuple[int, ...]], dict[str, Any]])
     for idx in indexes:
         keys.update(idx.keys())
     return sorted(keys)
+
+
+def fixed_then_extra_keys(current_index: dict[tuple[str, str, tuple[int, ...]], dict[str, Any]]) -> list[tuple[str, str, tuple[int, ...]]]:
+    fixed = list(FIXED_KEYS)
+    fixed_set = set(fixed)
+    extras = sorted(key for key in current_index if key not in fixed_set)
+    return fixed + extras
 
 
 def render_markdown(metadata: dict[str, Any], sections: list[dict[str, Any]]) -> str:
@@ -126,20 +160,21 @@ def render_markdown(metadata: dict[str, Any], sections: list[dict[str, Any]]) ->
         if section["category"] == "CUDA end-to-end":
             lines.append("非同类设备对比，仅作端到端参考。")
         lines.append("")
-        lines.append("| operation | dtype | shape | status | baseline | total_ns | ns_per_iter | throughput | speedup_vs_numpy_cpu |")
-        lines.append("| --- | --- | --- | --- | --- | --- | --- | --- | --- |")
+        lines.append("| operation | dtype | shape | status | baseline | median_ns | best_ns | p95_ns | throughput | speedup_vs_numpy_cpu |")
+        lines.append("| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |")
         for row in section["rows"]:
             shape = "x".join(str(v) for v in row["shape"]) if row["shape"] else "-"
             lines.append(
-                "| {operation} | {dtype} | {shape} | {status} | {baseline_status} | {total_ns} | {ns_per_iter} | {throughput} | {speedup} |".format(
+                "| {operation} | {dtype} | {shape} | {status} | {baseline_status} | {median} | {best} | {p95} | {throughput} | {speedup} |".format(
                     operation=row["operation"] or "-",
                     dtype=row["dtype"] or "-",
                     shape=shape,
                     status=row["status"],
                     baseline_status=row["baseline_status"],
-                    total_ns=row["total_ns"] if row["total_ns"] is not None else row["status"],
-                    ns_per_iter=row["ns_per_iter"] if row["ns_per_iter"] is not None else row["status"],
-                    throughput=row["throughput"] if row["throughput"] is not None else "missing",
+                    median=row["median"] if row["median"] is not None else row["status"],
+                    best=row["best"] if row["best"] is not None else row["status"],
+                    p95=row["p95"] if row["p95"] is not None else row["status"],
+                    throughput=format_throughput(row),
                     speedup=row["speedup_vs_numpy_cpu"] if row["speedup_vs_numpy_cpu"] is not None else row["status"],
                 )
             )
@@ -149,16 +184,20 @@ def render_markdown(metadata: dict[str, Any], sections: list[dict[str, Any]]) ->
 
 def render_report_section(input_dir: Path, metadata: dict[str, Any], sections: list[dict[str, Any]], gpu_reference: dict[str, Any]) -> str:
     sources = metadata.get("sources", {})
+    commands = metadata.get("commands", [])
     lines = [
         "## 第一版 CPU / GPU 对比报告",
         "",
         f"- 原始结果目录：`{input_dir}`",
         f"- benchmark 运行日期：`{metadata.get('run_date', 'unknown')}`",
         f"- NumUya commit：`{metadata.get('numuya_commit', 'unknown')}`",
-        "- 计时口径：CPU 与 `NumPy CPU baseline` 结论来自 wall-clock；`NumUya CUDA kernel-only` 只代表设备端 kernel 时间；当前 `CuPy` 未安装则不生成同机 GPU reference。",
+        "- 计时口径：CPU 与 `NumPy CPU baseline` 结论来自 wall-clock median；`NumUya CUDA end-to-end` 逐 workload 计入传输与计算；`NumUya CUDA kernel-only` 只代表设备端 kernel 时间。",
         "- 说明：NumPy 无 GPU backend，因此 GPU 主表只比较 `NumUya CUDA end-to-end` 与 `NumPy CPU baseline`；`NumUya CUDA kernel-only` 单列报告，不伪造 `NumPy GPU` 数据。",
         "",
     ]
+    if commands:
+        lines.append(f"- 具体命令行：`{commands[0]}`")
+        lines.append("")
     if sources:
         lines.append("### 原始 JSON / 文本来源")
         lines.append("")
@@ -171,21 +210,71 @@ def render_report_section(input_dir: Path, metadata: dict[str, Any], sections: l
             lines.append("")
             lines.append("非同类设备对比，仅作端到端参考。")
         lines.append("")
-        lines.append("| operation | dtype | shape | status | ns_per_iter | throughput | speedup_vs_numpy_cpu |")
-        lines.append("| --- | --- | --- | --- | --- | --- | --- |")
+        lines.append("| operation | dtype | shape | status | median_ns | best_ns | p95_ns | throughput | speedup_vs_numpy_cpu |")
+        lines.append("| --- | --- | --- | --- | --- | --- | --- | --- | --- |")
         for row in section["rows"]:
             shape = "x".join(str(v) for v in row["shape"]) if row["shape"] else "-"
             lines.append(
                 f"| {row['operation'] or '-'} | {row['dtype'] or '-'} | {shape} | {row['status']} | "
-                f"{row['ns_per_iter'] if row['ns_per_iter'] is not None else 'missing'} | "
-                f"{row['throughput'] if row['throughput'] is not None else 'missing'} | "
+                f"{row['median'] if row['median'] is not None else 'missing'} | "
+                f"{row['best'] if row['best'] is not None else 'missing'} | "
+                f"{row['p95'] if row['p95'] is not None else 'missing'} | "
+                f"{format_throughput(row)} | "
                 f"{row['speedup_vs_numpy_cpu'] if row['speedup_vs_numpy_cpu'] is not None else 'missing'} |"
             )
         lines.append("")
     if not gpu_reference.get("available", False):
-        lines.append(f"- CuPy reference：不可用（{gpu_reference.get('reason', 'unknown')}）。")
+        hint = gpu_reference.get("install_hint")
+        suffix = f"；安装提示：`{hint}`" if hint else ""
+        lines.append(f"- CuPy reference：不可用（{gpu_reference.get('reason', 'unknown')}{suffix}）。")
+    else:
+        lines.append(f"- CuPy reference：可用（{gpu_reference.get('device_name', 'unknown device')}）。")
+    lines.append("")
+    lines.extend(render_lagging_notes(sections))
     lines.append("")
     return "\n".join(lines)
+
+
+def lagging_rows(section: dict[str, Any]) -> list[dict[str, Any]]:
+    return [
+        row
+        for row in section.get("rows", [])
+        if isinstance(row.get("speedup_vs_numpy_cpu"), (int, float))
+        and row.get("speedup_vs_numpy_cpu") < 1.0
+    ]
+
+
+def find_section(sections: list[dict[str, Any]], category: str) -> dict[str, Any]:
+    for section in sections:
+        if section.get("category") == category:
+            return section
+    return {"category": category, "rows": []}
+
+
+def render_lagging_notes(sections: list[dict[str, Any]]) -> list[str]:
+    cpu_lag = lagging_rows(find_section(sections, "CPU"))
+    e2e_lag = lagging_rows(find_section(sections, "CUDA end-to-end"))
+    kernel_lag = lagging_rows(find_section(sections, "CUDA kernel-only"))
+    cupy_lag = lagging_rows(find_section(sections, "CuPy reference"))
+
+    return [
+        "### 未追平项说明",
+        "",
+        f"- 固定矩阵完整性：四个对比类别均按固定矩阵渲染，缺项会显示为 `missing`；本次 CPU 未追平 {len(cpu_lag)} 行，CUDA end-to-end 未追平 {len(e2e_lag)} 行，CUDA kernel-only 未追平 {len(kernel_lag)} 行，CuPy reference 未追平 {len(cupy_lag)} 行。",
+        "- CPU：`matmul float32` 仍是最大差距，当前实现是不依赖 BLAS/LAPACK 的纯 Uya contiguous fast path，不能与 NumPy/OpenBLAS 的成熟 GEMM 微内核直接追平；大数组 `add/mul` 仍是内存带宽与分配路径限制，`random float32 1e7` 已改为直接 f32 生成但仍低于 NumPy。",
+        "- CUDA end-to-end：小数据 `1e4` 和部分 `1e6` 行主要受 H2D、kernel launch、D2H 固定开销限制；同机 CuPy reference 的 `1e4` 行也低于 NumPy CPU，说明这类行不能用 kernel-only 吞吐冒充端到端追平。",
+        "- CUDA kernel-only：大多数固定矩阵行已超过 NumPy CPU；仍落后的 `sum float32/float64 1e4` 是小规模 reduction launch/同步开销，不代表大规模设备端吞吐。",
+    ]
+
+
+def format_throughput(row: dict[str, Any]) -> str:
+    value = row.get("throughput")
+    if value is None:
+        return "missing"
+    unit = row.get("unit", "")
+    if isinstance(value, (int, float)):
+        return f"{float(value):.3f} {unit}".strip()
+    return str(value)
 
 
 def write_report_doc(doc_path: Path, input_dir: Path, metadata: dict[str, Any], sections: list[dict[str, Any]], gpu_reference: dict[str, Any]) -> None:
@@ -226,10 +315,7 @@ def main() -> None:
             current_index = cuda_kernel_index
         else:
             current_index = cupy_index
-        rows = [
-            make_row(category, current_index.get(key), numpy_index.get(key))
-            for key in union_keys(current_index, numpy_index)
-        ]
+        rows = [make_row(category, current_index.get(key), numpy_index.get(key), key) for key in fixed_then_extra_keys(current_index)]
         sections.append({"category": category, "rows": rows})
 
     metadata = {
@@ -242,16 +328,18 @@ def main() -> None:
         or numuya_cuda.get("metadata", {}).get("numuya_commit")
         or numpy_cpu.get("metadata", {}).get("numuya_commit")
         or "unknown",
-        "commands": [
-            value
-            for value in [
-                numpy_cpu.get("metadata", {}).get("command"),
-                gpu_reference.get("metadata", {}).get("command"),
-                numuya_cpu.get("metadata", {}).get("command"),
-                numuya_cuda.get("metadata", {}).get("command"),
+        "commands": dedupe_preserve_order(
+            [
+                value
+                for value in [
+                    numpy_cpu.get("metadata", {}).get("command"),
+                    gpu_reference.get("metadata", {}).get("command"),
+                    numuya_cpu.get("metadata", {}).get("command"),
+                    numuya_cuda.get("metadata", {}).get("command"),
+                ]
+                if value
             ]
-            if value
-        ],
+        ),
         "sources": {
             "numpy_cpu_json": str((input_dir / "numpy_cpu.json").resolve()),
             "gpu_reference_json": str((input_dir / "gpu_reference.json").resolve()),

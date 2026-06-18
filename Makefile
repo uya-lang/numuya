@@ -9,8 +9,12 @@ BENCH ?= src/numuya/_benchmarks/bench_simd.uya
 BENCHES := $(sort $(wildcard src/numuya/_benchmarks/bench_*.uya))
 BENCH_RESULTS_DIR ?= benchmarks/results/$(shell date +%F)
 BENCH_REPORT_DOC ?= docs/benchmarks/numpy_comparison.md
+BENCH_UYA_FLAGS ?= --opt=3
+BENCH_HOST_CFLAGS ?= -std=c99 -O2 -fno-builtin
+BENCH_PYTHON ?= python3
+BENCH_VENV ?= .bench-venv
 
-.PHONY: bootstrap-upm upm-install test-one test test-cuda test-cuda-vendor check-one check-cpu-core-deps verify-upm-consumer require-upm bench bench-numpy-cpu bench-numpy-gpu-ref bench-compare bench-report bench-spotcheck bench-spotcheck-gpu bench-guardrails-cpu bench-guardrails-gpu bench-guardrails-gpu-vendor cuda-ptx-embed cuda-cubin-embed cuda-ptx-validate
+.PHONY: bootstrap-upm upm-install test-one test test-cuda test-cuda-vendor check-one check-cpu-core-deps verify-upm-consumer require-upm bench bench-python-env bench-numpy-cpu bench-numpy-gpu-ref bench-compare bench-report bench-spotcheck bench-spotcheck-gpu bench-guardrails-cpu bench-guardrails-gpu bench-guardrails-gpu-vendor cuda-ptx-embed cuda-cubin-embed cuda-ptx-validate
 
 require-upm:
 	@test -x "$(UPM)" || { echo "missing executable $(UPM)"; exit 1; }
@@ -84,21 +88,26 @@ check-cpu-core-deps:
 bench: require-upm
 	@test -n "$(BENCHES)" || { echo "no benchmark files found"; exit 1; }
 	@for bench in $(BENCHES); do \
-		echo "$(UYA) run $$bench --manifest-path $(MANIFEST)"; \
-		$(UYA) run "$$bench" --manifest-path $(MANIFEST) || exit $$?; \
+		echo "CFLAGS=\"$(BENCH_HOST_CFLAGS)\" $(UYA) run $$bench --manifest-path $(MANIFEST) $(BENCH_UYA_FLAGS)"; \
+		CFLAGS="$(BENCH_HOST_CFLAGS)" $(UYA) run "$$bench" --manifest-path $(MANIFEST) $(BENCH_UYA_FLAGS) || exit $$?; \
 	done
 
 bench-numpy-cpu:
-	python benchmarks/python/bench_numpy_cpu.py
+	$(BENCH_PYTHON) benchmarks/python/bench_numpy_cpu.py
 
 bench-numpy-gpu-ref:
-	python benchmarks/python/bench_gpu_reference.py
+	$(BENCH_PYTHON) benchmarks/python/bench_gpu_reference.py
+
+bench-python-env:
+	python3 -m venv $(BENCH_VENV)
+	$(BENCH_VENV)/bin/python -m pip install --upgrade pip
+	$(BENCH_VENV)/bin/python -m pip install "numpy>=2" "cupy-cuda13x[ctk]"
 
 bench-spotcheck: require-upm
-	python benchmarks/python/spotcheck_benchmarks.py --json
+	$(BENCH_PYTHON) benchmarks/python/spotcheck_benchmarks.py --json
 
 bench-spotcheck-gpu: require-upm
-	python benchmarks/python/spotcheck_benchmarks.py --json
+	$(BENCH_PYTHON) benchmarks/python/spotcheck_benchmarks.py --json
 
 bench-guardrails-cpu: test bench-spotcheck
 
@@ -109,7 +118,7 @@ bench-guardrails-gpu-vendor: test-cuda-vendor bench-spotcheck-gpu
 bench-compare: bench bench-numpy-cpu bench-numpy-gpu-ref
 
 bench-report:
-	python benchmarks/python/summarize_benchmarks.py --input-dir $(BENCH_RESULTS_DIR) --output-dir $(BENCH_RESULTS_DIR) --doc-path $(BENCH_REPORT_DOC)
+	$(BENCH_PYTHON) benchmarks/python/summarize_benchmarks.py --input-dir $(BENCH_RESULTS_DIR) --output-dir $(BENCH_RESULTS_DIR) --doc-path $(BENCH_REPORT_DOC)
 
 verify-upm-consumer: require-upm
 	$(UPM) install --manifest-path $(CONSUMER_MANIFEST)

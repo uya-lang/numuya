@@ -13,6 +13,16 @@ use ufunc;
 use std.mem.allocator.IAllocator;
 use std.mem.allocator.MallocAllocator;
 
+fn expect_eq_f32(actual: f32, expected: f32, tolerance: f32) !void {
+    var diff: f32 = actual - expected;
+    if diff < 0.0 {
+        diff = 0.0 - diff;
+    }
+    if diff > tolerance {
+        return error.NumuyaExpectationFailed;
+    }
+}
+
 test "ufunc test file imports ufunc module" {
 }
 
@@ -61,6 +71,38 @@ test "mul_f64 computes element-wise product for same shape" {
     try expect_close_f64(try get1<f64>(&result, 0), 10.0, 1e-12);
     try expect_close_f64(try get1<f64>(&result, 1), 18.0, 1e-12);
     try expect_close_f64(try get1<f64>(&result, 2), 28.0, 1e-12);
+}
+
+test "add_f32 computes element-wise sum for same shape" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var left_data: [f32: 3] = [1.0, 2.0, 3.0];
+    var right_data: [f32: 3] = [4.0, 5.0, 6.0];
+    var left: Array<f32> = try from_slice<f32>(allocator, left_data[0:3], shape1(3));
+    var right: Array<f32> = try from_slice<f32>(allocator, right_data[0:3], shape1(3));
+
+    var result: Array<f32> = try add_f32(&left, &right);
+
+    try expect_eq_usize(result.shape.rank, 1);
+    try expect_eq_usize(result.shape.dims[0], 3);
+    try expect_eq_f32(try get1<f32>(&result, 0), 5.0, 1e-6);
+    try expect_eq_f32(try get1<f32>(&result, 1), 7.0, 1e-6);
+    try expect_eq_f32(try get1<f32>(&result, 2), 9.0, 1e-6);
+}
+
+test "mul_f32 computes element-wise product for same shape" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var left_data: [f32: 3] = [2.0, 3.0, 4.0];
+    var right_data: [f32: 3] = [5.0, 6.0, 7.0];
+    var left: Array<f32> = try from_slice<f32>(allocator, left_data[0:3], shape1(3));
+    var right: Array<f32> = try from_slice<f32>(allocator, right_data[0:3], shape1(3));
+
+    var result: Array<f32> = try mul_f32(&left, &right);
+
+    try expect_eq_f32(try get1<f32>(&result, 0), 10.0, 1e-6);
+    try expect_eq_f32(try get1<f32>(&result, 1), 18.0, 1e-6);
+    try expect_eq_f32(try get1<f32>(&result, 2), 28.0, 1e-6);
 }
 
 test "div_f64 computes element-wise quotient for same shape" {
@@ -189,6 +231,27 @@ test "add_f64 handles non-contiguous transpose input" {
     try expect_close_f64(try get2<f64>(&result, 1, 1), 6.0, 1e-12);
     try expect_close_f64(try get2<f64>(&result, 2, 0), 4.0, 1e-12);
     try expect_close_f64(try get2<f64>(&result, 2, 1), 7.0, 1e-12);
+}
+
+test "add_f32 handles non-contiguous transpose input" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var source: [f32: 6] = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
+    var original: Array<f32> = try from_slice<f32>(allocator, source[0:6], shape2(2, 3));
+    var transposed: Array<f32> = try transpose<f32>(&original);
+    var other: Array<f32> = try full<f32>(allocator, shape2(3, 2), 1.0);
+
+    var result: Array<f32> = try add_f32(&transposed, &other);
+
+    try expect_eq_usize(result.shape.rank, 2);
+    try expect_eq_usize(result.shape.dims[0], 3);
+    try expect_eq_usize(result.shape.dims[1], 2);
+    try expect_eq_f32(try get2<f32>(&result, 0, 0), 2.0, 1e-6);
+    try expect_eq_f32(try get2<f32>(&result, 0, 1), 5.0, 1e-6);
+    try expect_eq_f32(try get2<f32>(&result, 1, 0), 3.0, 1e-6);
+    try expect_eq_f32(try get2<f32>(&result, 1, 1), 6.0, 1e-6);
+    try expect_eq_f32(try get2<f32>(&result, 2, 0), 4.0, 1e-6);
+    try expect_eq_f32(try get2<f32>(&result, 2, 1), 7.0, 1e-6);
 }
 
 test "add_f64 output is a new owner independent of inputs" {

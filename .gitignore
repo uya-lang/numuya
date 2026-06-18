@@ -1,2 +1,5 @@
 .uyacache/
 src/numuya/cuda/ptx/*.cubin
+.bench-venv/
+__pycache__/
+**/__pycache__/

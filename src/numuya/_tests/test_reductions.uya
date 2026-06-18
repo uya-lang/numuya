@@ -10,6 +10,16 @@ use testing.expect_eq_usize;
 use std.mem.allocator.IAllocator;
 use std.mem.allocator.MallocAllocator;
 
+fn expect_eq_f32(actual: f32, expected: f32, tolerance: f32) !void {
+    var diff: f32 = actual - expected;
+    if diff < 0.0 {
+        diff = 0.0 - diff;
+    }
+    if diff > tolerance {
+        return error.NumuyaExpectationFailed;
+    }
+}
+
 test "reductions test file imports reductions module" {
 }
 
@@ -44,6 +54,29 @@ test "sum_all_f64 handles non-contiguous transpose view" {
     const result: f64 = try sum_all_f64(&transposed);
 
     try expect_close_f64(result, 21.0, 1e-12);
+}
+
+test "sum_all_f32 reduces a rank-2 array to total" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var source: [f32: 6] = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
+    var a: Array<f32> = try from_slice<f32>(allocator, source[0:6], shape2(2, 3));
+
+    const result: f32 = try sum_all_f32(&a);
+
+    try expect_eq_f32(result, 21.0, 1e-5);
+}
+
+test "sum_all_f32 handles non-contiguous transpose view" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var source: [f32: 6] = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
+    var original: Array<f32> = try from_slice<f32>(allocator, source[0:6], shape2(2, 3));
+    var transposed: Array<f32> = try transpose<f32>(&original);
+
+    const result: f32 = try sum_all_f32(&transposed);
+
+    try expect_eq_f32(result, 21.0, 1e-5);
 }
 
 test "prod_all_f64 reduces a rank-2 array to total product" {

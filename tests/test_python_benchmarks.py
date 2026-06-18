@@ -7,13 +7,21 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
+FIXED_MATRIX_ROWS = 23
+
+
+def find_row(rows: list[dict], operation: str, dtype: str, shape: list[int]) -> dict:
+    for row in rows:
+        if row["operation"] == operation and row["dtype"] == dtype and row["shape"] == shape:
+            return row
+    raise AssertionError(f"row not found: {operation} {dtype} {shape}")
 
 
 class PythonBenchmarkScriptsTest(unittest.TestCase):
     def run_script(self, relative_path: str) -> dict:
         script_path = ROOT / relative_path
         completed = subprocess.run(
-            [sys.executable, str(script_path), "--json"],
+            [sys.executable, str(script_path), "--json", "--quick"],
             check=True,
             capture_output=True,
             text=True,
@@ -35,24 +43,49 @@ class PythonBenchmarkScriptsTest(unittest.TestCase):
         payload = self.run_script("benchmarks/python/bench_numpy_cpu.py")
         self.assertEqual(payload["benchmark"], "numpy_cpu")
         self.assert_common_metadata(payload)
-        self.assertEqual(
-            sorted(case["operation"] for case in payload["results"]),
-            ["add", "matmul", "mul", "random", "sum"],
-        )
+        self.assertEqual(len(payload["results"]), FIXED_MATRIX_ROWS)
+        self.assertEqual({case["operation"] for case in payload["results"]}, {"add", "mul", "sum", "matmul", "random"})
+        add_f32 = find_row(payload["results"], "add", "float32", [8])
+        self.assertEqual(add_f32["warmup"], 0)
+        self.assertEqual(add_f32["repeat"], 1)
+        self.assertEqual(len(add_f32["samples_ns"]), 1)
+        self.assertIn("median", add_f32)
+        self.assertIn("best", add_f32)
+        self.assertIn("p95", add_f32)
+
+    def test_benchmark_common_declares_fixed_phase24_matrix(self) -> None:
+        sys.path.insert(0, str(ROOT / "benchmarks/python"))
+        try:
+            from _bench_common import FIXED_SPECS
+        finally:
+            sys.path.pop(0)
+        self.assertEqual(len(FIXED_SPECS), FIXED_MATRIX_ROWS)
+        self.assertIn(("add", "float32", (10_000,)), [(s.operation, s.dtype, s.shape) for s in FIXED_SPECS])
+        self.assertIn(("sum", "float64", (10_000_000,)), [(s.operation, s.dtype, s.shape) for s in FIXED_SPECS])
+        self.assertIn(("matmul", "float32", (2048, 2048)), [(s.operation, s.dtype, s.shape) for s in FIXED_SPECS])
+        self.assertIn(("random", "float32", (10_000_000,)), [(s.operation, s.dtype, s.shape) for s in FIXED_SPECS])
 
     def test_gpu_reference_benchmark_outputs_numpy_baseline(self) -> None:
         payload = self.run_script("benchmarks/python/bench_gpu_reference.py")
         self.assertEqual(payload["benchmark"], "gpu_reference")
         self.assert_common_metadata(payload)
         self.assertIn("numpy_cpu_baseline", payload)
+        self.assertEqual(len(payload["numpy_cpu_baseline"]), FIXED_MATRIX_ROWS)
         self.assertIsInstance(payload["gpu_reference"], dict)
+        if not payload["gpu_reference"].get("available", False):
+            self.assertIn("cupy-cuda13x", payload["gpu_reference"].get("install_hint", ""))
 
     def test_bench_simd_declares_cpu_scope_aligned_with_numpy(self) -> None:
         source = (ROOT / "src/numuya/_benchmarks/bench_simd.uya").read_text(encoding="utf-8")
-        self.assertIn("Scope: add/mul/sum only; matmul/random remain Python-only in this round.", source)
+        self.assertIn("Scope: fixed Phase 24 CPU matrix", source)
         self.assertRegex(source, r'print_result\("add_f64"')
+        self.assertRegex(source, r'print_result\("add_f32"')
         self.assertRegex(source, r'print_result\("mul_f64"')
+        self.assertRegex(source, r'print_result\("mul_f32"')
         self.assertRegex(source, r'print_result\("sum_all_f64"')
+        self.assertRegex(source, r'print_result\("sum_all_f32"')
+        self.assertRegex(source, r'print_result\("matmul_f32"')
+        self.assertRegex(source, r'print_result\("random_f32"')
 
     def test_bench_cuda_emits_machine_readable_modes(self) -> None:
         source = (ROOT / "src/numuya/_benchmarks/bench_cuda.uya").read_text(encoding="utf-8")
@@ -60,12 +93,51 @@ class PythonBenchmarkScriptsTest(unittest.TestCase):
         self.assertIn("mode=kernel-only", source)
         self.assertIn("mode=end-to-end", source)
         self.assertIn("fn print_json_result(", source)
+        self.assertIn("gpu_mul_f32", source)
+
+    def test_numuya_raw_collect_fills_aggregate_statistics(self) -> None:
+        sys.path.insert(0, str(ROOT / "benchmarks/python"))
+        try:
+            from collect_numuya_benchmarks import parse_bench_json_line
+        finally:
+            sys.path.pop(0)
+
+        row = parse_bench_json_line(
+            "BENCH_JSON|operation=add|mode=cpu|metric=latency|dtype=float32|shape=10000|"
+            "warmup=1|repeat=4|iterations=4|total_ns=1000|ns_per_iter=250.0"
+        )
+
+        self.assertEqual(row["samples_ns"], [250])
+        self.assertEqual(row["median"], 250.0)
+        self.assertEqual(row["best"], 250.0)
+        self.assertEqual(row["p95"], 250.0)
+        self.assertIn("throughput", row)
+
+    def test_numuya_raw_collect_uses_explicit_sample_median(self) -> None:
+        sys.path.insert(0, str(ROOT / "benchmarks/python"))
+        try:
+            from collect_numuya_benchmarks import parse_bench_json_line
+        finally:
+            sys.path.pop(0)
+
+        row = parse_bench_json_line(
+            "BENCH_JSON|operation=add|mode=cpu|metric=latency|dtype=float32|shape=10000|"
+            "warmup=5|repeat=4|iterations=4|total_ns=1000|samples_ns=400,100,300,200"
+        )
+
+        self.assertEqual(row["samples_ns"], [400, 100, 300, 200])
+        self.assertEqual(row["ns_per_iter"], 250.0)
+        self.assertEqual(row["median"], 250.0)
+        self.assertEqual(row["best"], 100)
+        self.assertEqual(row["p95"], 400.0)
 
     def test_makefile_exposes_numpy_comparison_targets(self) -> None:
         makefile = (ROOT / "Makefile").read_text(encoding="utf-8")
+        self.assertRegex(makefile, r"(?m)^bench-python-env:")
         self.assertRegex(makefile, r"(?m)^bench-numpy-cpu:")
         self.assertRegex(makefile, r"(?m)^bench-numpy-gpu-ref:")
         self.assertRegex(makefile, r"(?m)^bench-compare:")
+        self.assertIn("BENCH_PYTHON", makefile)
 
     def test_makefile_exposes_benchmark_guardrail_targets(self) -> None:
         makefile = (ROOT / "Makefile").read_text(encoding="utf-8")
@@ -347,15 +419,25 @@ class PythonBenchmarkScriptsTest(unittest.TestCase):
                 ["CPU", "CUDA end-to-end", "CUDA kernel-only", "CuPy reference"],
             )
             cpu_rows = summary_json["sections"][0]["rows"]
-            self.assertEqual(cpu_rows[0]["speedup_vs_numpy_cpu"], 1.43)
-            self.assertEqual(cpu_rows[1]["status"], "failed")
-            self.assertEqual(cpu_rows[1]["baseline_status"], "ok")
-            self.assertEqual(summary_json["sections"][1]["rows"][0]["speedup_vs_numpy_cpu"], 1.11)
-            self.assertEqual(summary_json["sections"][3]["rows"][0]["speedup_vs_numpy_cpu"], 2.0)
+            self.assertGreaterEqual(len(cpu_rows), FIXED_MATRIX_ROWS)
+            add_cpu = find_row(cpu_rows, "add", "float64", [1000000])
+            sum_cpu = find_row(cpu_rows, "sum", "float64", [1000000])
+            add_e2e = find_row(summary_json["sections"][1]["rows"], "add", "float64", [1000000])
+            add_cupy = find_row(summary_json["sections"][3]["rows"], "add", "float64", [1000000])
+            missing_fixed = find_row(cpu_rows, "add", "float32", [10000])
+            self.assertEqual(add_cpu["speedup_vs_numpy_cpu"], 1.43)
+            self.assertEqual(sum_cpu["status"], "failed")
+            self.assertEqual(sum_cpu["baseline_status"], "ok")
+            self.assertEqual(add_e2e["speedup_vs_numpy_cpu"], 1.11)
+            self.assertEqual(add_cupy["speedup_vs_numpy_cpu"], 2.0)
+            self.assertEqual(missing_fixed["status"], "missing")
             self.assertIn(
                 "transfer_h2d",
                 [row["operation"] for row in summary_json["sections"][1]["rows"]],
             )
+            self.assertIn("median", add_cpu)
+            self.assertIn("best", add_cpu)
+            self.assertIn("p95", add_cpu)
             self.assertIn("missing", summary_md)
             self.assertIn("failed", summary_md)
             self.assertIn("CUDA end-to-end", summary_md)

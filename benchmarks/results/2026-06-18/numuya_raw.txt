@@ -1,5 +1,5 @@
-../uya/bin/uya run src/numuya/_benchmarks/bench_cuda.uya --manifest-path uya.toml
-[optimize] optimize_program called (level 1)
+CFLAGS="-std=c99 -O2 -fno-builtin" ../uya/bin/uya run src/numuya/_benchmarks/bench_cuda.uya --manifest-path uya.toml --opt=3
+[optimize] optimize_program called (level 3)
 [optimize] running constant_folding_pass
 [optimize] constant folded: expression -> 1048576
 [optimize] constant folded: expression -> 67108864
@@ -11,6 +11,1452 @@
 [optimize] constant folded: expression -> 49
 [optimize] constant folded: expression -> 392
 [optimize] running dead_code_elimination_pass
+[optimize] running proof_optimization_pass
+[optimize] running inline_pass
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_newline
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_newline
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_driver_version
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_newline
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: cublaslt_is_available
+[optimize] inlined function: cublaslt_load
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: curand_is_available
+[optimize] inlined function: curand_load
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_newline
+[optimize] inlined function: write_str
+[optimize] inlined function: compute_bandwidth
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_newline
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: monotonic_ns
+[optimize] inlined function: monotonic_ns
+[optimize] inlined function: monotonic_ns
+[optimize] inlined function: monotonic_ns
+[optimize] inlined function: monotonic_ns
+[optimize] inlined function: monotonic_ns
+[optimize] inlined function: monotonic_ns
+[optimize] inlined function: monotonic_ns
+[optimize] inlined function: monotonic_ns
+[optimize] inlined function: monotonic_ns
+[optimize] inlined function: monotonic_ns
+[optimize] inlined function: monotonic_ns
+[optimize] inlined function: monotonic_ns
+[optimize] inlined function: monotonic_ns
+[optimize] inlined function: monotonic_ns
+[optimize] inlined function: monotonic_ns
+[optimize] inlined function: monotonic_ns
+[optimize] inlined function: monotonic_ns
+[optimize] inlined function: monotonic_ns
+[optimize] inlined function: monotonic_ns
+[optimize] inlined function: monotonic_ns
+[optimize] inlined function: monotonic_ns
+[optimize] inlined function: monotonic_ns
+[optimize] inlined function: monotonic_ns
+[optimize] inlined function: monotonic_ns
+[optimize] inlined function: monotonic_ns
+[optimize] inlined function: monotonic_ns
+[optimize] inlined function: monotonic_ns
+[optimize] inlined function: monotonic_ns
+[optimize] inlined function: monotonic_ns
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: repeat_for_elements
+[optimize] inlined function: print_json_result
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_newline
+[optimize] inlined function: write_str
+[optimize] inlined function: print_json_result
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_newline
+[optimize] inlined function: write_str
+[optimize] inlined function: print_json_result
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_newline
+[optimize] inlined function: write_str
+[optimize] inlined function: print_json_result
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_newline
+[optimize] inlined function: write_str
+[optimize] inlined function: print_json_result
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_newline
+[optimize] inlined function: write_str
+[optimize] inlined function: print_json_result
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_newline
+[optimize] inlined function: write_str
+[optimize] inlined function: print_json_result
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_newline
+[optimize] inlined function: write_str
+[optimize] inlined function: print_json_result
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_newline
+[optimize] inlined function: write_str
+[optimize] inlined function: print_json_result
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_newline
+[optimize] inlined function: write_str
+[optimize] inlined function: print_json_result
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_newline
+[optimize] inlined function: write_str
+[optimize] inlined function: print_json_result
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_newline
+[optimize] inlined function: write_str
+[optimize] inlined function: print_json_result
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_newline
+[optimize] inlined function: write_str
+[optimize] inlined function: print_json_result
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_newline
+[optimize] inlined function: write_str
+[optimize] inlined function: print_json_result
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_newline
+[optimize] inlined function: write_str
+[optimize] inlined function: repeat_for_elements
+[optimize] inlined function: print_json_result
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_newline
+[optimize] inlined function: write_str
+[optimize] inlined function: print_json_result
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_newline
+[optimize] inlined function: write_str
+[optimize] inlined function: write_newline
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: backend_is_cuda_available
+[optimize] inlined function: write_str
+[optimize] inlined function: memory_pool_new
+[optimize] inlined function: print_header
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_device_info
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_newline
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_newline
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_driver_version
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_newline
+[optimize] inlined function: write_str
+[optimize] inlined function: write_backend_path
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: cublaslt_is_available
+[optimize] inlined function: cublaslt_load
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: curand_is_available
+[optimize] inlined function: curand_load
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_newline
+[optimize] inlined function: write_str
+[optimize] inlined function: write_newline
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_newline
+[optimize] inlined function: write_str
+[optimize] inlined function: write_newline
+[optimize] inlined function: write_str
+[optimize] inlined function: print_bandwidth_result
+[optimize] inlined function: compute_bandwidth
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: print_json_result
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_newline
+[optimize] inlined function: write_str
+[optimize] inlined function: check_bandwidth
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: print_bandwidth_result
+[optimize] inlined function: compute_bandwidth
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: print_json_result
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_newline
+[optimize] inlined function: write_str
+[optimize] inlined function: check_bandwidth
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: print_add_bandwidth_result
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: print_json_result
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_newline
+[optimize] inlined function: write_str
+[optimize] inlined function: print_json_result
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_newline
+[optimize] inlined function: write_str
+[optimize] inlined function: check_bandwidth
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: print_add_bandwidth_result
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: print_json_result
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_newline
+[optimize] inlined function: write_str
+[optimize] inlined function: print_json_result
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_newline
+[optimize] inlined function: write_str
+[optimize] inlined function: check_bandwidth
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_newline
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: print_matmul_result
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: print_json_result
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_newline
+[optimize] inlined function: write_str
+[optimize] inlined function: check_tflops
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: print_matmul_result
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: print_json_result
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_newline
+[optimize] inlined function: write_str
+[optimize] inlined function: cublaslt_is_available
+[optimize] inlined function: cublaslt_load
+[optimize] inlined function: print_json_result
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_newline
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: print_sum_bandwidth_result
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: print_json_result
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_newline
+[optimize] inlined function: write_str
+[optimize] inlined function: print_json_result
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_newline
+[optimize] inlined function: write_str
+[optimize] inlined function: check_bandwidth
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: print_sum_bandwidth_result
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: print_json_result
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_newline
+[optimize] inlined function: write_str
+[optimize] inlined function: print_json_result
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_newline
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: print_sum_bandwidth_result
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: print_json_result
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_newline
+[optimize] inlined function: write_str
+[optimize] inlined function: check_bandwidth
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_newline
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: cublaslt_is_available
+[optimize] inlined function: cublaslt_load
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: set_process_stack_limit_bytes
+[optimize] inlined function: backend_default_config
+[optimize] inlined function: backend_init_with_config
+[optimize] inlined function: cublaslt_load
+[optimize] inlined function: cublaslt_load
+[optimize] inlined function: cublaslt_load
+[optimize] inlined function: cublaslt_load
+[optimize] inlined function: call_cuInit
+[optimize] inlined function: call_cuDeviceGet
+[optimize] inlined function: call_cuCtxCreate
+[optimize] inlined function: call_cuCtxSetCurrent
+[optimize] inlined function: call_cuDeviceGet
+[optimize] inlined function: call_cuDeviceGet
+[optimize] inlined function: call_cuDriverGetVersion
+[optimize] inlined function: call_cuDeviceGet
+[optimize] inlined function: call_cuCtxDestroy
+[optimize] inlined function: call_cuCtxSetCurrent
+[optimize] inlined function: call_cuCtxSetCurrent
+[optimize] inlined function: call_cuStreamCreate
+[optimize] inlined function: stream_record
+[optimize] inlined function: stream_get_context
+[optimize] inlined function: call_cuCtxSetCurrent
+[optimize] inlined function: call_cuStreamSynchronize
+[optimize] inlined function: stream_get_context
+[optimize] inlined function: call_cuCtxSetCurrent
+[optimize] inlined function: call_cuStreamDestroy
+[optimize] inlined function: stream_remove
+[optimize] inlined function: call_cuMemAlloc
+[optimize] inlined function: call_cuMemFree
+[optimize] inlined function: call_cuMemcpyHtoD
+[optimize] inlined function: call_cuMemcpyDtoH
+[optimize] inlined function: call_cuMemcpyHtoDAsync
+[optimize] inlined function: call_cuMemcpyDtoHAsync
+[optimize] inlined function: call_cuCtxSetCurrent
+[optimize] inlined function: call_cuModuleLoadData
+[optimize] inlined function: call_cuModuleGetFunction
+[optimize] inlined function: call_cuModuleUnload
+[optimize] inlined function: call_cuLaunchKernel
+[optimize] inlined function: curand_load
+[optimize] inlined function: curand_load
+[optimize] inlined function: stride_step_matches
+[optimize] inlined function: stride_step_matches
+[optimize] inlined function: c_order_strides_ref
+[optimize] inlined function: shape1
+[optimize] inlined function: shape_scalar
+[optimize] inlined function: shape_scalar
+[optimize] inlined function: module_has_function
+[optimize] inlined function: module_has_function
+[optimize] inlined function: module_has_function
+[optimize] inlined function: module_has_function
+[optimize] inlined function: module_has_function
+[optimize] inlined function: module_has_function
+[optimize] inlined function: module_has_function
+[optimize] inlined function: module_has_function
+[optimize] inlined function: module_has_function
+[optimize] inlined function: module_has_function
+[optimize] inlined function: module_has_function
+[optimize] inlined function: module_has_function
+[optimize] inlined function: module_has_function
+[optimize] inlined function: module_has_function
+[optimize] inlined function: module_has_function
+[optimize] inlined function: module_has_function
+[optimize] inlined function: module_has_function
+[optimize] inlined function: module_has_function
+[optimize] inlined function: core_sm86_cubin
+[optimize] inlined function: module_has_required_core_kernels
+[optimize] inlined function: module_has_function
+[optimize] inlined function: module_has_function
+[optimize] inlined function: module_has_function
+[optimize] inlined function: module_has_function
+[optimize] inlined function: module_has_function
+[optimize] inlined function: module_has_function
+[optimize] inlined function: module_has_function
+[optimize] inlined function: module_has_function
+[optimize] inlined function: module_has_function
+[optimize] inlined function: module_has_function
+[optimize] inlined function: module_has_function
+[optimize] inlined function: module_has_function
+[optimize] inlined function: module_has_function
+[optimize] inlined function: module_has_function
+[optimize] inlined function: module_has_function
+[optimize] inlined function: module_has_function
+[optimize] inlined function: module_has_function
+[optimize] inlined function: module_has_function
+[optimize] inlined function: cuda_module_load_data
+[optimize] inlined function: core_sm86_ptx
+[optimize] inlined function: cuda_module_load_data
+[optimize] inlined function: device_ptr_with_offset_f32
+[optimize] inlined function: device_ptr_with_offset_f32
+[optimize] inlined function: device_ptr_with_offset_f32
+[optimize] inlined function: cublaslt_is_available
+[optimize] inlined function: cublaslt_load
+[optimize] inlined function: cublaslt_init
+[optimize] inlined function: cublaslt_load
+[optimize] inlined function: ceil_div_u32
+[optimize] inlined function: ceil_div_u32
+[optimize] inlined function: shape2
+[optimize] inlined function: shape_scalar
+[optimize] inlined function: device_ptr_with_offset_f32
+[optimize] inlined function: curand_is_available
+[optimize] inlined function: curand_load
+[optimize] inlined function: ceil_div_u32
+[optimize] inlined function: clone_shape
+[optimize] inlined function: shape_scalar
+[optimize] inlined function: shape_scalar
+[optimize] inlined function: shape_scalar
+[optimize] inlined function: compute_axis_shape_local
+[optimize] inlined function: shape_scalar
+[optimize] inlined function: ceil_div_u32
+[optimize] inlined function: device_array_is_c_contiguous_local
+[optimize] inlined function: device_ptr_with_offset_f32
+[optimize] inlined function: device_array_is_c_contiguous_local
+[optimize] inlined function: device_ptr_with_offset_f64
+[optimize] inlined function: device_array_is_c_contiguous_local
+[optimize] inlined function: device_array_is_c_contiguous_local
+[optimize] inlined function: device_array_is_c_contiguous_local
+[optimize] inlined function: shape_scalar
+[optimize] inlined function: clone_shape_local
+[optimize] inlined function: shape_scalar
+[optimize] inlined function: materialize_bool_storage_type
+[optimize] inlined function: shape_eq
+[optimize] inlined function: shape_scalar
+[optimize] inlined function: numuya_simd_sum_f64
+[optimize] inlined function: numuya_simd_sum_f32
+[optimize] inlined function: shape_scalar
+[optimize] inlined function: clone_shape
+[optimize] inlined function: shape_scalar
+[optimize] inlined function: clone_shape
+[optimize] inlined function: shape_scalar
+[optimize] inlined function: scan_axis_cumsum_f64
+[optimize] inlined function: clone_shape
+[optimize] inlined function: shape_scalar
+[optimize] inlined function: scan_axis_cumprod_f64
+[optimize] inlined function: clone_shape
+[optimize] inlined function: shape_scalar
+[optimize] inlined function: shape_scalar
+[optimize] inlined function: shape_scalar
+[optimize] inlined function: ceil_div_u32
+[optimize] inlined function: device_ptr_with_offset_f64
+[optimize] inlined function: device_ptr_with_offset_f64
+[optimize] inlined function: device_ptr_with_offset_f64
+[optimize] inlined function: ceil_div_u32
+[optimize] inlined function: device_ptr_with_offset_f64
+[optimize] inlined function: device_ptr_with_offset_f64
+[optimize] inlined function: shape_eq
+[optimize] inlined function: ceil_div_u32
+[optimize] inlined function: device_ptr_with_offset_f32
+[optimize] inlined function: device_ptr_with_offset_f32
+[optimize] inlined function: device_ptr_with_offset_f32
+[optimize] inlined function: shape_eq
+[optimize] inlined function: ceil_div_u32
+[optimize] inlined function: device_ptr_with_offset_f32
+[optimize] inlined function: device_ptr_with_offset_f32
+[optimize] inlined function: device_ptr_with_offset_f32
+[optimize] inlined function: shape_eq
+[optimize] inlined function: ceil_div_u32
+[optimize] inlined function: device_ptr_with_offset_f64
+[optimize] inlined function: device_ptr_with_offset_f64
+[optimize] inlined function: device_ptr_with_offset_f64
+[optimize] inlined function: shape_scalar
+[optimize] inlined function: shape_scalar
+[optimize] running loop_unrolling_pass
 Benchmark: CUDA arrays
 ======================
 This benchmark measures wall-clock time including kernel launch and stream sync.
@@ -24,71 +1470,692 @@ backend path: Cuda, vendor_libs=off, tf32=off, cublaslt=available, curand=availa
 
 array size: 1000000 elements (7 MiB), iterations: 100
 
-H2D bandwidth: total=78.95 ms, per-iter=0.789 ms, bandwidth=9.44 GB/s
-BENCH_JSON|operation=transfer_h2d|mode=end-to-end|metric=bandwidth|dtype=float64|shape=1000000|iterations=100|total_ns=78947194
-  H2D threshold=6.00 GB/s, measured=9.44 GB/s -> PASS
-D2H bandwidth: total=80.09 ms, per-iter=0.801 ms, bandwidth=9.30 GB/s
-BENCH_JSON|operation=transfer_d2h|mode=end-to-end|metric=bandwidth|dtype=float64|shape=1000000|iterations=100|total_ns=80094687
-  D2H threshold=6.00 GB/s, measured=9.30 GB/s -> PASS
-add_f32: per-iter=38853.91 ns (0.0389 ns/elem), throughput=25737.44 Melem/s, effective bandwidth=287.64 GB/s
-BENCH_JSON|operation=add|mode=kernel-only|metric=throughput|dtype=float32|shape=1000000|iterations=100|total_ns=3885391
-BENCH_JSON|operation=add|mode=end-to-end|metric=throughput|dtype=float32|shape=1000000|iterations=100|total_ns=162927272
-  add_f32 threshold=150.00 GB/s, measured=287.64 GB/s -> PASS
-add_f64: per-iter=76682.54 ns (0.0767 ns/elem), throughput=13040.78 Melem/s, effective bandwidth=291.48 GB/s
-BENCH_JSON|operation=add|mode=kernel-only|metric=throughput|dtype=float64|shape=1000000|iterations=100|total_ns=7668254
-BENCH_JSON|operation=add|mode=end-to-end|metric=throughput|dtype=float64|shape=1000000|iterations=100|total_ns=166710135
-  add_f64 threshold=100.00 GB/s, measured=291.48 GB/s -> PASS
+H2D bandwidth: total=78.50 ms, per-iter=0.785 ms, bandwidth=9.49 GB/s
+BENCH_JSON|operation=transfer_h2d|mode=end-to-end|metric=bandwidth|dtype=float64|shape=1000000|iterations=100|total_ns=78498224
+  H2D threshold=6.00 GB/s, measured=9.49 GB/s -> PASS
+D2H bandwidth: total=81.75 ms, per-iter=0.818 ms, bandwidth=9.11 GB/s
+BENCH_JSON|operation=transfer_d2h|mode=end-to-end|metric=bandwidth|dtype=float64|shape=1000000|iterations=100|total_ns=81750304
+  D2H threshold=6.00 GB/s, measured=9.11 GB/s -> PASS
+add_f32: per-iter=42159.47 ns (0.0422 ns/elem), throughput=23719.46 Melem/s, effective bandwidth=265.09 GB/s
+BENCH_JSON|operation=add|mode=kernel-only|metric=throughput|dtype=float32|shape=1000000|iterations=100|total_ns=4215947
+BENCH_JSON|operation=add|mode=end-to-end|metric=throughput|dtype=float32|shape=1000000|iterations=100|total_ns=164464475
+  add_f32 threshold=150.00 GB/s, measured=265.09 GB/s -> PASS
+add_f64: per-iter=87540.46 ns (0.0875 ns/elem), throughput=11423.29 Melem/s, effective bandwidth=255.33 GB/s
+BENCH_JSON|operation=add|mode=kernel-only|metric=throughput|dtype=float64|shape=1000000|iterations=100|total_ns=8754046
+BENCH_JSON|operation=add|mode=end-to-end|metric=throughput|dtype=float64|shape=1000000|iterations=100|total_ns=169002574
+  add_f64 threshold=100.00 GB/s, measured=255.33 GB/s -> PASS
 
 matmul_f32 benchmark
-matmul_f32 1024x1024: total=16.59 ms, per-iter=1.66 ms, matmul_f32 1024x1024=1.29 TFLOP/s
-BENCH_JSON|operation=matmul|mode=kernel-only|metric=tflops|dtype=float32|shape=1024x1024|iterations=10|total_ns=16592064
-  matmul_f32 1024x1024 threshold=1.00 TFLOP/s, measured=1.29 TFLOP/s -> PASS
-matmul_f32 2048x2048: total=134.83 ms, per-iter=13.48 ms, matmul_f32 2048x2048=1.27 TFLOP/s
-BENCH_JSON|operation=matmul|mode=kernel-only|metric=tflops|dtype=float32|shape=2048x2048|iterations=10|total_ns=134827168
-cublasLt TF32 matmul_f32 2048x2048: total=14.70 ms, per-iter=1.47 ms, cublasLt TF32 matmul_f32 2048x2048=11.69 TFLOP/s
-BENCH_JSON|operation=matmul_vendor_tf32|mode=kernel-only|metric=tflops|dtype=float32|shape=2048x2048|iterations=10|total_ns=14700434
-  cublasLt TF32 matmul_f32 2048x2048 threshold=6.00 TFLOP/s, measured=11.69 TFLOP/s -> PASS
+matmul_f32 1024x1024: total=19.58 ms, per-iter=1.96 ms, matmul_f32 1024x1024=1.10 TFLOP/s
+BENCH_JSON|operation=matmul|mode=kernel-only|metric=tflops|dtype=float32|shape=1024x1024|iterations=10|total_ns=19581417
+  matmul_f32 1024x1024 threshold=1.00 TFLOP/s, measured=1.10 TFLOP/s -> PASS
+matmul_f32 2048x2048: total=153.69 ms, per-iter=15.37 ms, matmul_f32 2048x2048=1.12 TFLOP/s
+BENCH_JSON|operation=matmul|mode=kernel-only|metric=tflops|dtype=float32|shape=2048x2048|iterations=10|total_ns=153693824
+cublasLt TF32 matmul_f32 2048x2048: total=16.12 ms, per-iter=1.61 ms, cublasLt TF32 matmul_f32 2048x2048=10.66 TFLOP/s
+BENCH_JSON|operation=matmul_vendor_tf32|mode=kernel-only|metric=tflops|dtype=float32|shape=2048x2048|iterations=10|total_ns=16121282
+  cublasLt TF32 matmul_f32 2048x2048 threshold=6.00 TFLOP/s, measured=10.66 TFLOP/s -> PASS
 sum_f32 correctness check: 1500000.000000 (expected 1500000.000000)
-sum_all_f32: per-iter=29937.92 ns (0.0299 ns/elem), throughput=33402.45 Melem/s, effective read bandwidth=124.43 GB/s
-BENCH_JSON|operation=sum|mode=kernel-only|metric=throughput|dtype=float32|shape=1000000|iterations=100|total_ns=2993792
-BENCH_JSON|operation=sum|mode=end-to-end|metric=throughput|dtype=float32|shape=1000000|iterations=100|total_ns=162035673
-  sum_all_f32 threshold=60.00 GB/s, measured=124.43 GB/s -> PASS
-sum_all_f64: per-iter=48514.70 ns (0.0485 ns/elem), throughput=20612.31 Melem/s, effective read bandwidth=153.57 GB/s
-BENCH_JSON|operation=sum|mode=kernel-only|metric=throughput|dtype=float64|shape=1000000|iterations=100|total_ns=4851470
-BENCH_JSON|operation=sum|mode=end-to-end|metric=throughput|dtype=float64|shape=1000000|iterations=100|total_ns=163893351
-random_f32: per-iter=23116.87 ns (0.0231 ns/elem), throughput=43258.45 Melem/s, effective read bandwidth=161.15 GB/s
-BENCH_JSON|operation=random|mode=kernel-only|metric=throughput|dtype=float32|shape=1000000|iterations=100|total_ns=2311687
-  random_f32 threshold=40.00 GB/s, measured=161.15 GB/s -> PASS
+sum_all_f32: per-iter=48084.46 ns (0.0481 ns/elem), throughput=20796.74 Melem/s, effective read bandwidth=77.47 GB/s
+BENCH_JSON|operation=sum|mode=kernel-only|metric=throughput|dtype=float32|shape=1000000|iterations=100|total_ns=4808446
+BENCH_JSON|operation=sum|mode=end-to-end|metric=throughput|dtype=float32|shape=1000000|iterations=100|total_ns=165056974
+  sum_all_f32 threshold=60.00 GB/s, measured=77.47 GB/s -> PASS
+sum_all_f64: per-iter=47928.65 ns (0.0479 ns/elem), throughput=20864.35 Melem/s, effective read bandwidth=155.45 GB/s
+BENCH_JSON|operation=sum|mode=kernel-only|metric=throughput|dtype=float64|shape=1000000|iterations=100|total_ns=4792865
+BENCH_JSON|operation=sum|mode=end-to-end|metric=throughput|dtype=float64|shape=1000000|iterations=100|total_ns=165041393
+random_f32: per-iter=18752.23 ns (0.0188 ns/elem), throughput=53326.99 Melem/s, effective read bandwidth=198.66 GB/s
+BENCH_JSON|operation=random|mode=kernel-only|metric=throughput|dtype=float32|shape=1000000|iterations=100|total_ns=1875223
+  random_f32 threshold=40.00 GB/s, measured=198.66 GB/s -> PASS
+
+fixed Phase 24 CUDA matrix supplement
+BENCH_JSON|operation=add|mode=kernel-only|metric=throughput|dtype=float32|shape=10000|iterations=1000|total_ns=2040605
+BENCH_JSON|operation=add|mode=end-to-end|metric=throughput|dtype=float32|shape=10000|iterations=1000|total_ns=32742814
+BENCH_JSON|operation=add|mode=kernel-only|metric=throughput|dtype=float64|shape=10000|iterations=1000|total_ns=2245853
+BENCH_JSON|operation=add|mode=end-to-end|metric=throughput|dtype=float64|shape=10000|iterations=1000|total_ns=68479599
+BENCH_JSON|operation=mul|mode=kernel-only|metric=throughput|dtype=float32|shape=10000|iterations=1000|total_ns=2051321
+BENCH_JSON|operation=mul|mode=end-to-end|metric=throughput|dtype=float32|shape=10000|iterations=1000|total_ns=33336197
+BENCH_JSON|operation=mul|mode=kernel-only|metric=throughput|dtype=float64|shape=10000|iterations=1000|total_ns=2001699
+BENCH_JSON|operation=mul|mode=end-to-end|metric=throughput|dtype=float64|shape=10000|iterations=1000|total_ns=67412596
+BENCH_JSON|operation=sum|mode=kernel-only|metric=throughput|dtype=float32|shape=10000|iterations=1000|total_ns=23055168
+BENCH_JSON|operation=sum|mode=end-to-end|metric=throughput|dtype=float32|shape=10000|iterations=1000|total_ns=29989549
+BENCH_JSON|operation=sum|mode=kernel-only|metric=throughput|dtype=float64|shape=10000|iterations=1000|total_ns=22774558
+BENCH_JSON|operation=sum|mode=end-to-end|metric=throughput|dtype=float64|shape=10000|iterations=1000|total_ns=52473276
+BENCH_JSON|operation=add|mode=kernel-only|metric=throughput|dtype=float32|shape=1000000|iterations=100|total_ns=4394761
+BENCH_JSON|operation=add|mode=end-to-end|metric=throughput|dtype=float32|shape=1000000|iterations=100|total_ns=131070516
+BENCH_JSON|operation=add|mode=kernel-only|metric=throughput|dtype=float64|shape=1000000|iterations=100|total_ns=7382483
+BENCH_JSON|operation=add|mode=end-to-end|metric=throughput|dtype=float64|shape=1000000|iterations=100|total_ns=244546701
+BENCH_JSON|operation=mul|mode=kernel-only|metric=throughput|dtype=float32|shape=1000000|iterations=100|total_ns=3879348
+BENCH_JSON|operation=mul|mode=end-to-end|metric=throughput|dtype=float32|shape=1000000|iterations=100|total_ns=128689375
+BENCH_JSON|operation=mul|mode=kernel-only|metric=throughput|dtype=float64|shape=1000000|iterations=100|total_ns=8418935
+BENCH_JSON|operation=mul|mode=end-to-end|metric=throughput|dtype=float64|shape=1000000|iterations=100|total_ns=239317794
+BENCH_JSON|operation=sum|mode=kernel-only|metric=throughput|dtype=float32|shape=1000000|iterations=100|total_ns=3052939
+BENCH_JSON|operation=sum|mode=end-to-end|metric=throughput|dtype=float32|shape=1000000|iterations=100|total_ns=48376538
+BENCH_JSON|operation=sum|mode=kernel-only|metric=throughput|dtype=float64|shape=1000000|iterations=100|total_ns=4712829
+BENCH_JSON|operation=sum|mode=end-to-end|metric=throughput|dtype=float64|shape=1000000|iterations=100|total_ns=85854667
+BENCH_JSON|operation=add|mode=kernel-only|metric=throughput|dtype=float32|shape=10000000|iterations=10|total_ns=3596068
+BENCH_JSON|operation=add|mode=end-to-end|metric=throughput|dtype=float32|shape=10000000|iterations=10|total_ns=167218798
+BENCH_JSON|operation=add|mode=kernel-only|metric=throughput|dtype=float64|shape=10000000|iterations=10|total_ns=7732067
+BENCH_JSON|operation=add|mode=end-to-end|metric=throughput|dtype=float64|shape=10000000|iterations=10|total_ns=328588808
+BENCH_JSON|operation=mul|mode=kernel-only|metric=throughput|dtype=float32|shape=10000000|iterations=10|total_ns=3668603
+BENCH_JSON|operation=mul|mode=end-to-end|metric=throughput|dtype=float32|shape=10000000|iterations=10|total_ns=140929486
+BENCH_JSON|operation=mul|mode=kernel-only|metric=throughput|dtype=float64|shape=10000000|iterations=10|total_ns=7820427
+BENCH_JSON|operation=mul|mode=end-to-end|metric=throughput|dtype=float64|shape=10000000|iterations=10|total_ns=281169927
+BENCH_JSON|operation=sum|mode=kernel-only|metric=throughput|dtype=float32|shape=10000000|iterations=10|total_ns=1513152
+BENCH_JSON|operation=sum|mode=end-to-end|metric=throughput|dtype=float32|shape=10000000|iterations=10|total_ns=44311537
+BENCH_JSON|operation=sum|mode=kernel-only|metric=throughput|dtype=float64|shape=10000000|iterations=10|total_ns=3089334
+BENCH_JSON|operation=sum|mode=end-to-end|metric=throughput|dtype=float64|shape=10000000|iterations=10|total_ns=108654831
+BENCH_JSON|operation=matmul|mode=kernel-only|metric=tflops|dtype=float32|shape=256x256|iterations=10|total_ns=974604
+BENCH_JSON|operation=matmul|mode=end-to-end|metric=tflops|dtype=float32|shape=256x256|iterations=10|total_ns=2019152
+BENCH_JSON|operation=matmul|mode=kernel-only|metric=tflops|dtype=float32|shape=1024x1024|iterations=10|total_ns=18164207
+BENCH_JSON|operation=matmul|mode=end-to-end|metric=tflops|dtype=float32|shape=1024x1024|iterations=10|total_ns=31593951
+BENCH_JSON|operation=matmul|mode=kernel-only|metric=tflops|dtype=float32|shape=2048x2048|iterations=10|total_ns=153335793
+BENCH_JSON|operation=matmul|mode=end-to-end|metric=tflops|dtype=float32|shape=2048x2048|iterations=10|total_ns=205161844
+BENCH_JSON|operation=random|mode=kernel-only|metric=throughput|dtype=float32|shape=1000000|iterations=100|total_ns=1848158
+BENCH_JSON|operation=random|mode=end-to-end|metric=throughput|dtype=float32|shape=1000000|iterations=100|total_ns=45005582
+BENCH_JSON|operation=random|mode=kernel-only|metric=throughput|dtype=float32|shape=10000000|iterations=10|total_ns=1237993
+BENCH_JSON|operation=random|mode=end-to-end|metric=throughput|dtype=float32|shape=10000000|iterations=10|total_ns=58906300
 
 H2D/D2H bandwidth benchmark completed; threshold results are informational
-add_f32 effective bandwidth: 287.64 GB/s
-add_f64 effective bandwidth: 291.48 GB/s
-sum_all_f32 effective read bandwidth: 124.43 GB/s
-sum_all_f64 effective read bandwidth: 153.57 GB/s
-matmul_f32 1024x1024: 1.29 TFLOP/s
-matmul_f32 2048x2048: 1.27 TFLOP/s
-cublasLt TF32 matmul_f32 2048x2048: 11.69 TFLOP/s
-random_f32 fill bandwidth: 161.15 GB/s
+add_f32 effective bandwidth: 265.09 GB/s
+add_f64 effective bandwidth: 255.33 GB/s
+sum_all_f32 effective read bandwidth: 77.47 GB/s
+sum_all_f64 effective read bandwidth: 155.45 GB/s
+matmul_f32 1024x1024: 1.10 TFLOP/s
+matmul_f32 2048x2048: 1.12 TFLOP/s
+cublasLt TF32 matmul_f32 2048x2048: 10.66 TFLOP/s
+random_f32 fill bandwidth: 198.66 GB/s
 Done.
-../uya/bin/uya run src/numuya/_benchmarks/bench_simd.uya --manifest-path uya.toml
-[optimize] optimize_program called (level 1)
+CFLAGS="-std=c99 -O2 -fno-builtin" ../uya/bin/uya run src/numuya/_benchmarks/bench_simd.uya --manifest-path uya.toml --opt=3
+[optimize] optimize_program called (level 3)
 [optimize] running constant_folding_pass
 [optimize] constant folded: expression -> 67108864
 [optimize] constant folded: expression -> 8
+[optimize] constant folded: expression -> -2147483647
 [optimize] running dead_code_elimination_pass
-Benchmark: scalar vs SIMD f64 arrays
-=====================================
+[optimize] running proof_optimization_pass
+[optimize] running inline_pass
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_newline
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: print_samples
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_newline
+[optimize] inlined function: write_str
+[optimize] inlined function: pcg64_seed
+[optimize] inlined function: monotonic_ns
+[optimize] inlined function: monotonic_ns
+[optimize] inlined function: monotonic_ns
+[optimize] inlined function: monotonic_ns
+[optimize] inlined function: monotonic_ns
+[optimize] inlined function: monotonic_ns
+[optimize] inlined function: monotonic_ns
+[optimize] inlined function: monotonic_ns
+[optimize] inlined function: monotonic_ns
+[optimize] inlined function: monotonic_ns
+[optimize] inlined function: monotonic_ns
+[optimize] inlined function: monotonic_ns
+[optimize] inlined function: monotonic_ns
+[optimize] inlined function: monotonic_ns
+[optimize] inlined function: pcg64_seed
+[optimize] inlined function: monotonic_ns
+[optimize] inlined function: monotonic_ns
+[optimize] inlined function: print_result
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_newline
+[optimize] inlined function: write_str
+[optimize] inlined function: print_json_result
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: print_samples
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_newline
+[optimize] inlined function: write_str
+[optimize] inlined function: print_result
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_newline
+[optimize] inlined function: write_str
+[optimize] inlined function: print_json_result
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: print_samples
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_newline
+[optimize] inlined function: write_str
+[optimize] inlined function: print_result
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_newline
+[optimize] inlined function: write_str
+[optimize] inlined function: print_json_result
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: print_samples
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_newline
+[optimize] inlined function: write_str
+[optimize] inlined function: print_result
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_newline
+[optimize] inlined function: write_str
+[optimize] inlined function: print_json_result
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: print_samples
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_newline
+[optimize] inlined function: write_str
+[optimize] inlined function: print_result
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_newline
+[optimize] inlined function: write_str
+[optimize] inlined function: print_json_result
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: print_samples
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_newline
+[optimize] inlined function: write_str
+[optimize] inlined function: print_result
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_newline
+[optimize] inlined function: write_str
+[optimize] inlined function: print_json_result
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: print_samples
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_newline
+[optimize] inlined function: write_str
+[optimize] inlined function: print_result
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_newline
+[optimize] inlined function: write_str
+[optimize] inlined function: print_json_result
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: print_samples
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_newline
+[optimize] inlined function: write_str
+[optimize] inlined function: print_result
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_f64
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_newline
+[optimize] inlined function: write_str
+[optimize] inlined function: print_json_result
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_str
+[optimize] inlined function: write_byte
+[optimize] inlined function: print_samples
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_usize
+[optimize] inlined function: write_newline
+[optimize] inlined function: write_str
+[optimize] inlined function: print_header
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: write_newline
+[optimize] inlined function: write_str
+[optimize] inlined function: write_str
+[optimize] inlined function: set_process_stack_limit_bytes
+[optimize] inlined function: matmul_f32_accumulate_lanes
+[optimize] inlined function: abs_f64
+[optimize] inlined function: abs_f64
+[optimize] inlined function: abs_f64
+[optimize] inlined function: abs_f64
+[optimize] inlined function: abs_f64
+[optimize] inlined function: svd_jacobi_solve
+[optimize] inlined function: abs_f64
+[optimize] inlined function: abs_f64
+[optimize] inlined function: shape_scalar
+[optimize] inlined function: clone_shape_local
+[optimize] inlined function: shape_scalar
+[optimize] inlined function: materialize_bool_storage_type
+[optimize] inlined function: shape_eq
+[optimize] inlined function: random_u64
+[optimize] inlined function: random_u64
+[optimize] inlined function: random_f64
+[optimize] inlined function: random_u64
+[optimize] inlined function: random_f64
+[optimize] inlined function: random_u64
+[optimize] inlined function: shape_scalar
+[optimize] inlined function: numuya_simd_sum_f64
+[optimize] inlined function: numuya_simd_sum_f32
+[optimize] inlined function: shape_scalar
+[optimize] inlined function: clone_shape
+[optimize] inlined function: shape_scalar
+[optimize] inlined function: clone_shape
+[optimize] inlined function: shape_scalar
+[optimize] inlined function: scan_axis_cumsum_f64
+[optimize] inlined function: clone_shape
+[optimize] inlined function: shape_scalar
+[optimize] inlined function: scan_axis_cumprod_f64
+[optimize] inlined function: clone_shape
+[optimize] inlined function: shape_scalar
+[optimize] inlined function: shape_scalar
+[optimize] inlined function: numuya_contiguous_add_f64
+[optimize] inlined function: numuya_contiguous_add_f64
+[optimize] inlined function: numuya_contiguous_add_f32
+[optimize] inlined function: numuya_contiguous_add_f32
+[optimize] inlined function: numuya_contiguous_mul_f64
+[optimize] inlined function: numuya_contiguous_mul_f64
+[optimize] inlined function: numuya_contiguous_mul_f32
+[optimize] inlined function: numuya_contiguous_mul_f32
+[optimize] inlined function: shape_scalar
+[optimize] inlined function: shape_scalar
+[optimize] inlined function: c_order_strides_ref
+[optimize] inlined function: shape1
+[optimize] inlined function: shape_scalar
+[optimize] inlined function: shape_scalar
+[optimize] running loop_unrolling_pass
+Benchmark: NumUya CPU fixed matrix
+==================================
 This benchmark measures wall-clock time; it does not verify correctness.
-Scope: add/mul/sum only; matmul/random remain Python-only in this round.
+Scope: fixed Phase 24 CPU matrix (add/mul/sum f32/f64, matmul/random f32).
 For correctness, run `make test`.
 
-array size: 1000000 elements, iterations: 100
-
-add_f64: scalar=3805663.38 ns/iter (3.8057 ns/elem), simd=75556897.87 ns/iter (75.5569 ns/elem), speedup=0.05x
-BENCH_JSON|operation=add|mode=cpu|metric=latency|dtype=float64|shape=1000000|iterations=100|total_ns=7555689787
-mul_f64: scalar=3734291.08 ns/iter (3.7343 ns/elem), simd=76196413.84 ns/iter (76.1964 ns/elem), speedup=0.05x
-BENCH_JSON|operation=mul|mode=cpu|metric=latency|dtype=float64|shape=1000000|iterations=100|total_ns=7619641384
-sum_all_f64: scalar=3132881.91 ns/iter (3.1329 ns/elem), simd=32349912.56 ns/iter (32.3499 ns/elem), speedup=0.10x
-BENCH_JSON|operation=sum|mode=cpu|metric=latency|dtype=float64|shape=1000000|iterations=100|total_ns=3234991256
+add_f64: per-iter=10223.95 ns (1.0224 ns/elem), iterations=20
+BENCH_JSON|operation=add|mode=cpu|metric=latency|dtype=float64|shape=10000|warmup=5|repeat=20|iterations=20|total_ns=204479|samples_ns=8708,8195,23092,7876,7877,7886,7872,7823,7915,7930,7844,7851,7817,23381,23165,7833,7861,7879,7861,7813
+add_f32: per-iter=7644.45 ns (0.7644 ns/elem), iterations=20
+BENCH_JSON|operation=add|mode=cpu|metric=latency|dtype=float32|shape=10000|warmup=5|repeat=20|iterations=20|total_ns=152889|samples_ns=6431,6312,6293,6303,6306,6300,6292,15069,6676,21618,6514,6576,6529,6500,6496,6539,6534,6520,6551,6530
+mul_f64: per-iter=8137.15 ns (0.8137 ns/elem), iterations=20
+BENCH_JSON|operation=mul|mode=cpu|metric=latency|dtype=float64|shape=10000|warmup=5|repeat=20|iterations=20|total_ns=162743|samples_ns=8347,8184,8087,8087,8095,8146,8162,8181,8143,8096,8077,8086,8116,8131,8183,8102,8078,8152,8158,8132
+mul_f32: per-iter=8006.45 ns (0.8006 ns/elem), iterations=20
+BENCH_JSON|operation=mul|mode=cpu|metric=latency|dtype=float32|shape=10000|warmup=5|repeat=20|iterations=20|total_ns=160129|samples_ns=6370,6289,6314,6314,6307,6300,6300,6298,16093,6314,6296,6300,6308,13771,21910,6528,6530,6520,6529,6538
+sum_all_f64: per-iter=3161.75 ns (0.3162 ns/elem), iterations=20
+BENCH_JSON|operation=sum|mode=cpu|metric=latency|dtype=float64|shape=10000|warmup=5|repeat=20|iterations=20|total_ns=63235|samples_ns=3197,3168,3153,3177,3149,3154,3159,3158,3164,3163,3172,3157,3150,3151,3172,3147,3162,3155,3163,3164
+sum_all_f32: per-iter=1874.25 ns (0.1874 ns/elem), iterations=20
+BENCH_JSON|operation=sum|mode=cpu|metric=latency|dtype=float32|shape=10000|warmup=5|repeat=20|iterations=20|total_ns=37485|samples_ns=1908,1872,1873,1863,1878,1877,1881,1885,1855,1872,1901,1873,1878,1878,1863,1867,1866,1863,1873,1859
+add_f64: per-iter=924324.15 ns (0.9243 ns/elem), iterations=20
+BENCH_JSON|operation=add|mode=cpu|metric=latency|dtype=float64|shape=1000000|warmup=5|repeat=20|iterations=20|total_ns=18486483|samples_ns=915019,898934,924665,901591,950693,964226,878186,873150,871557,874824,878812,958542,936799,896824,952572,957109,899333,1043211,948954,961482
+add_f32: per-iter=639493.00 ns (0.6395 ns/elem), iterations=20
+BENCH_JSON|operation=add|mode=cpu|metric=latency|dtype=float32|shape=1000000|warmup=5|repeat=20|iterations=20|total_ns=12789860|samples_ns=679395,677152,701641,696177,609552,639227,584423,633387,585109,663282,614338,638134,710204,648148,611929,623418,652486,602800,608525,610533
+mul_f64: per-iter=949895.40 ns (0.9499 ns/elem), iterations=20
+BENCH_JSON|operation=mul|mode=cpu|metric=latency|dtype=float64|shape=1000000|warmup=5|repeat=20|iterations=20|total_ns=18997908|samples_ns=962641,986825,1008342,943123,908985,908377,924726,952169,923064,956814,896362,894386,1054846,950900,960261,972601,1018759,936612,901222,936893
+mul_f32: per-iter=587266.05 ns (0.5873 ns/elem), iterations=20
+BENCH_JSON|operation=mul|mode=cpu|metric=latency|dtype=float32|shape=1000000|warmup=5|repeat=20|iterations=20|total_ns=11745321|samples_ns=638347,586257,595627,610983,568120,662190,568691,603303,599289,587795,589883,584247,594697,578721,568350,585625,552802,558217,553308,558869
+sum_all_f64: per-iter=301576.95 ns (0.3016 ns/elem), iterations=20
+BENCH_JSON|operation=sum|mode=cpu|metric=latency|dtype=float64|shape=1000000|warmup=5|repeat=20|iterations=20|total_ns=6031539|samples_ns=313725,287090,300023,266181,266219,310432,297437,313763,343707,369143,289608,317009,295212,278469,303415,299049,278738,278603,326613,297103
+sum_all_f32: per-iter=139605.30 ns (0.1396 ns/elem), iterations=20
+BENCH_JSON|operation=sum|mode=cpu|metric=latency|dtype=float32|shape=1000000|warmup=5|repeat=20|iterations=20|total_ns=2792106|samples_ns=139398,139034,147601,139169,138745,138955,139095,138683,139442,145844,138709,152992,136432,135881,135957,135941,142459,135455,136076,136238
+add_f64: per-iter=50369265.95 ns (5.0369 ns/elem), iterations=20
+BENCH_JSON|operation=add|mode=cpu|metric=latency|dtype=float64|shape=10000000|warmup=5|repeat=20|iterations=20|total_ns=1007385319|samples_ns=50736305,49833620,49388016,50569283,53406628,49935427,50095613,50104616,49670244,51035615,50392760,50032305,50302085,50547505,50140432,50231672,49786441,50066749,50067493,51042510
+add_f32: per-iter=25899756.45 ns (2.5900 ns/elem), iterations=20
+BENCH_JSON|operation=add|mode=cpu|metric=latency|dtype=float32|shape=10000000|warmup=5|repeat=20|iterations=20|total_ns=517995129|samples_ns=26433286,26709484,26254845,26350538,25205936,25597333,25466537,25773485,26255624,25750776,26018059,26265964,25285406,25374294,26025195,25225929,25557476,26310443,25494022,26640497
+mul_f64: per-iter=50183019.95 ns (5.0183 ns/elem), iterations=20
+BENCH_JSON|operation=mul|mode=cpu|metric=latency|dtype=float64|shape=10000000|warmup=5|repeat=20|iterations=20|total_ns=1003660399|samples_ns=51090986,50055856,50338320,49022920,50898908,50370143,50667068,50807974,49445762,49478699,49242649,49430999,50175133,49747041,49607819,50384855,51147946,50823495,51396872,49526954
+mul_f32: per-iter=26126936.20 ns (2.6127 ns/elem), iterations=20
+BENCH_JSON|operation=mul|mode=cpu|metric=latency|dtype=float32|shape=10000000|warmup=5|repeat=20|iterations=20|total_ns=522538724|samples_ns=26445398,26257650,25468814,26642127,25983146,25674456,25449693,26207344,25723832,26394975,26042990,26520896,27277474,26157008,26576775,26668619,26186140,25653857,25725757,25481773
+sum_all_f64: per-iter=6696824.15 ns (0.6697 ns/elem), iterations=20
+BENCH_JSON|operation=sum|mode=cpu|metric=latency|dtype=float64|shape=10000000|warmup=5|repeat=20|iterations=20|total_ns=133936483|samples_ns=6390964,6427750,6430515,6714106,7247076,6773480,7093322,6525413,6697372,6509878,6167406,7184507,7014811,6666330,6635089,6503705,6579087,6557507,6475606,7342559
+sum_all_f32: per-iter=2296398.20 ns (0.2296 ns/elem), iterations=20
+BENCH_JSON|operation=sum|mode=cpu|metric=latency|dtype=float32|shape=10000000|warmup=5|repeat=20|iterations=20|total_ns=45927964|samples_ns=2440578,2327980,2356722,2283191,2129603,2177216,2321195,2175372,2089372,1976485,1960943,2491684,3204409,2996988,2567335,2176212,2026636,1933095,2266465,2026483
+matmul_f32: per-iter=8399612.10 ns (128.1679 ns/elem), iterations=10
+BENCH_JSON|operation=matmul|mode=cpu|metric=latency|dtype=float32|shape=256x256|warmup=3|repeat=10|iterations=10|total_ns=83996121|samples_ns=8325373,8119921,8802854,8500622,8553308,8205600,8344634,8043954,8544066,8555789
+matmul_f32: per-iter=521244911.50 ns (497.0979 ns/elem), iterations=10
+BENCH_JSON|operation=matmul|mode=cpu|metric=latency|dtype=float32|shape=1024x1024|warmup=3|repeat=10|iterations=10|total_ns=5212449115|samples_ns=519946310,516192320,520253120,526476231,527000767,519657875,523603247,521173446,518932623,519213176
+matmul_f32: per-iter=3996567920.40 ns (952.8560 ns/elem), iterations=10
+BENCH_JSON|operation=matmul|mode=cpu|metric=latency|dtype=float32|shape=2048x2048|warmup=3|repeat=10|iterations=10|total_ns=39965679204|samples_ns=3968202279,4002862328,4006020378,3995644258,3990195633,3966400696,4002111644,4095566546,3967237410,3971438032
+random_f32: per-iter=3404977.35 ns (3.4050 ns/elem), iterations=20
+BENCH_JSON|operation=random|mode=cpu|metric=latency|dtype=float32|shape=1000000|warmup=5|repeat=20|iterations=20|total_ns=68099547|samples_ns=3529694,3490538,3388658,3486688,3437998,3413201,3480037,3379124,3476033,3365893,3590579,3312471,3136244,3276066,3405131,3469097,3425932,3232492,3174022,3629649
+random_f32: per-iter=49473910.05 ns (4.9474 ns/elem), iterations=20
+BENCH_JSON|operation=random|mode=cpu|metric=latency|dtype=float32|shape=10000000|warmup=5|repeat=20|iterations=20|total_ns=989478201|samples_ns=51706556,50545637,49550696,48671748,48447751,49175486,50701122,48581937,48199236,48533002,48290568,49359079,51977550,51251329,48813633,49658384,48425908,48197282,49077478,50313819
 
 Done.

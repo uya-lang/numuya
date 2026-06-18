@@ -1,18 +1,14 @@
-// NumUya SIMD 性能 benchmark
+// NumUya CPU benchmark for the fixed Phase 24 NumPy comparison matrix.
 //
-// 测量标量与 SIMD 路径在 element-wise 二元运算（add/mul）和归约（sum）上的耗时。
-// 本文件是性能基准，不是正确性测试；结果仅用于观察相对加速比。
-//
-// 运行：
-//   make bench
-// 或直接：
-//   ../uya/bin/uya run src/numuya/_benchmarks/bench_simd.uya --manifest-path uya.toml
+// This benchmark emits BENCH_JSON rows consumed by
+// benchmarks/python/collect_numuya_benchmarks.py.
 
 use array;
 use creation;
+use linalg;
+use random;
 use reductions;
 use shape;
-use types;
 use ufunc;
 
 use libc.syscall;
@@ -21,6 +17,13 @@ use std.mem.allocator.MallocAllocator;
 
 const CLOCK_MONOTONIC: i32 = 1;
 const NS_PER_SEC: u64 = 1000000000u64;
+const ELEMENT_WARMUP: usize = 5;
+const ELEMENT_REPEAT: usize = 20;
+const MATMUL_WARMUP: usize = 3;
+const MATMUL_REPEAT: usize = 10;
+const RANDOM_WARMUP: usize = 5;
+const RANDOM_REPEAT: usize = 20;
+const MAX_BENCH_SAMPLES: usize = 20;
 
 extern "libc" fn snprintf(buf: &byte, size: usize, format: &const byte, ...) i32;
 
@@ -90,104 +93,51 @@ fn write_newline() void {
     write_str("\n");
 }
 
-fn bench_add_scalar(left: &Array<f64>, right: &Array<f64>, iterations: usize) !u64 {
-    const start: u64 = monotonic_ns();
-    var i: usize = 0;
-    while i < iterations {
-        var result: Array<f64> = try add_f64_scalar(left, right);
-        i = i + 1;
-    }
-    const end: u64 = monotonic_ns();
-    return end - start;
-}
-
-fn bench_add_simd(left: &Array<f64>, right: &Array<f64>, iterations: usize) !u64 {
-    const start: u64 = monotonic_ns();
-    var i: usize = 0;
-    while i < iterations {
-        var result: Array<f64> = try add_f64_simd(left, right);
-        i = i + 1;
-    }
-    const end: u64 = monotonic_ns();
-    return end - start;
-}
-
-fn bench_mul_scalar(left: &Array<f64>, right: &Array<f64>, iterations: usize) !u64 {
-    const start: u64 = monotonic_ns();
-    var i: usize = 0;
-    while i < iterations {
-        var result: Array<f64> = try mul_f64_scalar(left, right);
-        i = i + 1;
-    }
-    const end: u64 = monotonic_ns();
-    return end - start;
-}
-
-fn bench_mul_simd(left: &Array<f64>, right: &Array<f64>, iterations: usize) !u64 {
-    const start: u64 = monotonic_ns();
-    var i: usize = 0;
-    while i < iterations {
-        var result: Array<f64> = try mul_f64_simd(left, right);
-        i = i + 1;
-    }
-    const end: u64 = monotonic_ns();
-    return end - start;
-}
-
-fn bench_sum_scalar(array_value: &Array<f64>, iterations: usize) !u64 {
-    const start: u64 = monotonic_ns();
-    var i: usize = 0;
-    while i < iterations {
-        const result: f64 = try sum_all_f64_scalar(array_value);
-        _ = result;
-        i = i + 1;
-    }
-    const end: u64 = monotonic_ns();
-    return end - start;
-}
-
-fn bench_sum_simd(array_value: &Array<f64>, iterations: usize) !u64 {
-    const start: u64 = monotonic_ns();
-    var i: usize = 0;
-    while i < iterations {
-        const result: f64 = try sum_all_f64_simd(array_value);
-        _ = result;
-        i = i + 1;
-    }
-    const end: u64 = monotonic_ns();
-    return end - start;
-}
-
 fn print_header() void {
-    write_str("Benchmark: scalar vs SIMD f64 arrays\n");
-    write_str("=====================================\n");
+    write_str("Benchmark: NumUya CPU fixed matrix\n");
+    write_str("==================================\n");
     write_str("This benchmark measures wall-clock time; it does not verify correctness.\n");
-    write_str("Scope: add/mul/sum only; matmul/random remain Python-only in this round.\n");
+    write_str("Scope: fixed Phase 24 CPU matrix (add/mul/sum f32/f64, matmul/random f32).\n");
     write_str("For correctness, run `make test`.\n\n");
 }
 
 fn print_result(name: &const byte, scalar_ns: u64, simd_ns: u64, elements: usize, iterations: usize) void {
-    const scalar_per_iter: f64 = if iterations == 0 { 0.0 } else { (scalar_ns as f64) / (iterations as f64) };
-    const simd_per_iter: f64 = if iterations == 0 { 0.0 } else { (simd_ns as f64) / (iterations as f64) };
-    const scalar_per_elem: f64 = if elements == 0 { 0.0 } else { scalar_per_iter / (elements as f64) };
-    const simd_per_elem: f64 = if elements == 0 { 0.0 } else { simd_per_iter / (elements as f64) };
-    const speedup: f64 = if simd_per_iter == 0.0 { 0.0 } else { scalar_per_iter / simd_per_iter };
+    const measured_ns: u64 = if simd_ns == 0 { scalar_ns } else { simd_ns };
+    const per_iter: f64 = if iterations == 0 { 0.0 } else { (measured_ns as f64) / (iterations as f64) };
+    const per_elem: f64 = if elements == 0 { 0.0 } else { per_iter / (elements as f64) };
 
     write_str(name);
-    write_str(": scalar=");
-    write_f64(scalar_per_iter, 2);
-    write_str(" ns/iter (");
-    write_f64(scalar_per_elem, 4);
-    write_str(" ns/elem), simd=");
-    write_f64(simd_per_iter, 2);
-    write_str(" ns/iter (");
-    write_f64(simd_per_elem, 4);
-    write_str(" ns/elem), speedup=");
-    write_f64(speedup, 2);
-    write_str("x\n");
+    write_str(": per-iter=");
+    write_f64(per_iter, 2);
+    write_str(" ns (");
+    write_f64(per_elem, 4);
+    write_str(" ns/elem), iterations=");
+    write_usize(iterations);
+    write_newline();
 }
 
-fn print_json_result(operation: &const byte, dtype: &const byte, elements: usize, total_ns: u64, iterations: usize) void {
+fn print_samples(samples: &u64, repeat: usize) void {
+    write_str("|samples_ns=");
+    var i: usize = 0;
+    while i < repeat {
+        if i > 0 {
+            write_str(",");
+        }
+        write_usize(samples[i] as usize);
+        i = i + 1;
+    }
+}
+
+fn print_json_result(
+    operation: &const byte,
+    dtype: &const byte,
+    shape0: usize,
+    shape1: usize,
+    total_ns: u64,
+    warmup: usize,
+    repeat: usize,
+    samples: &u64,
+) void {
     write_str("BENCH_JSON|operation=");
     write_str(operation);
     write_str("|mode=cpu");
@@ -195,70 +145,322 @@ fn print_json_result(operation: &const byte, dtype: &const byte, elements: usize
     write_str("|dtype=");
     write_str(dtype);
     write_str("|shape=");
-    write_usize(elements);
+    write_usize(shape0);
+    if shape1 > 0 {
+        write_str("x");
+        write_usize(shape1);
+    }
+    write_str("|warmup=");
+    write_usize(warmup);
+    write_str("|repeat=");
+    write_usize(repeat);
     write_str("|iterations=");
-    write_usize(iterations);
+    write_usize(repeat);
     write_str("|total_ns=");
     write_usize(total_ns as usize);
+    print_samples(samples, repeat);
     write_newline();
+}
+
+fn warmup_add_f64(left: &Array<f64>, right: &Array<f64>, warmup: usize) !void {
+    var i: usize = 0;
+    while i < warmup {
+        const result: Array<f64> = try add_f64(left, right);
+        _ = result.storage.len;
+        i = i + 1;
+    }
+}
+
+fn warmup_add_f32(left: &Array<f32>, right: &Array<f32>, warmup: usize) !void {
+    var i: usize = 0;
+    while i < warmup {
+        const result: Array<f32> = try add_f32(left, right);
+        _ = result.storage.len;
+        i = i + 1;
+    }
+}
+
+fn warmup_mul_f64(left: &Array<f64>, right: &Array<f64>, warmup: usize) !void {
+    var i: usize = 0;
+    while i < warmup {
+        const result: Array<f64> = try mul_f64(left, right);
+        _ = result.storage.len;
+        i = i + 1;
+    }
+}
+
+fn warmup_mul_f32(left: &Array<f32>, right: &Array<f32>, warmup: usize) !void {
+    var i: usize = 0;
+    while i < warmup {
+        const result: Array<f32> = try mul_f32(left, right);
+        _ = result.storage.len;
+        i = i + 1;
+    }
+}
+
+fn warmup_sum_f64(input: &Array<f64>, warmup: usize) !void {
+    var i: usize = 0;
+    while i < warmup {
+        const result: f64 = try sum_all_f64(input);
+        _ = result;
+        i = i + 1;
+    }
+}
+
+fn warmup_sum_f32(input: &Array<f32>, warmup: usize) !void {
+    var i: usize = 0;
+    while i < warmup {
+        const result: f32 = try sum_all_f32(input);
+        _ = result;
+        i = i + 1;
+    }
+}
+
+fn warmup_matmul_f32(left: &Array<f32>, right: &Array<f32>, warmup: usize) !void {
+    var i: usize = 0;
+    while i < warmup {
+        const result: Array<f32> = try matmul_f32(left, right);
+        _ = result.storage.len;
+        i = i + 1;
+    }
+}
+
+fn warmup_random_f32(allocator: IAllocator, elements: usize, warmup: usize) !void {
+    var rng: PCG64 = pcg64_seed(777u64, 3u64);
+    var i: usize = 0;
+    while i < warmup {
+        const result: Array<f32> = try random_array_f32(allocator, &rng, shape1(elements));
+        _ = result.storage.len;
+        i = i + 1;
+    }
+}
+
+fn bench_add_f64(left: &Array<f64>, right: &Array<f64>, samples: &u64, repeat: usize) !u64 {
+    var total: u64 = 0u64;
+    var i: usize = 0;
+    while i < repeat {
+        const start: u64 = monotonic_ns();
+        const result: Array<f64> = try add_f64(left, right);
+        _ = result.storage.len;
+        const elapsed: u64 = monotonic_ns() - start;
+        samples[i] = elapsed;
+        total = total + elapsed;
+        i = i + 1;
+    }
+    return total;
+}
+
+fn bench_add_f32(left: &Array<f32>, right: &Array<f32>, samples: &u64, repeat: usize) !u64 {
+    var total: u64 = 0u64;
+    var i: usize = 0;
+    while i < repeat {
+        const start: u64 = monotonic_ns();
+        const result: Array<f32> = try add_f32(left, right);
+        _ = result.storage.len;
+        const elapsed: u64 = monotonic_ns() - start;
+        samples[i] = elapsed;
+        total = total + elapsed;
+        i = i + 1;
+    }
+    return total;
+}
+
+fn bench_mul_f64(left: &Array<f64>, right: &Array<f64>, samples: &u64, repeat: usize) !u64 {
+    var total: u64 = 0u64;
+    var i: usize = 0;
+    while i < repeat {
+        const start: u64 = monotonic_ns();
+        const result: Array<f64> = try mul_f64(left, right);
+        _ = result.storage.len;
+        const elapsed: u64 = monotonic_ns() - start;
+        samples[i] = elapsed;
+        total = total + elapsed;
+        i = i + 1;
+    }
+    return total;
+}
+
+fn bench_mul_f32(left: &Array<f32>, right: &Array<f32>, samples: &u64, repeat: usize) !u64 {
+    var total: u64 = 0u64;
+    var i: usize = 0;
+    while i < repeat {
+        const start: u64 = monotonic_ns();
+        const result: Array<f32> = try mul_f32(left, right);
+        _ = result.storage.len;
+        const elapsed: u64 = monotonic_ns() - start;
+        samples[i] = elapsed;
+        total = total + elapsed;
+        i = i + 1;
+    }
+    return total;
+}
+
+fn bench_sum_f64(input: &Array<f64>, samples: &u64, repeat: usize) !u64 {
+    var total: u64 = 0u64;
+    var i: usize = 0;
+    while i < repeat {
+        const start: u64 = monotonic_ns();
+        const result: f64 = try sum_all_f64(input);
+        _ = result;
+        const elapsed: u64 = monotonic_ns() - start;
+        samples[i] = elapsed;
+        total = total + elapsed;
+        i = i + 1;
+    }
+    return total;
+}
+
+fn bench_sum_f32(input: &Array<f32>, samples: &u64, repeat: usize) !u64 {
+    var total: u64 = 0u64;
+    var i: usize = 0;
+    while i < repeat {
+        const start: u64 = monotonic_ns();
+        const result: f32 = try sum_all_f32(input);
+        _ = result;
+        const elapsed: u64 = monotonic_ns() - start;
+        samples[i] = elapsed;
+        total = total + elapsed;
+        i = i + 1;
+    }
+    return total;
+}
+
+fn bench_matmul_f32(left: &Array<f32>, right: &Array<f32>, samples: &u64, repeat: usize) !u64 {
+    var total: u64 = 0u64;
+    var i: usize = 0;
+    while i < repeat {
+        const start: u64 = monotonic_ns();
+        const result: Array<f32> = try matmul_f32(left, right);
+        _ = result.storage.len;
+        const elapsed: u64 = monotonic_ns() - start;
+        samples[i] = elapsed;
+        total = total + elapsed;
+        i = i + 1;
+    }
+    return total;
+}
+
+fn bench_random_f32(allocator: IAllocator, elements: usize, samples: &u64, repeat: usize) !u64 {
+    var rng: PCG64 = pcg64_seed(12345u64, 1u64);
+    var total: u64 = 0u64;
+    var i: usize = 0;
+    while i < repeat {
+        const start: u64 = monotonic_ns();
+        const result: Array<f32> = try random_array_f32(allocator, &rng, shape1(elements));
+        _ = result.storage.len;
+        const elapsed: u64 = monotonic_ns() - start;
+        samples[i] = elapsed;
+        total = total + elapsed;
+        i = i + 1;
+    }
+    return total;
+}
+
+fn run_element_case(allocator: IAllocator, elements: usize) !void {
+    const warmup: usize = ELEMENT_WARMUP;
+    const repeat: usize = ELEMENT_REPEAT;
+
+    var left_f64: Array<f64> = try full_f64(allocator, shape1(elements), 1.5);
+    var right_f64: Array<f64> = try full_f64(allocator, shape1(elements), 2.5);
+    var left_f32: Array<f32> = try full<f32>(allocator, shape1(elements), 1.5);
+    var right_f32: Array<f32> = try full<f32>(allocator, shape1(elements), 2.5);
+    var samples: [u64: MAX_BENCH_SAMPLES] = [0u64: MAX_BENCH_SAMPLES];
+
+    try warmup_add_f64(&left_f64, &right_f64, warmup);
+    const add_f64_ns: u64 = try bench_add_f64(&left_f64, &right_f64, &samples[0], repeat);
+    print_result("add_f64", 0u64, add_f64_ns, elements, repeat);
+    print_json_result("add", "float64", elements, 0, add_f64_ns, warmup, repeat, &samples[0]);
+
+    try warmup_add_f32(&left_f32, &right_f32, warmup);
+    const add_f32_ns: u64 = try bench_add_f32(&left_f32, &right_f32, &samples[0], repeat);
+    print_result("add_f32", 0u64, add_f32_ns, elements, repeat);
+    print_json_result("add", "float32", elements, 0, add_f32_ns, warmup, repeat, &samples[0]);
+
+    try warmup_mul_f64(&left_f64, &right_f64, warmup);
+    const mul_f64_ns: u64 = try bench_mul_f64(&left_f64, &right_f64, &samples[0], repeat);
+    print_result("mul_f64", 0u64, mul_f64_ns, elements, repeat);
+    print_json_result("mul", "float64", elements, 0, mul_f64_ns, warmup, repeat, &samples[0]);
+
+    try warmup_mul_f32(&left_f32, &right_f32, warmup);
+    const mul_f32_ns: u64 = try bench_mul_f32(&left_f32, &right_f32, &samples[0], repeat);
+    print_result("mul_f32", 0u64, mul_f32_ns, elements, repeat);
+    print_json_result("mul", "float32", elements, 0, mul_f32_ns, warmup, repeat, &samples[0]);
+
+    try warmup_sum_f64(&left_f64, warmup);
+    const sum_f64_ns: u64 = try bench_sum_f64(&left_f64, &samples[0], repeat);
+    print_result("sum_all_f64", 0u64, sum_f64_ns, elements, repeat);
+    print_json_result("sum", "float64", elements, 0, sum_f64_ns, warmup, repeat, &samples[0]);
+
+    try warmup_sum_f32(&left_f32, warmup);
+    const sum_f32_ns: u64 = try bench_sum_f32(&left_f32, &samples[0], repeat);
+    print_result("sum_all_f32", 0u64, sum_f32_ns, elements, repeat);
+    print_json_result("sum", "float32", elements, 0, sum_f32_ns, warmup, repeat, &samples[0]);
+}
+
+fn run_matmul_case(allocator: IAllocator, size: usize) !void {
+    const warmup: usize = MATMUL_WARMUP;
+    const repeat: usize = MATMUL_REPEAT;
+    var left: Array<f32> = try full<f32>(allocator, shape2(size, size), 1.0);
+    var right: Array<f32> = try full<f32>(allocator, shape2(size, size), 1.0);
+    var samples: [u64: MAX_BENCH_SAMPLES] = [0u64: MAX_BENCH_SAMPLES];
+
+    try warmup_matmul_f32(&left, &right, warmup);
+    const total_ns: u64 = try bench_matmul_f32(&left, &right, &samples[0], repeat);
+    print_result("matmul_f32", 0u64, total_ns, size * size, repeat);
+    print_json_result("matmul", "float32", size, size, total_ns, warmup, repeat, &samples[0]);
+}
+
+fn run_random_case(allocator: IAllocator, elements: usize) !void {
+    const warmup: usize = RANDOM_WARMUP;
+    const repeat: usize = RANDOM_REPEAT;
+    var samples: [u64: MAX_BENCH_SAMPLES] = [0u64: MAX_BENCH_SAMPLES];
+
+    try warmup_random_f32(allocator, elements, warmup);
+    const total_ns: u64 = try bench_random_f32(allocator, elements, &samples[0], repeat);
+    print_result("random_f32", 0u64, total_ns, elements, repeat);
+    print_json_result("random", "float32", elements, 0, total_ns, warmup, repeat, &samples[0]);
 }
 
 export fn main() i32 {
     var malloc_allocator: MallocAllocator = MallocAllocator{};
     var allocator: IAllocator = malloc_allocator;
 
-    const size: usize = 1000000;
-    const iterations: usize = 100;
-
-    var left: Array<f64> = full_f64(allocator, shape1(size), 1.5) catch {
-        write_str("error: failed to allocate left array\n");
-        return 1;
-    };
-    var right: Array<f64> = full_f64(allocator, shape1(size), 2.5) catch {
-        write_str("error: failed to allocate right array\n");
-        return 1;
-    };
-
     print_header();
-    write_str("array size: ");
-    write_usize(size);
-    write_str(" elements, iterations: ");
-    write_usize(iterations);
-    write_newline();
-    write_newline();
 
-    const add_scalar_ns: u64 = bench_add_scalar(&left, &right, iterations) catch {
-        write_str("error: scalar add benchmark failed\n");
+    run_element_case(allocator, 10000) catch {
+        write_str("error: element benchmark 10000 failed\n");
         return 1;
     };
-    const add_simd_ns: u64 = bench_add_simd(&left, &right, iterations) catch {
-        write_str("error: simd add benchmark failed\n");
+    run_element_case(allocator, 1000000) catch {
+        write_str("error: element benchmark 1000000 failed\n");
         return 1;
     };
-    print_result("add_f64", add_scalar_ns, add_simd_ns, size, iterations);
-    print_json_result("add", "float64", size, add_simd_ns, iterations);
+    run_element_case(allocator, 10000000) catch {
+        write_str("error: element benchmark 10000000 failed\n");
+        return 1;
+    };
 
-    const mul_scalar_ns: u64 = bench_mul_scalar(&left, &right, iterations) catch {
-        write_str("error: scalar mul benchmark failed\n");
+    run_matmul_case(allocator, 256) catch {
+        write_str("error: matmul_f32 256 benchmark failed\n");
         return 1;
     };
-    const mul_simd_ns: u64 = bench_mul_simd(&left, &right, iterations) catch {
-        write_str("error: simd mul benchmark failed\n");
+    run_matmul_case(allocator, 1024) catch {
+        write_str("error: matmul_f32 1024 benchmark failed\n");
         return 1;
     };
-    print_result("mul_f64", mul_scalar_ns, mul_simd_ns, size, iterations);
-    print_json_result("mul", "float64", size, mul_simd_ns, iterations);
+    run_matmul_case(allocator, 2048) catch {
+        write_str("error: matmul_f32 2048 benchmark failed\n");
+        return 1;
+    };
 
-    const sum_scalar_ns: u64 = bench_sum_scalar(&left, iterations) catch {
-        write_str("error: scalar sum benchmark failed\n");
+    run_random_case(allocator, 1000000) catch {
+        write_str("error: random_f32 1000000 benchmark failed\n");
         return 1;
     };
-    const sum_simd_ns: u64 = bench_sum_simd(&left, iterations) catch {
-        write_str("error: simd sum benchmark failed\n");
+    run_random_case(allocator, 10000000) catch {
+        write_str("error: random_f32 10000000 benchmark failed\n");
         return 1;
     };
-    print_result("sum_all_f64", sum_scalar_ns, sum_simd_ns, size, iterations);
-    print_json_result("sum", "float64", size, sum_simd_ns, iterations);
 
     write_newline();
     write_str("Done.\n");

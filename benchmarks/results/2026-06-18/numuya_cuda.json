@@ -1,9 +1,9 @@
 {
   "benchmark": "numuya_cuda",
   "metadata": {
-    "numuya_commit": "47580f8d5dd4ee3fc3fcd52b9083d96c3808fc74",
+    "numuya_commit": "8ff0e4593895aae0ac174e79f9d482576f3d2f84",
     "run_date": "2026-06-18",
-    "command": "OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 NUMEXPR_NUM_THREADS=1 make bench",
+    "command": "make bench > benchmarks/results/2026-06-18/numuya_raw.txt",
     "raw_output_path": "/media/winger/_dde_data/winger/uya/numuya/benchmarks/results/2026-06-18/numuya_raw.txt"
   },
   "results": [
@@ -15,9 +15,19 @@
       "shape": [
         1000000
       ],
+      "warmup": 0,
+      "repeat": 100,
       "iterations": 100,
-      "total_ns": 78947194,
-      "ns_per_iter": 789471.94
+      "samples_ns": [
+        784982
+      ],
+      "total_ns": 78498224,
+      "ns_per_iter": 784982.24,
+      "unit": "ns/iter",
+      "throughput": null,
+      "median": 784982.24,
+      "best": 784982.24,
+      "p95": 784982.24
     },
     {
       "operation": "transfer_d2h",
@@ -27,57 +37,107 @@
       "shape": [
         1000000
       ],
+      "warmup": 0,
+      "repeat": 100,
       "iterations": 100,
-      "total_ns": 80094687,
-      "ns_per_iter": 800946.87
+      "samples_ns": [
+        817503
+      ],
+      "total_ns": 81750304,
+      "ns_per_iter": 817503.04,
+      "unit": "ns/iter",
+      "throughput": null,
+      "median": 817503.04,
+      "best": 817503.04,
+      "p95": 817503.04
     },
     {
       "operation": "add",
       "mode": "kernel-only",
-      "metric": "throughput",
+      "metric": "bandwidth",
       "dtype": "float32",
       "shape": [
         1000000
       ],
+      "warmup": 0,
+      "repeat": 100,
       "iterations": 100,
-      "total_ns": 3885391,
-      "ns_per_iter": 38853.91
+      "samples_ns": [
+        42159
+      ],
+      "total_ns": 4215947,
+      "ns_per_iter": 42159.47,
+      "unit": "GiB/s",
+      "throughput": 265.08565917421976,
+      "median": 42159.47,
+      "best": 42159.47,
+      "p95": 42159.47
     },
     {
       "operation": "add",
       "mode": "end-to-end",
-      "metric": "throughput",
+      "metric": "bandwidth",
       "dtype": "float32",
       "shape": [
         1000000
       ],
+      "warmup": 0,
+      "repeat": 100,
       "iterations": 100,
-      "total_ns": 162927272,
-      "ns_per_iter": 1629272.72
+      "samples_ns": [
+        1644644
+      ],
+      "total_ns": 164464475,
+      "ns_per_iter": 1644644.75,
+      "unit": "GiB/s",
+      "throughput": 6.795309987391345,
+      "median": 1644644.75,
+      "best": 1644644.75,
+      "p95": 1644644.75
     },
     {
       "operation": "add",
       "mode": "kernel-only",
-      "metric": "throughput",
+      "metric": "bandwidth",
       "dtype": "float64",
       "shape": [
         1000000
       ],
+      "warmup": 0,
+      "repeat": 100,
       "iterations": 100,
-      "total_ns": 7668254,
-      "ns_per_iter": 76682.54
+      "samples_ns": [
+        87540
+      ],
+      "total_ns": 8754046,
+      "ns_per_iter": 87540.46,
+      "unit": "GiB/s",
+      "throughput": 255.33041282592623,
+      "median": 87540.46,
+      "best": 87540.46,
+      "p95": 87540.46
     },
     {
       "operation": "add",
       "mode": "end-to-end",
-      "metric": "throughput",
+      "metric": "bandwidth",
       "dtype": "float64",
       "shape": [
         1000000
       ],
+      "warmup": 0,
+      "repeat": 100,
       "iterations": 100,
-      "total_ns": 166710135,
-      "ns_per_iter": 1667101.35
+      "samples_ns": [
+        1690025
+      ],
+      "total_ns": 169002574,
+      "ns_per_iter": 1690025.74,
+      "unit": "GiB/s",
+      "throughput": 13.22568127913335,
+      "median": 1690025.74,
+      "best": 1690025.74,
+      "p95": 1690025.74
     },
     {
       "operation": "matmul",
@@ -88,9 +148,19 @@
         1024,
         1024
       ],
+      "warmup": 0,
+      "repeat": 10,
       "iterations": 10,
-      "total_ns": 16592064,
-      "ns_per_iter": 1659206.4
+      "samples_ns": [
+        1958141
+      ],
+      "total_ns": 19581417,
+      "ns_per_iter": 1958141.7,
+      "unit": "TFLOP/s",
+      "throughput": 1.0966947121344692,
+      "median": 1958141.7,
+      "best": 1958141.7,
+      "p95": 1958141.7
     },
     {
       "operation": "matmul",
@@ -101,9 +171,19 @@
         2048,
         2048
       ],
+      "warmup": 0,
+      "repeat": 10,
       "iterations": 10,
-      "total_ns": 134827168,
-      "ns_per_iter": 13482716.8
+      "samples_ns": [
+        15369382
+      ],
+      "total_ns": 153693824,
+      "ns_per_iter": 15369382.4,
+      "unit": "TFLOP/s",
+      "throughput": 1.1177982782183882,
+      "median": 15369382.4,
+      "best": 15369382.4,
+      "p95": 15369382.4
     },
     {
       "operation": "matmul_vendor_tf32",
@@ -114,69 +194,1147 @@
         2048,
         2048
       ],
+      "warmup": 0,
+      "repeat": 10,
       "iterations": 10,
-      "total_ns": 14700434,
-      "ns_per_iter": 1470043.4
+      "samples_ns": [
+        1612128
+      ],
+      "total_ns": 16121282,
+      "ns_per_iter": 1612128.2,
+      "unit": "ns/iter",
+      "throughput": null,
+      "median": 1612128.2,
+      "best": 1612128.2,
+      "p95": 1612128.2
     },
     {
       "operation": "sum",
       "mode": "kernel-only",
-      "metric": "throughput",
+      "metric": "bandwidth",
       "dtype": "float32",
       "shape": [
         1000000
       ],
+      "warmup": 0,
+      "repeat": 100,
       "iterations": 100,
-      "total_ns": 2993792,
-      "ns_per_iter": 29937.92
+      "samples_ns": [
+        48084
+      ],
+      "total_ns": 4808446,
+      "ns_per_iter": 48084.46,
+      "unit": "GiB/s",
+      "throughput": 77.47389278078435,
+      "median": 48084.46,
+      "best": 48084.46,
+      "p95": 48084.46
     },
     {
       "operation": "sum",
       "mode": "end-to-end",
-      "metric": "throughput",
+      "metric": "bandwidth",
       "dtype": "float32",
       "shape": [
         1000000
       ],
+      "warmup": 0,
+      "repeat": 100,
       "iterations": 100,
-      "total_ns": 162035673,
-      "ns_per_iter": 1620356.73
+      "samples_ns": [
+        1650569
+      ],
+      "total_ns": 165056974,
+      "ns_per_iter": 1650569.74,
+      "unit": "GiB/s",
+      "throughput": 2.256972370317363,
+      "median": 1650569.74,
+      "best": 1650569.74,
+      "p95": 1650569.74
     },
     {
       "operation": "sum",
       "mode": "kernel-only",
-      "metric": "throughput",
+      "metric": "bandwidth",
       "dtype": "float64",
       "shape": [
         1000000
       ],
+      "warmup": 0,
+      "repeat": 100,
       "iterations": 100,
-      "total_ns": 4851470,
-      "ns_per_iter": 48514.7
+      "samples_ns": [
+        47928
+      ],
+      "total_ns": 4792865,
+      "ns_per_iter": 47928.65,
+      "unit": "GiB/s",
+      "throughput": 155.45150128208968,
+      "median": 47928.65,
+      "best": 47928.65,
+      "p95": 47928.65
     },
     {
       "operation": "sum",
       "mode": "end-to-end",
-      "metric": "throughput",
+      "metric": "bandwidth",
       "dtype": "float64",
       "shape": [
         1000000
       ],
+      "warmup": 0,
+      "repeat": 100,
       "iterations": 100,
-      "total_ns": 163893351,
-      "ns_per_iter": 1638933.51
+      "samples_ns": [
+        1650413
+      ],
+      "total_ns": 165041393,
+      "ns_per_iter": 1650413.93,
+      "unit": "GiB/s",
+      "throughput": 4.514370886898554,
+      "median": 1650413.93,
+      "best": 1650413.93,
+      "p95": 1650413.93
     },
     {
       "operation": "random",
       "mode": "kernel-only",
-      "metric": "throughput",
+      "metric": "bandwidth",
       "dtype": "float32",
       "shape": [
         1000000
       ],
+      "warmup": 0,
+      "repeat": 100,
       "iterations": 100,
-      "total_ns": 2311687,
-      "ns_per_iter": 23116.87
+      "samples_ns": [
+        18752
+      ],
+      "total_ns": 1875223,
+      "ns_per_iter": 18752.23,
+      "unit": "GiB/s",
+      "throughput": 198.65852213107,
+      "median": 18752.23,
+      "best": 18752.23,
+      "p95": 18752.23
+    },
+    {
+      "operation": "add",
+      "mode": "kernel-only",
+      "metric": "bandwidth",
+      "dtype": "float32",
+      "shape": [
+        10000
+      ],
+      "warmup": 0,
+      "repeat": 1000,
+      "iterations": 1000,
+      "samples_ns": [
+        2040
+      ],
+      "total_ns": 2040605,
+      "ns_per_iter": 2040.605,
+      "unit": "GiB/s",
+      "throughput": 54.767438555652575,
+      "median": 2040.605,
+      "best": 2040.605,
+      "p95": 2040.605
+    },
+    {
+      "operation": "add",
+      "mode": "end-to-end",
+      "metric": "bandwidth",
+      "dtype": "float32",
+      "shape": [
+        10000
+      ],
+      "warmup": 0,
+      "repeat": 1000,
+      "iterations": 1000,
+      "samples_ns": [
+        32742
+      ],
+      "total_ns": 32742814,
+      "ns_per_iter": 32742.814,
+      "unit": "GiB/s",
+      "throughput": 3.4132285928099346,
+      "median": 32742.814,
+      "best": 32742.814,
+      "p95": 32742.814
+    },
+    {
+      "operation": "add",
+      "mode": "kernel-only",
+      "metric": "bandwidth",
+      "dtype": "float64",
+      "shape": [
+        10000
+      ],
+      "warmup": 0,
+      "repeat": 1000,
+      "iterations": 1000,
+      "samples_ns": [
+        2245
+      ],
+      "total_ns": 2245853,
+      "ns_per_iter": 2245.853,
+      "unit": "GiB/s",
+      "throughput": 99.52450935467051,
+      "median": 2245.853,
+      "best": 2245.853,
+      "p95": 2245.853
+    },
+    {
+      "operation": "add",
+      "mode": "end-to-end",
+      "metric": "bandwidth",
+      "dtype": "float64",
+      "shape": [
+        10000
+      ],
+      "warmup": 0,
+      "repeat": 1000,
+      "iterations": 1000,
+      "samples_ns": [
+        68479
+      ],
+      "total_ns": 68479599,
+      "ns_per_iter": 68479.599,
+      "unit": "GiB/s",
+      "throughput": 3.264000098886602,
+      "median": 68479.599,
+      "best": 68479.599,
+      "p95": 68479.599
+    },
+    {
+      "operation": "mul",
+      "mode": "kernel-only",
+      "metric": "bandwidth",
+      "dtype": "float32",
+      "shape": [
+        10000
+      ],
+      "warmup": 0,
+      "repeat": 1000,
+      "iterations": 1000,
+      "samples_ns": [
+        2051
+      ],
+      "total_ns": 2051321,
+      "ns_per_iter": 2051.321,
+      "unit": "GiB/s",
+      "throughput": 54.48133615063533,
+      "median": 2051.321,
+      "best": 2051.321,
+      "p95": 2051.321
+    },
+    {
+      "operation": "mul",
+      "mode": "end-to-end",
+      "metric": "bandwidth",
+      "dtype": "float32",
+      "shape": [
+        10000
+      ],
+      "warmup": 0,
+      "repeat": 1000,
+      "iterations": 1000,
+      "samples_ns": [
+        33336
+      ],
+      "total_ns": 33336197,
+      "ns_per_iter": 33336.197,
+      "unit": "GiB/s",
+      "throughput": 3.352473257638159,
+      "median": 33336.197,
+      "best": 33336.197,
+      "p95": 33336.197
+    },
+    {
+      "operation": "mul",
+      "mode": "kernel-only",
+      "metric": "bandwidth",
+      "dtype": "float64",
+      "shape": [
+        10000
+      ],
+      "warmup": 0,
+      "repeat": 1000,
+      "iterations": 1000,
+      "samples_ns": [
+        2001
+      ],
+      "total_ns": 2001699,
+      "ns_per_iter": 2001.699,
+      "unit": "GiB/s",
+      "throughput": 111.66385051284676,
+      "median": 2001.699,
+      "best": 2001.699,
+      "p95": 2001.699
+    },
+    {
+      "operation": "mul",
+      "mode": "end-to-end",
+      "metric": "bandwidth",
+      "dtype": "float64",
+      "shape": [
+        10000
+      ],
+      "warmup": 0,
+      "repeat": 1000,
+      "iterations": 1000,
+      "samples_ns": [
+        67412
+      ],
+      "total_ns": 67412596,
+      "ns_per_iter": 67412.596,
+      "unit": "GiB/s",
+      "throughput": 3.3156625196234075,
+      "median": 67412.596,
+      "best": 67412.596,
+      "p95": 67412.596
+    },
+    {
+      "operation": "sum",
+      "mode": "kernel-only",
+      "metric": "bandwidth",
+      "dtype": "float32",
+      "shape": [
+        10000
+      ],
+      "warmup": 0,
+      "repeat": 1000,
+      "iterations": 1000,
+      "samples_ns": [
+        23055
+      ],
+      "total_ns": 23055168,
+      "ns_per_iter": 23055.168,
+      "unit": "GiB/s",
+      "throughput": 1.6158157244665985,
+      "median": 23055.168,
+      "best": 23055.168,
+      "p95": 23055.168
+    },
+    {
+      "operation": "sum",
+      "mode": "end-to-end",
+      "metric": "bandwidth",
+      "dtype": "float32",
+      "shape": [
+        10000
+      ],
+      "warmup": 0,
+      "repeat": 1000,
+      "iterations": 1000,
+      "samples_ns": [
+        29989
+      ],
+      "total_ns": 29989549,
+      "ns_per_iter": 29989.549,
+      "unit": "GiB/s",
+      "throughput": 1.2421961725606192,
+      "median": 29989.549,
+      "best": 29989.549,
+      "p95": 29989.549
+    },
+    {
+      "operation": "sum",
+      "mode": "kernel-only",
+      "metric": "bandwidth",
+      "dtype": "float64",
+      "shape": [
+        10000
+      ],
+      "warmup": 0,
+      "repeat": 1000,
+      "iterations": 1000,
+      "samples_ns": [
+        22774
+      ],
+      "total_ns": 22774558,
+      "ns_per_iter": 22774.558,
+      "unit": "GiB/s",
+      "throughput": 3.2714490427975935,
+      "median": 22774.558,
+      "best": 22774.558,
+      "p95": 22774.558
+    },
+    {
+      "operation": "sum",
+      "mode": "end-to-end",
+      "metric": "bandwidth",
+      "dtype": "float64",
+      "shape": [
+        10000
+      ],
+      "warmup": 0,
+      "repeat": 1000,
+      "iterations": 1000,
+      "samples_ns": [
+        52473
+      ],
+      "total_ns": 52473276,
+      "ns_per_iter": 52473.276,
+      "unit": "GiB/s",
+      "throughput": 1.4198809689190794,
+      "median": 52473.276,
+      "best": 52473.276,
+      "p95": 52473.276
+    },
+    {
+      "operation": "add",
+      "mode": "kernel-only",
+      "metric": "bandwidth",
+      "dtype": "float32",
+      "shape": [
+        1000000
+      ],
+      "warmup": 0,
+      "repeat": 100,
+      "iterations": 100,
+      "samples_ns": [
+        43947
+      ],
+      "total_ns": 4394761,
+      "ns_per_iter": 43947.61,
+      "unit": "GiB/s",
+      "throughput": 254.29985601914967,
+      "median": 43947.61,
+      "best": 43947.61,
+      "p95": 43947.61
+    },
+    {
+      "operation": "add",
+      "mode": "end-to-end",
+      "metric": "bandwidth",
+      "dtype": "float32",
+      "shape": [
+        1000000
+      ],
+      "warmup": 0,
+      "repeat": 100,
+      "iterations": 100,
+      "samples_ns": [
+        1310705
+      ],
+      "total_ns": 131070516,
+      "ns_per_iter": 1310705.16,
+      "unit": "GiB/s",
+      "throughput": 8.526609367575652,
+      "median": 1310705.16,
+      "best": 1310705.16,
+      "p95": 1310705.16
+    },
+    {
+      "operation": "add",
+      "mode": "kernel-only",
+      "metric": "bandwidth",
+      "dtype": "float64",
+      "shape": [
+        1000000
+      ],
+      "warmup": 0,
+      "repeat": 100,
+      "iterations": 100,
+      "samples_ns": [
+        73824
+      ],
+      "total_ns": 7382483,
+      "ns_per_iter": 73824.83,
+      "unit": "GiB/s",
+      "throughput": 302.7672639513221,
+      "median": 73824.83,
+      "best": 73824.83,
+      "p95": 73824.83
+    },
+    {
+      "operation": "add",
+      "mode": "end-to-end",
+      "metric": "bandwidth",
+      "dtype": "float64",
+      "shape": [
+        1000000
+      ],
+      "warmup": 0,
+      "repeat": 100,
+      "iterations": 100,
+      "samples_ns": [
+        2445467
+      ],
+      "total_ns": 244546701,
+      "ns_per_iter": 2445467.01,
+      "unit": "GiB/s",
+      "throughput": 9.140070873731185,
+      "median": 2445467.01,
+      "best": 2445467.01,
+      "p95": 2445467.01
+    },
+    {
+      "operation": "mul",
+      "mode": "kernel-only",
+      "metric": "bandwidth",
+      "dtype": "float32",
+      "shape": [
+        1000000
+      ],
+      "warmup": 0,
+      "repeat": 100,
+      "iterations": 100,
+      "samples_ns": [
+        38793
+      ],
+      "total_ns": 3879348,
+      "ns_per_iter": 38793.48,
+      "unit": "GiB/s",
+      "throughput": 288.086320056508,
+      "median": 38793.48,
+      "best": 38793.48,
+      "p95": 38793.48
+    },
+    {
+      "operation": "mul",
+      "mode": "end-to-end",
+      "metric": "bandwidth",
+      "dtype": "float32",
+      "shape": [
+        1000000
+      ],
+      "warmup": 0,
+      "repeat": 100,
+      "iterations": 100,
+      "samples_ns": [
+        1286893
+      ],
+      "total_ns": 128689375,
+      "ns_per_iter": 1286893.75,
+      "unit": "GiB/s",
+      "throughput": 8.684377319717143,
+      "median": 1286893.75,
+      "best": 1286893.75,
+      "p95": 1286893.75
+    },
+    {
+      "operation": "mul",
+      "mode": "kernel-only",
+      "metric": "bandwidth",
+      "dtype": "float64",
+      "shape": [
+        1000000
+      ],
+      "warmup": 0,
+      "repeat": 100,
+      "iterations": 100,
+      "samples_ns": [
+        84189
+      ],
+      "total_ns": 8418935,
+      "ns_per_iter": 84189.35,
+      "unit": "GiB/s",
+      "throughput": 265.4936971335624,
+      "median": 84189.35,
+      "best": 84189.35,
+      "p95": 84189.35
+    },
+    {
+      "operation": "mul",
+      "mode": "end-to-end",
+      "metric": "bandwidth",
+      "dtype": "float64",
+      "shape": [
+        1000000
+      ],
+      "warmup": 0,
+      "repeat": 100,
+      "iterations": 100,
+      "samples_ns": [
+        2393177
+      ],
+      "total_ns": 239317794,
+      "ns_per_iter": 2393177.94,
+      "unit": "GiB/s",
+      "throughput": 9.339774288062962,
+      "median": 2393177.94,
+      "best": 2393177.94,
+      "p95": 2393177.94
+    },
+    {
+      "operation": "sum",
+      "mode": "kernel-only",
+      "metric": "bandwidth",
+      "dtype": "float32",
+      "shape": [
+        1000000
+      ],
+      "warmup": 0,
+      "repeat": 100,
+      "iterations": 100,
+      "samples_ns": [
+        30529
+      ],
+      "total_ns": 3052939,
+      "ns_per_iter": 30529.39,
+      "unit": "GiB/s",
+      "throughput": 122.02308328014134,
+      "median": 30529.39,
+      "best": 30529.39,
+      "p95": 30529.39
+    },
+    {
+      "operation": "sum",
+      "mode": "end-to-end",
+      "metric": "bandwidth",
+      "dtype": "float32",
+      "shape": [
+        1000000
+      ],
+      "warmup": 0,
+      "repeat": 100,
+      "iterations": 100,
+      "samples_ns": [
+        483765
+      ],
+      "total_ns": 48376538,
+      "ns_per_iter": 483765.38,
+      "unit": "GiB/s",
+      "throughput": 7.700613670333157,
+      "median": 483765.38,
+      "best": 483765.38,
+      "p95": 483765.38
+    },
+    {
+      "operation": "sum",
+      "mode": "kernel-only",
+      "metric": "bandwidth",
+      "dtype": "float64",
+      "shape": [
+        1000000
+      ],
+      "warmup": 0,
+      "repeat": 100,
+      "iterations": 100,
+      "samples_ns": [
+        47128
+      ],
+      "total_ns": 4712829,
+      "ns_per_iter": 47128.29,
+      "unit": "GiB/s",
+      "throughput": 158.0914689865435,
+      "median": 47128.29,
+      "best": 47128.29,
+      "p95": 47128.29
+    },
+    {
+      "operation": "sum",
+      "mode": "end-to-end",
+      "metric": "bandwidth",
+      "dtype": "float64",
+      "shape": [
+        1000000
+      ],
+      "warmup": 0,
+      "repeat": 100,
+      "iterations": 100,
+      "samples_ns": [
+        858546
+      ],
+      "total_ns": 85854667,
+      "ns_per_iter": 858546.67,
+      "unit": "GiB/s",
+      "throughput": 8.678131145653186,
+      "median": 858546.67,
+      "best": 858546.67,
+      "p95": 858546.67
+    },
+    {
+      "operation": "add",
+      "mode": "kernel-only",
+      "metric": "bandwidth",
+      "dtype": "float32",
+      "shape": [
+        10000000
+      ],
+      "warmup": 0,
+      "repeat": 10,
+      "iterations": 10,
+      "samples_ns": [
+        359606
+      ],
+      "total_ns": 3596068,
+      "ns_per_iter": 359606.8,
+      "unit": "GiB/s",
+      "throughput": 310.7802993543432,
+      "median": 359606.8,
+      "best": 359606.8,
+      "p95": 359606.8
+    },
+    {
+      "operation": "add",
+      "mode": "end-to-end",
+      "metric": "bandwidth",
+      "dtype": "float32",
+      "shape": [
+        10000000
+      ],
+      "warmup": 0,
+      "repeat": 10,
+      "iterations": 10,
+      "samples_ns": [
+        16721879
+      ],
+      "total_ns": 167218798,
+      "ns_per_iter": 16721879.8,
+      "unit": "GiB/s",
+      "throughput": 6.683381909841105,
+      "median": 16721879.8,
+      "best": 16721879.8,
+      "p95": 16721879.8
+    },
+    {
+      "operation": "add",
+      "mode": "kernel-only",
+      "metric": "bandwidth",
+      "dtype": "float64",
+      "shape": [
+        10000000
+      ],
+      "warmup": 0,
+      "repeat": 10,
+      "iterations": 10,
+      "samples_ns": [
+        773206
+      ],
+      "total_ns": 7732067,
+      "ns_per_iter": 773206.7,
+      "unit": "GiB/s",
+      "throughput": 289.07848044735624,
+      "median": 773206.7,
+      "best": 773206.7,
+      "p95": 773206.7
+    },
+    {
+      "operation": "add",
+      "mode": "end-to-end",
+      "metric": "bandwidth",
+      "dtype": "float64",
+      "shape": [
+        10000000
+      ],
+      "warmup": 0,
+      "repeat": 10,
+      "iterations": 10,
+      "samples_ns": [
+        32858880
+      ],
+      "total_ns": 328588808,
+      "ns_per_iter": 32858880.8,
+      "unit": "GiB/s",
+      "throughput": 6.802344220674577,
+      "median": 32858880.8,
+      "best": 32858880.8,
+      "p95": 32858880.8
+    },
+    {
+      "operation": "mul",
+      "mode": "kernel-only",
+      "metric": "bandwidth",
+      "dtype": "float32",
+      "shape": [
+        10000000
+      ],
+      "warmup": 0,
+      "repeat": 10,
+      "iterations": 10,
+      "samples_ns": [
+        366860
+      ],
+      "total_ns": 3668603,
+      "ns_per_iter": 366860.3,
+      "unit": "GiB/s",
+      "throughput": 304.635603672181,
+      "median": 366860.3,
+      "best": 366860.3,
+      "p95": 366860.3
+    },
+    {
+      "operation": "mul",
+      "mode": "end-to-end",
+      "metric": "bandwidth",
+      "dtype": "float32",
+      "shape": [
+        10000000
+      ],
+      "warmup": 0,
+      "repeat": 10,
+      "iterations": 10,
+      "samples_ns": [
+        14092948
+      ],
+      "total_ns": 140929486,
+      "ns_per_iter": 14092948.6,
+      "unit": "GiB/s",
+      "throughput": 7.930115416291054,
+      "median": 14092948.6,
+      "best": 14092948.6,
+      "p95": 14092948.6
+    },
+    {
+      "operation": "mul",
+      "mode": "kernel-only",
+      "metric": "bandwidth",
+      "dtype": "float64",
+      "shape": [
+        10000000
+      ],
+      "warmup": 0,
+      "repeat": 10,
+      "iterations": 10,
+      "samples_ns": [
+        782042
+      ],
+      "total_ns": 7820427,
+      "ns_per_iter": 782042.7,
+      "unit": "GiB/s",
+      "throughput": 285.8122937631345,
+      "median": 782042.7,
+      "best": 782042.7,
+      "p95": 782042.7
+    },
+    {
+      "operation": "mul",
+      "mode": "end-to-end",
+      "metric": "bandwidth",
+      "dtype": "float64",
+      "shape": [
+        10000000
+      ],
+      "warmup": 0,
+      "repeat": 10,
+      "iterations": 10,
+      "samples_ns": [
+        28116992
+      ],
+      "total_ns": 281169927,
+      "ns_per_iter": 28116992.7,
+      "unit": "GiB/s",
+      "throughput": 7.949549238518487,
+      "median": 28116992.7,
+      "best": 28116992.7,
+      "p95": 28116992.7
+    },
+    {
+      "operation": "sum",
+      "mode": "kernel-only",
+      "metric": "bandwidth",
+      "dtype": "float32",
+      "shape": [
+        10000000
+      ],
+      "warmup": 0,
+      "repeat": 10,
+      "iterations": 10,
+      "samples_ns": [
+        151315
+      ],
+      "total_ns": 1513152,
+      "ns_per_iter": 151315.2,
+      "unit": "GiB/s",
+      "throughput": 246.1940570717227,
+      "median": 151315.2,
+      "best": 151315.2,
+      "p95": 151315.2
+    },
+    {
+      "operation": "sum",
+      "mode": "end-to-end",
+      "metric": "bandwidth",
+      "dtype": "float32",
+      "shape": [
+        10000000
+      ],
+      "warmup": 0,
+      "repeat": 10,
+      "iterations": 10,
+      "samples_ns": [
+        4431153
+      ],
+      "total_ns": 44311537,
+      "ns_per_iter": 4431153.7,
+      "unit": "GiB/s",
+      "throughput": 8.407043742269455,
+      "median": 4431153.7,
+      "best": 4431153.7,
+      "p95": 4431153.7
+    },
+    {
+      "operation": "sum",
+      "mode": "kernel-only",
+      "metric": "bandwidth",
+      "dtype": "float64",
+      "shape": [
+        10000000
+      ],
+      "warmup": 0,
+      "repeat": 10,
+      "iterations": 10,
+      "samples_ns": [
+        308933
+      ],
+      "total_ns": 3089334,
+      "ns_per_iter": 308933.4,
+      "unit": "GiB/s",
+      "throughput": 241.17109373489004,
+      "median": 308933.4,
+      "best": 308933.4,
+      "p95": 308933.4
+    },
+    {
+      "operation": "sum",
+      "mode": "end-to-end",
+      "metric": "bandwidth",
+      "dtype": "float64",
+      "shape": [
+        10000000
+      ],
+      "warmup": 0,
+      "repeat": 10,
+      "iterations": 10,
+      "samples_ns": [
+        10865483
+      ],
+      "total_ns": 108654831,
+      "ns_per_iter": 10865483.1,
+      "unit": "GiB/s",
+      "throughput": 6.857109369507765,
+      "median": 10865483.1,
+      "best": 10865483.1,
+      "p95": 10865483.1
+    },
+    {
+      "operation": "matmul",
+      "mode": "kernel-only",
+      "metric": "tflops",
+      "dtype": "float32",
+      "shape": [
+        256,
+        256
+      ],
+      "warmup": 0,
+      "repeat": 10,
+      "iterations": 10,
+      "samples_ns": [
+        97460
+      ],
+      "total_ns": 974604,
+      "ns_per_iter": 97460.4,
+      "unit": "TFLOP/s",
+      "throughput": 0.34428785434904846,
+      "median": 97460.4,
+      "best": 97460.4,
+      "p95": 97460.4
+    },
+    {
+      "operation": "matmul",
+      "mode": "end-to-end",
+      "metric": "tflops",
+      "dtype": "float32",
+      "shape": [
+        256,
+        256
+      ],
+      "warmup": 0,
+      "repeat": 10,
+      "iterations": 10,
+      "samples_ns": [
+        201915
+      ],
+      "total_ns": 2019152,
+      "ns_per_iter": 201915.2,
+      "unit": "TFLOP/s",
+      "throughput": 0.16618081253912534,
+      "median": 201915.2,
+      "best": 201915.2,
+      "p95": 201915.2
+    },
+    {
+      "operation": "matmul",
+      "mode": "kernel-only",
+      "metric": "tflops",
+      "dtype": "float32",
+      "shape": [
+        1024,
+        1024
+      ],
+      "warmup": 0,
+      "repeat": 10,
+      "iterations": 10,
+      "samples_ns": [
+        1816420
+      ],
+      "total_ns": 18164207,
+      "ns_per_iter": 1816420.7,
+      "unit": "TFLOP/s",
+      "throughput": 1.182261162295717,
+      "median": 1816420.7,
+      "best": 1816420.7,
+      "p95": 1816420.7
+    },
+    {
+      "operation": "matmul",
+      "mode": "end-to-end",
+      "metric": "tflops",
+      "dtype": "float32",
+      "shape": [
+        1024,
+        1024
+      ],
+      "warmup": 0,
+      "repeat": 10,
+      "iterations": 10,
+      "samples_ns": [
+        3159395
+      ],
+      "total_ns": 31593951,
+      "ns_per_iter": 3159395.1,
+      "unit": "TFLOP/s",
+      "throughput": 0.6797135464317203,
+      "median": 3159395.1,
+      "best": 3159395.1,
+      "p95": 3159395.1
+    },
+    {
+      "operation": "matmul",
+      "mode": "kernel-only",
+      "metric": "tflops",
+      "dtype": "float32",
+      "shape": [
+        2048,
+        2048
+      ],
+      "warmup": 0,
+      "repeat": 10,
+      "iterations": 10,
+      "samples_ns": [
+        15333579
+      ],
+      "total_ns": 153335793,
+      "ns_per_iter": 15333579.3,
+      "unit": "TFLOP/s",
+      "throughput": 1.1204082783202485,
+      "median": 15333579.3,
+      "best": 15333579.3,
+      "p95": 15333579.3
+    },
+    {
+      "operation": "matmul",
+      "mode": "end-to-end",
+      "metric": "tflops",
+      "dtype": "float32",
+      "shape": [
+        2048,
+        2048
+      ],
+      "warmup": 0,
+      "repeat": 10,
+      "iterations": 10,
+      "samples_ns": [
+        20516184
+      ],
+      "total_ns": 205161844,
+      "ns_per_iter": 20516184.4,
+      "unit": "TFLOP/s",
+      "throughput": 0.8373813009791431,
+      "median": 20516184.4,
+      "best": 20516184.4,
+      "p95": 20516184.4
+    },
+    {
+      "operation": "random",
+      "mode": "kernel-only",
+      "metric": "bandwidth",
+      "dtype": "float32",
+      "shape": [
+        1000000
+      ],
+      "warmup": 0,
+      "repeat": 100,
+      "iterations": 100,
+      "samples_ns": [
+        18481
+      ],
+      "total_ns": 1848158,
+      "ns_per_iter": 18481.58,
+      "unit": "GiB/s",
+      "throughput": 201.56773925508068,
+      "median": 18481.58,
+      "best": 18481.58,
+      "p95": 18481.58
+    },
+    {
+      "operation": "random",
+      "mode": "end-to-end",
+      "metric": "bandwidth",
+      "dtype": "float32",
+      "shape": [
+        1000000
+      ],
+      "warmup": 0,
+      "repeat": 100,
+      "iterations": 100,
+      "samples_ns": [
+        450055
+      ],
+      "total_ns": 45005582,
+      "ns_per_iter": 450055.82,
+      "unit": "GiB/s",
+      "throughput": 8.27739612046771,
+      "median": 450055.82,
+      "best": 450055.82,
+      "p95": 450055.82
+    },
+    {
+      "operation": "random",
+      "mode": "kernel-only",
+      "metric": "bandwidth",
+      "dtype": "float32",
+      "shape": [
+        10000000
+      ],
+      "warmup": 0,
+      "repeat": 10,
+      "iterations": 10,
+      "samples_ns": [
+        123799
+      ],
+      "total_ns": 1237993,
+      "ns_per_iter": 123799.3,
+      "unit": "GiB/s",
+      "throughput": 300.91368032467983,
+      "median": 123799.3,
+      "best": 123799.3,
+      "p95": 123799.3
+    },
+    {
+      "operation": "random",
+      "mode": "end-to-end",
+      "metric": "bandwidth",
+      "dtype": "float32",
+      "shape": [
+        10000000
+      ],
+      "warmup": 0,
+      "repeat": 10,
+      "iterations": 10,
+      "samples_ns": [
+        5890630
+      ],
+      "total_ns": 58906300,
+      "ns_per_iter": 5890630.0,
+      "unit": "GiB/s",
+      "throughput": 6.324094873488768,
+      "median": 5890630.0,
+      "best": 5890630.0,
+      "p95": 5890630.0
     }
   ]
 }
