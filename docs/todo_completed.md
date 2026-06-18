@@ -1483,3 +1483,12 @@ NUMUYA_CUDA_REQUIRED=1 LDFLAGS="-lcublasLt -lcublas -lcufft -lcurand -lcuda" ../
   - 验证：`python3 -m unittest tests/test_python_benchmarks.py` -> OK
   - 验证：`python3 benchmarks/python/bench_numpy_cpu.py --json` -> 输出 5 个 operation：`add`/`mul`/`sum`/`matmul`/`random`
   - 验证：`python3 benchmarks/python/bench_gpu_reference.py --json` -> 输出 NumPy CPU baseline，当前环境 `cupy not installed`
+
+### Phase 24: NumPy 性能对比（CPU / GPU）
+- [x] 让 NumUya benchmark 与 Python 对照项一一对应。
+  - `src/numuya/_benchmarks/bench_simd.uya` 对齐 CPU 对照项；若本轮不做 `matmul` / `random`，必须在文档中明确 scope。
+  - `src/numuya/_benchmarks/bench_cuda.uya` 同时输出 `kernel-only` 与 `end-to-end` 结果，避免把两者混在一个数字里。
+  - 对已有 CUDA benchmark 的输出增加机器可解析字段，便于自动生成汇总表。
+  - `Makefile` 建议新增 `bench-numpy-cpu`、`bench-numpy-gpu-ref`、`bench-compare` 目标。
+  - 验证：`python -m unittest tests.test_python_benchmarks`
+  - 结果：通过（5 tests, 4.209s）。

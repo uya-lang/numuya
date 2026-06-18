@@ -8,7 +8,7 @@ TESTS := $(sort $(wildcard src/numuya/_tests/test_*.uya))
 BENCH ?= src/numuya/_benchmarks/bench_simd.uya
 BENCHES := $(sort $(wildcard src/numuya/_benchmarks/bench_*.uya))
 
-.PHONY: bootstrap-upm upm-install test-one test test-cuda test-cuda-vendor check-one check-cpu-core-deps verify-upm-consumer require-upm bench cuda-ptx-embed cuda-cubin-embed cuda-ptx-validate
+.PHONY: bootstrap-upm upm-install test-one test test-cuda test-cuda-vendor check-one check-cpu-core-deps verify-upm-consumer require-upm bench bench-numpy-cpu bench-numpy-gpu-ref bench-compare cuda-ptx-embed cuda-cubin-embed cuda-ptx-validate
 
 require-upm:
 	@test -x "$(UPM)" || { echo "missing executable $(UPM)"; exit 1; }
@@ -85,6 +85,14 @@ bench: require-upm
 		echo "$(UYA) run $$bench --manifest-path $(MANIFEST)"; \
 		$(UYA) run "$$bench" --manifest-path $(MANIFEST) || exit $$?; \
 	done
+
+bench-numpy-cpu:
+	python benchmarks/python/bench_numpy_cpu.py
+
+bench-numpy-gpu-ref:
+	python benchmarks/python/bench_gpu_reference.py
+
+bench-compare: bench bench-numpy-cpu bench-numpy-gpu-ref
 
 verify-upm-consumer: require-upm
 	$(UPM) install --manifest-path $(CONSUMER_MANIFEST)

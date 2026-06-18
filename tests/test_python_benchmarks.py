@@ -46,6 +46,26 @@ class PythonBenchmarkScriptsTest(unittest.TestCase):
         self.assertIn("numpy_cpu_baseline", payload)
         self.assertIsInstance(payload["gpu_reference"], dict)
 
+    def test_bench_simd_declares_cpu_scope_aligned_with_numpy(self) -> None:
+        source = (ROOT / "src/numuya/_benchmarks/bench_simd.uya").read_text(encoding="utf-8")
+        self.assertIn("Scope: add/mul/sum only; matmul/random remain Python-only in this round.", source)
+        self.assertRegex(source, r'print_result\("add_f64"')
+        self.assertRegex(source, r'print_result\("mul_f64"')
+        self.assertRegex(source, r'print_result\("sum_all_f64"')
+
+    def test_bench_cuda_emits_machine_readable_modes(self) -> None:
+        source = (ROOT / "src/numuya/_benchmarks/bench_cuda.uya").read_text(encoding="utf-8")
+        self.assertIn("BENCH_JSON|", source)
+        self.assertIn("mode=kernel-only", source)
+        self.assertIn("mode=end-to-end", source)
+        self.assertIn("fn print_json_result(", source)
+
+    def test_makefile_exposes_numpy_comparison_targets(self) -> None:
+        makefile = (ROOT / "Makefile").read_text(encoding="utf-8")
+        self.assertRegex(makefile, r"(?m)^bench-numpy-cpu:")
+        self.assertRegex(makefile, r"(?m)^bench-numpy-gpu-ref:")
+        self.assertRegex(makefile, r"(?m)^bench-compare:")
+
 
 if __name__ == "__main__":
     unittest.main()

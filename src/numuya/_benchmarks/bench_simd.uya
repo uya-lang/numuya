@@ -162,6 +162,7 @@ fn print_header() void {
     write_str("Benchmark: scalar vs SIMD f64 arrays\n");
     write_str("=====================================\n");
     write_str("This benchmark measures wall-clock time; it does not verify correctness.\n");
+    write_str("Scope: add/mul/sum only; matmul/random remain Python-only in this round.\n");
     write_str("For correctness, run `make test`.\n\n");
 }
 

@@ -207,6 +207,39 @@ fn print_bandwidth_result(name: &const byte, total_ns: u64, bytes_per_transfer: 
     return gb_per_s;
 }
 
+fn print_json_result(
+    operation: &const byte,
+    mode: &const byte,
+    metric: &const byte,
+    dtype: &const byte,
+    shape0: usize,
+    shape1: usize,
+    total_ns: u64,
+    iterations: usize,
+) void {
+    // Example: BENCH_JSON|operation=add|mode=kernel-only|metric=throughput|dtype=float64|shape=1000000|iterations=100|total_ns=123
+    // Example: BENCH_JSON|operation=add|mode=end-to-end|metric=throughput|dtype=float64|shape=1000000|iterations=100|total_ns=456
+    write_str("BENCH_JSON|operation=");
+    write_str(operation);
+    write_str("|mode=");
+    write_str(mode);
+    write_str("|metric=");
+    write_str(metric);
+    write_str("|dtype=");
+    write_str(dtype);
+    write_str("|shape=");
+    write_usize(shape0);
+    if shape1 > 0 {
+        write_str("x");
+        write_usize(shape1);
+    }
+    write_str("|iterations=");
+    write_usize(iterations);
+    write_str("|total_ns=");
+    write_usize(total_ns as usize);
+    write_newline();
+}
+
 fn check_bandwidth(name: &const byte, gb_per_s: f64, min_gb_per_s: f64) bool {
     write_str("  ");
     write_str(name);
@@ -617,6 +650,7 @@ export fn main() i32 {
         return 1;
     };
     const h2d_gbps: f64 = print_bandwidth_result("H2D bandwidth", h2d_ns, bytes, iterations);
+    print_json_result("transfer_h2d", "end-to-end", "bandwidth", "float64", size, 0, h2d_ns, iterations);
     const h2d_ok: bool = check_bandwidth("H2D", h2d_gbps, MIN_H2D_GBPS);
 
     const d2h_ns: u64 = bench_d2h(&host_buffer, device_left.storage, state.context, state.stream, iterations) catch {
@@ -624,6 +658,7 @@ export fn main() i32 {
         return 1;
     };
     const d2h_gbps: f64 = print_bandwidth_result("D2H bandwidth", d2h_ns, bytes, iterations);
+    print_json_result("transfer_d2h", "end-to-end", "bandwidth", "float64", size, 0, d2h_ns, iterations);
     const d2h_ok: bool = check_bandwidth("D2H", d2h_gbps, MIN_D2H_GBPS);
 
     if !h2d_ok || !d2h_ok {
@@ -644,6 +679,8 @@ export fn main() i32 {
         return 1;
     };
     const add_f32_bw: f64 = print_add_bandwidth_result("add_f32", add_f32_ns, size, iterations, BENCH_F32_ELEMENT_SIZE);
+    print_json_result("add", "kernel-only", "throughput", "float32", size, 0, add_f32_ns, iterations);
+    print_json_result("add", "end-to-end", "throughput", "float32", size, 0, h2d_ns + add_f32_ns + d2h_ns, iterations);
     const add_f32_ok: bool = check_bandwidth("add_f32", add_f32_bw, MIN_ADD_F32_GBPS);
 
     const add_ns: u64 = bench_add_kernel(
@@ -660,6 +697,8 @@ export fn main() i32 {
         return 1;
     };
     const add_f64_bw: f64 = print_add_bandwidth_result("add_f64", add_ns, size, iterations, BENCH_F64_ELEMENT_SIZE);
+    print_json_result("add", "kernel-only", "throughput", "float64", size, 0, add_ns, iterations);
+    print_json_result("add", "end-to-end", "throughput", "float64", size, 0, h2d_ns + add_ns + d2h_ns, iterations);
     const add_f64_ok: bool = check_bandwidth("add_f64", add_f64_bw, MIN_ADD_F64_GBPS);
 
     if !add_f32_ok || !add_f64_ok {
@@ -718,6 +757,7 @@ export fn main() i32 {
         return 1;
     };
     const matmul_1_tflops: f64 = print_matmul_result("matmul_f32 1024x1024", matmul_1_ns, MATMUL_SIZE_1, MATMUL_SIZE_1, MATMUL_SIZE_1, MATMUL_ITER_1);
+    print_json_result("matmul", "kernel-only", "tflops", "float32", MATMUL_SIZE_1, MATMUL_SIZE_1, matmul_1_ns, MATMUL_ITER_1);
     const matmul_1_ok: bool = check_tflops("matmul_f32 1024x1024", matmul_1_tflops, MIN_MATMUL_F32_1024_TFLOPS);
 
     _ = gpu_matmul_f32(&state, &device_matmul_a_2, &device_matmul_b_2) catch {
@@ -729,6 +769,7 @@ export fn main() i32 {
         return 1;
     };
     const matmul_2_tflops: f64 = print_matmul_result("matmul_f32 2048x2048", matmul_2_ns, MATMUL_SIZE_2, MATMUL_SIZE_2, MATMUL_SIZE_2, MATMUL_ITER_2);
+    print_json_result("matmul", "kernel-only", "tflops", "float32", MATMUL_SIZE_2, MATMUL_SIZE_2, matmul_2_ns, MATMUL_ITER_2);
 
     var vendor_matmul_2_tflops: f64 = 0.0;
     var vendor_matmul_2_ok: bool = true;
@@ -738,6 +779,7 @@ export fn main() i32 {
             return 1;
         };
         vendor_matmul_2_tflops = print_matmul_result("cublasLt TF32 matmul_f32 2048x2048", vendor_matmul_ns, MATMUL_SIZE_2, MATMUL_SIZE_2, MATMUL_SIZE_2, MATMUL_ITER_2);
+        print_json_result("matmul_vendor_tf32", "kernel-only", "tflops", "float32", MATMUL_SIZE_2, MATMUL_SIZE_2, vendor_matmul_ns, MATMUL_ITER_2);
         vendor_matmul_2_ok = check_tflops("cublasLt TF32 matmul_f32 2048x2048", vendor_matmul_2_tflops, MIN_CUBLASLT_TF32_2048_TFLOPS);
     } else {
         write_str("cublasLt unavailable; skipping vendor TF32 strict threshold\n");
@@ -760,6 +802,8 @@ export fn main() i32 {
         return 1;
     };
     const sum_f32_bw: f64 = print_sum_bandwidth_result("sum_all_f32", sum_f32_ns, size, iterations, BENCH_F32_ELEMENT_SIZE);
+    print_json_result("sum", "kernel-only", "throughput", "float32", size, 0, sum_f32_ns, iterations);
+    print_json_result("sum", "end-to-end", "throughput", "float32", size, 0, h2d_ns + sum_f32_ns + d2h_ns, iterations);
     const sum_f32_ok: bool = check_bandwidth("sum_all_f32", sum_f32_bw, MIN_SUM_F32_GBPS);
 
     const sum_f64_ns: u64 = bench_sum_all_f64(&state, &device_left, iterations) catch {
@@ -767,6 +811,8 @@ export fn main() i32 {
         return 1;
     };
     const sum_f64_bw: f64 = print_sum_bandwidth_result("sum_all_f64", sum_f64_ns, size, iterations, BENCH_F64_ELEMENT_SIZE);
+    print_json_result("sum", "kernel-only", "throughput", "float64", size, 0, sum_f64_ns, iterations);
+    print_json_result("sum", "end-to-end", "throughput", "float64", size, 0, h2d_ns + sum_f64_ns + d2h_ns, iterations);
 
     if !sum_f32_ok {
         write_str("\nsum_all_f32 benchmark below strict threshold; continuing benchmark run\n");
@@ -777,6 +823,7 @@ export fn main() i32 {
         return 1;
     };
     const random_bw: f64 = print_sum_bandwidth_result("random_f32", random_ns, size, iterations, BENCH_F32_ELEMENT_SIZE);
+    print_json_result("random", "kernel-only", "throughput", "float32", size, 0, random_ns, iterations);
     const random_ok: bool = check_bandwidth("random_f32", random_bw, MIN_RANDOM_F32_GBPS);
     if !random_ok {
         write_str("\nrandom_f32 benchmark below strict threshold; continuing benchmark run\n");
