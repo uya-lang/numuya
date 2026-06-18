@@ -40,12 +40,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
   - `NumUya CUDA kernel-only` 单独报告，不伪造“NumPy GPU”数据。
 - 如环境允许，可额外记录 `CuPy` 作为同机 GPU reference，但必须单列展示，不能替代 NumPy baseline。
 
-- [ ] 准备 Python 对照 benchmark 脚本。
-  - 建议新增 `benchmarks/python/bench_numpy_cpu.py`，覆盖 `add`、`mul`、`sum`、`matmul`、`random`。
-  - 建议新增 `benchmarks/python/bench_gpu_reference.py`，至少输出 NumPy CPU baseline；检测到 `cupy` 时再追加 GPU reference。
-  - Python 输出必须包含：`python --version`、`numpy.__version__`、`cupy.__version__`（如有）、BLAS backend、线程环境变量、机器信息。
-  - 输出格式建议为 JSON + 可读表格，便于后续汇总到 Markdown 文档。
-
 - [ ] 让 NumUya benchmark 与 Python 对照项一一对应。
   - `src/numuya/_benchmarks/bench_simd.uya` 对齐 CPU 对照项；若本轮不做 `matmul` / `random`，必须在文档中明确 scope。
   - `src/numuya/_benchmarks/bench_cuda.uya` 同时输出 `kernel-only` 与 `end-to-end` 结果，避免把两者混在一个数字里。

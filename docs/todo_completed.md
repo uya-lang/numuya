@@ -1473,3 +1473,13 @@ NUMUYA_CUDA_REQUIRED=1 LDFLAGS="-lcublasLt -lcublas -lcufft -lcurand -lcuda" ../
 - [x] 可选 cuBLAS/cuFFT/cuRAND 通过 `BackendConfig.prefer_vendor_libs=true` / `make test-cuda-vendor` 开启，纯 Uya CUDA kernel backend 始终可通过测试。
 - [x] DeviceArray view/drop 路径经过 DeviceStorage refcount 测试（test_cuda_device_array.uya）。
 - [x] host-return `_auto` API 与 location-preserving `_on` API 都有测试（test_cuda_auto.uya + test_cuda_location_preserving.uya）。
+
+### Phase 24: NumPy 性能对比（CPU / GPU）
+
+- [x] 准备 Python 对照 benchmark 脚本。
+  - 新增 `benchmarks/python/bench_numpy_cpu.py`，覆盖 `add`、`mul`、`sum`、`matmul`、`random`，输出 JSON 和可读表格。
+  - 新增 `benchmarks/python/bench_gpu_reference.py`，默认输出 NumPy CPU baseline；检测不到 `cupy` 时返回 `available=false`，检测到时追加 GPU reference。
+  - 新增 `benchmarks/python/_bench_common.py` 统一采集 `python_version`、`numpy_version`、`cupy_version`（如有）、BLAS backend、线程环境变量、机器信息。
+  - 验证：`python3 -m unittest tests/test_python_benchmarks.py` -> OK
+  - 验证：`python3 benchmarks/python/bench_numpy_cpu.py --json` -> 输出 5 个 operation：`add`/`mul`/`sum`/`matmul`/`random`
+  - 验证：`python3 benchmarks/python/bench_gpu_reference.py --json` -> 输出 NumPy CPU baseline，当前环境 `cupy not installed`
