@@ -1511,3 +1511,11 @@ NUMUYA_CUDA_REQUIRED=1 LDFLAGS="-lcublasLt -lcublas -lcufft -lcurand -lcuda" ../
   - 验证：`python3 -m unittest tests/test_python_benchmarks.py` -> OK
   - 验证：`make bench-guardrails-cpu` -> 通过；跑完整非 CUDA 测试集后执行 `python benchmarks/python/spotcheck_benchmarks.py --json`，`cpu_workloads` 的 `add/mul/sum/matmul/random` 全部 `match=true`
   - 验证：`make bench-guardrails-gpu` -> 通过；跑完整 CUDA 测试集后执行 `python benchmarks/python/spotcheck_benchmarks.py --json`，`gpu_workloads` 的 `add/sum` 全部 `match=true`，当前环境 `available=true`
+
+## Phase 24: NumPy 性能对比（CPU / GPU）
+
+- [x] 固定原始结果与汇总产物位置。
+  - 原始结果固定根目录：`benchmarks/results/<YYYY-MM-DD>/`，并新增 `benchmarks/results/.gitkeep` 保留目录骨架。
+  - 汇总文档固定为 `docs/benchmarks/numpy_comparison.md`，文档新增“固定产物位置”章节并补齐汇总表必填字段。
+  - 验证：`python3 -m unittest tests.test_python_benchmarks.PythonBenchmarkScriptsTest.test_numpy_comparison_doc_freezes_artifact_locations` -> OK
+  - 验证：`python3 -m unittest tests.test_python_benchmarks.PythonBenchmarkScriptsTest.test_makefile_exposes_numpy_comparison_targets tests.test_python_benchmarks.PythonBenchmarkScriptsTest.test_numpy_comparison_doc_freezes_v1_matrix tests.test_python_benchmarks.PythonBenchmarkScriptsTest.test_numpy_comparison_doc_mentions_correctness_guardrails tests.test_python_benchmarks.PythonBenchmarkScriptsTest.test_numpy_comparison_doc_freezes_artifact_locations` -> OK

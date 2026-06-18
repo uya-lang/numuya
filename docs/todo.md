@@ -40,12 +40,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
   - `NumUya CUDA kernel-only` 单独报告，不伪造“NumPy GPU”数据。
 - 如环境允许，可额外记录 `CuPy` 作为同机 GPU reference，但必须单列展示，不能替代 NumPy baseline。
 
-- [ ] 固定原始结果与汇总产物位置。
-  - 原始结果建议落到 `benchmarks/results/2026-06-18/` 这类按日期命名的目录。
-  - 汇总文档建议新增 `docs/benchmarks/numpy_comparison.md`。
-  - 汇总表至少包含：绝对耗时、吞吐/带宽、相对 NumPy CPU speedup、命令行、commit、运行日期、硬件/驱动/版本信息。
-  - 若某项只有 NumUya CUDA 与 NumPy CPU，必须明确标注“非同类设备对比，仅作端到端参考”。
-
 - [ ] 添加汇总报告生成任务。
   - 建议新增 `benchmarks/python/summarize_benchmarks.py`，读取 NumUya 与 Python 对照脚本输出的 JSON 结果。
   - 建议新增 `make bench-report` 目标，负责把原始结果汇总成 `Markdown + JSON summary`。

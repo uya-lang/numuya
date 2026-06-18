@@ -101,6 +101,23 @@ class PythonBenchmarkScriptsTest(unittest.TestCase):
         self.assertIn("bench-guardrails-gpu", doc)
         self.assertIn("spot-check", doc)
 
+    def test_numpy_comparison_doc_freezes_artifact_locations(self) -> None:
+        results_root = ROOT / "benchmarks/results"
+        self.assertTrue(results_root.is_dir())
+
+        doc = (ROOT / "docs/benchmarks/numpy_comparison.md").read_text(encoding="utf-8")
+        self.assertIn("固定产物位置", doc)
+        self.assertIn("`benchmarks/results/<YYYY-MM-DD>/`", doc)
+        self.assertIn("`docs/benchmarks/numpy_comparison.md`", doc)
+        self.assertIn("绝对耗时", doc)
+        self.assertIn("吞吐 / 带宽 / TFLOP/s", doc)
+        self.assertIn("相对 `NumPy CPU baseline` 的 speedup", doc)
+        self.assertIn("具体命令行", doc)
+        self.assertIn("NumUya commit", doc)
+        self.assertIn("benchmark 运行日期", doc)
+        self.assertIn("硬件/驱动/版本信息", doc)
+        self.assertIn("非同类设备对比，仅作端到端参考", doc)
+
 
 if __name__ == "__main__":
     unittest.main()
