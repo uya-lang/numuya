@@ -137,7 +137,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--model",
-        default=os.environ.get("CODEX_MODEL", "gpt-5.5"),
+        default=os.environ.get("CODEX_MODEL", "gpt-5.4"),
         help="Optional model passed to `codex exec --model`.",
     )
     parser.add_argument(
