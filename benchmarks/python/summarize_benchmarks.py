@@ -106,6 +106,7 @@ def union_keys(*indexes: dict[tuple[str, str, tuple[int, ...]], dict[str, Any]])
 
 
 def render_markdown(metadata: dict[str, Any], sections: list[dict[str, Any]]) -> str:
+    sources = metadata.get("sources", {})
     lines = [
         "# Benchmark Summary",
         "",
@@ -114,6 +115,12 @@ def render_markdown(metadata: dict[str, Any], sections: list[dict[str, Any]]) ->
         f"- commands: {', '.join(metadata.get('commands', [])) or 'unknown'}",
         "",
     ]
+    if sources:
+        lines.append("## Sources")
+        lines.append("")
+        for key, value in sources.items():
+            lines.append(f"- {key}: `{value}`")
+        lines.append("")
     for section in sections:
         lines.append(f"## {section['category']}")
         if section["category"] == "CUDA end-to-end":
@@ -141,6 +148,7 @@ def render_markdown(metadata: dict[str, Any], sections: list[dict[str, Any]]) ->
 
 
 def render_report_section(input_dir: Path, metadata: dict[str, Any], sections: list[dict[str, Any]], gpu_reference: dict[str, Any]) -> str:
+    sources = metadata.get("sources", {})
     lines = [
         "## 第一版 CPU / GPU 对比报告",
         "",
@@ -151,6 +159,12 @@ def render_report_section(input_dir: Path, metadata: dict[str, Any], sections: l
         "- 说明：NumPy 无 GPU backend，因此 GPU 主表只比较 `NumUya CUDA end-to-end` 与 `NumPy CPU baseline`；`NumUya CUDA kernel-only` 单列报告，不伪造 `NumPy GPU` 数据。",
         "",
     ]
+    if sources:
+        lines.append("### 原始 JSON / 文本来源")
+        lines.append("")
+        for key, value in sources.items():
+            lines.append(f"- {key}: `{value}`")
+        lines.append("")
     for section in sections:
         lines.append(f"### {section['category']}")
         if section["category"] == "CUDA end-to-end":
@@ -238,6 +252,15 @@ def main() -> None:
             ]
             if value
         ],
+        "sources": {
+            "numpy_cpu_json": str((input_dir / "numpy_cpu.json").resolve()),
+            "gpu_reference_json": str((input_dir / "gpu_reference.json").resolve()),
+            "numuya_cpu_json": str((input_dir / "numuya_cpu.json").resolve()),
+            "numuya_cuda_json": str((input_dir / "numuya_cuda.json").resolve()),
+            "numuya_raw_text": numuya_cpu.get("metadata", {}).get("raw_output_path")
+            or numuya_cuda.get("metadata", {}).get("raw_output_path")
+            or "unknown",
+        },
     }
     summary = {"metadata": metadata, "sections": sections}
 

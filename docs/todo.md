@@ -28,24 +28,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## 待优化项
 
-### Phase 24: NumPy 性能对比（CPU / GPU）
-
-目标：给出一份可复现、口径统一的 NumUya vs NumPy 性能对比，并把 CPU 与 GPU 路径分开汇报。
-
-说明：
-
-- CPU 对比口径是 `NumUya CPU/SIMD` vs `NumPy CPU`。
-- NumPy 本身没有 GPU backend，因此“GPU 对比”必须拆成两层：
-  - `NumUya CUDA end-to-end`（H2D + kernel + D2H）vs `NumPy CPU baseline`。
-  - `NumUya CUDA kernel-only` 单独报告，不伪造“NumPy GPU”数据。
-- 如环境允许，可额外记录 `CuPy` 作为同机 GPU reference，但必须单列展示，不能替代 NumPy baseline。
-
-- [ ] 验收：本机能稳定复现一版对比结果。
-  - `make bench`、Python 对照脚本、汇总脚本都能独立运行。
-  - `docs/benchmarks/numpy_comparison.md` 同时包含 CPU 与 GPU 两部分。
-  - 每个数字都能追溯到原始 JSON/文本输出。
-  - 文档中明确写出 NumPy 无 GPU backend，避免读者误解。
-
 ## 每次提交前检查
 
 - `make test` 已通过。

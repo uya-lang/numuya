@@ -1,7 +1,7 @@
 {
   "benchmark": "numuya_cuda",
   "metadata": {
-    "numuya_commit": "bba2b7af2be1e8c9b097c3146e330dec134f8958",
+    "numuya_commit": "47580f8d5dd4ee3fc3fcd52b9083d96c3808fc74",
     "run_date": "2026-06-18",
     "command": "OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 NUMEXPR_NUM_THREADS=1 make bench",
     "raw_output_path": "/media/winger/_dde_data/winger/uya/numuya/benchmarks/results/2026-06-18/numuya_raw.txt"
@@ -16,8 +16,8 @@
         1000000
       ],
       "iterations": 100,
-      "total_ns": 97225076,
-      "ns_per_iter": 972250.76
+      "total_ns": 78947194,
+      "ns_per_iter": 789471.94
     },
     {
       "operation": "transfer_d2h",
@@ -28,8 +28,8 @@
         1000000
       ],
       "iterations": 100,
-      "total_ns": 91692008,
-      "ns_per_iter": 916920.08
+      "total_ns": 80094687,
+      "ns_per_iter": 800946.87
     },
     {
       "operation": "add",
@@ -40,8 +40,8 @@
         1000000
       ],
       "iterations": 100,
-      "total_ns": 3888693,
-      "ns_per_iter": 38886.93
+      "total_ns": 3885391,
+      "ns_per_iter": 38853.91
     },
     {
       "operation": "add",
@@ -52,8 +52,8 @@
         1000000
       ],
       "iterations": 100,
-      "total_ns": 192805777,
-      "ns_per_iter": 1928057.77
+      "total_ns": 162927272,
+      "ns_per_iter": 1629272.72
     },
     {
       "operation": "add",
@@ -64,8 +64,8 @@
         1000000
       ],
       "iterations": 100,
-      "total_ns": 7903515,
-      "ns_per_iter": 79035.15
+      "total_ns": 7668254,
+      "ns_per_iter": 76682.54
     },
     {
       "operation": "add",
@@ -76,8 +76,8 @@
         1000000
       ],
       "iterations": 100,
-      "total_ns": 196820599,
-      "ns_per_iter": 1968205.99
+      "total_ns": 166710135,
+      "ns_per_iter": 1667101.35
     },
     {
       "operation": "matmul",
@@ -89,8 +89,8 @@
         1024
       ],
       "iterations": 10,
-      "total_ns": 17086604,
-      "ns_per_iter": 1708660.4
+      "total_ns": 16592064,
+      "ns_per_iter": 1659206.4
     },
     {
       "operation": "matmul",
@@ -102,8 +102,8 @@
         2048
       ],
       "iterations": 10,
-      "total_ns": 139139445,
-      "ns_per_iter": 13913944.5
+      "total_ns": 134827168,
+      "ns_per_iter": 13482716.8
     },
     {
       "operation": "matmul_vendor_tf32",
@@ -115,8 +115,8 @@
         2048
       ],
       "iterations": 10,
-      "total_ns": 15135346,
-      "ns_per_iter": 1513534.6
+      "total_ns": 14700434,
+      "ns_per_iter": 1470043.4
     },
     {
       "operation": "sum",
@@ -127,8 +127,8 @@
         1000000
       ],
       "iterations": 100,
-      "total_ns": 3427079,
-      "ns_per_iter": 34270.79
+      "total_ns": 2993792,
+      "ns_per_iter": 29937.92
     },
     {
       "operation": "sum",
@@ -139,8 +139,8 @@
         1000000
       ],
       "iterations": 100,
-      "total_ns": 192344163,
-      "ns_per_iter": 1923441.63
+      "total_ns": 162035673,
+      "ns_per_iter": 1620356.73
     },
     {
       "operation": "sum",
@@ -151,8 +151,8 @@
         1000000
       ],
       "iterations": 100,
-      "total_ns": 5838378,
-      "ns_per_iter": 58383.78
+      "total_ns": 4851470,
+      "ns_per_iter": 48514.7
     },
     {
       "operation": "sum",
@@ -163,8 +163,8 @@
         1000000
       ],
       "iterations": 100,
-      "total_ns": 194755462,
-      "ns_per_iter": 1947554.62
+      "total_ns": 163893351,
+      "ns_per_iter": 1638933.51
     },
     {
       "operation": "random",
@@ -175,8 +175,8 @@
         1000000
       ],
       "iterations": 100,
-      "total_ns": 2663465,
-      "ns_per_iter": 26634.65
+      "total_ns": 2311687,
+      "ns_per_iter": 23116.87
     }
   ]
 }

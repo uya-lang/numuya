@@ -1,7 +1,7 @@
 {
   "benchmark": "numuya_cpu",
   "metadata": {
-    "numuya_commit": "bba2b7af2be1e8c9b097c3146e330dec134f8958",
+    "numuya_commit": "47580f8d5dd4ee3fc3fcd52b9083d96c3808fc74",
     "run_date": "2026-06-18",
     "command": "OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 NUMEXPR_NUM_THREADS=1 make bench",
     "raw_output_path": "/media/winger/_dde_data/winger/uya/numuya/benchmarks/results/2026-06-18/numuya_raw.txt"
@@ -16,8 +16,8 @@
         1000000
       ],
       "iterations": 100,
-      "total_ns": 9280931973,
-      "ns_per_iter": 92809319.73
+      "total_ns": 7555689787,
+      "ns_per_iter": 75556897.87
     },
     {
       "operation": "mul",
@@ -28,8 +28,8 @@
         1000000
       ],
       "iterations": 100,
-      "total_ns": 8031348110,
-      "ns_per_iter": 80313481.1
+      "total_ns": 7619641384,
+      "ns_per_iter": 76196413.84
     },
     {
       "operation": "sum",
@@ -40,8 +40,8 @@
         1000000
       ],
       "iterations": 100,
-      "total_ns": 3322115076,
-      "ns_per_iter": 33221150.76
+      "total_ns": 3234991256,
+      "ns_per_iter": 32349912.56
     }
   ]
 }

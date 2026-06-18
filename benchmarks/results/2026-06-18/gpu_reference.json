@@ -21,8 +21,8 @@
     {
       "operation": "add",
       "iterations": 200,
-      "total_ns": 322868382,
-      "ns_per_iter": 1614341.91,
+      "total_ns": 258205512,
+      "ns_per_iter": 1291027.56,
       "shape": [
         1000000
       ],
@@ -31,8 +31,8 @@
     {
       "operation": "sum",
       "iterations": 400,
-      "total_ns": 174166393,
-      "ns_per_iter": 435415.9825,
+      "total_ns": 162130145,
+      "ns_per_iter": 405325.3625,
       "shape": [
         1000000
       ],

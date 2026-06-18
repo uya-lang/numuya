@@ -147,6 +147,7 @@ class PythonBenchmarkScriptsTest(unittest.TestCase):
                             "numuya_commit": "abc123",
                             "run_date": "2026-06-18",
                             "command": "python benchmarks/python/bench_numpy_cpu.py --json",
+                            "result_path": "/tmp/inputs/numpy_cpu.json",
                         },
                         "results": [
                             {
@@ -184,6 +185,7 @@ class PythonBenchmarkScriptsTest(unittest.TestCase):
                             "numuya_commit": "abc123",
                             "run_date": "2026-06-18",
                             "command": "python benchmarks/python/bench_gpu_reference.py --json",
+                            "result_path": "/tmp/inputs/gpu_reference.json",
                         },
                         "numpy_cpu_baseline": [
                             {
@@ -221,6 +223,8 @@ class PythonBenchmarkScriptsTest(unittest.TestCase):
                             "numuya_commit": "abc123",
                             "run_date": "2026-06-18",
                             "command": "../uya/bin/uya run src/numuya/_benchmarks/bench_simd.uya --manifest-path uya.toml",
+                            "result_path": "/tmp/inputs/numuya_cpu.json",
+                            "raw_output_path": "/tmp/inputs/numuya_raw.txt",
                         },
                         "results": [
                             {
@@ -261,6 +265,8 @@ class PythonBenchmarkScriptsTest(unittest.TestCase):
                             "numuya_commit": "abc123",
                             "run_date": "2026-06-18",
                             "command": "../uya/bin/uya run src/numuya/_benchmarks/bench_cuda.uya --manifest-path uya.toml",
+                            "result_path": "/tmp/inputs/numuya_cuda.json",
+                            "raw_output_path": "/tmp/inputs/numuya_raw.txt",
                         },
                         "results": [
                             {
@@ -325,6 +331,17 @@ class PythonBenchmarkScriptsTest(unittest.TestCase):
             report_doc = doc_path.read_text(encoding="utf-8")
 
             self.assertEqual(summary_json["metadata"]["run_date"], "2026-06-18")
+            self.assertEqual(summary_json["metadata"]["numuya_commit"], "abc123")
+            self.assertEqual(
+                summary_json["metadata"]["sources"],
+                {
+                    "numpy_cpu_json": str((input_dir / "numpy_cpu.json").resolve()),
+                    "gpu_reference_json": str((input_dir / "gpu_reference.json").resolve()),
+                    "numuya_cpu_json": str((input_dir / "numuya_cpu.json").resolve()),
+                    "numuya_cuda_json": str((input_dir / "numuya_cuda.json").resolve()),
+                    "numuya_raw_text": "/tmp/inputs/numuya_raw.txt",
+                },
+            )
             self.assertEqual(
                 [section["category"] for section in summary_json["sections"]],
                 ["CPU", "CUDA end-to-end", "CUDA kernel-only", "CuPy reference"],
@@ -344,9 +361,14 @@ class PythonBenchmarkScriptsTest(unittest.TestCase):
             self.assertIn("CUDA end-to-end", summary_md)
             self.assertIn("CUDA kernel-only", summary_md)
             self.assertIn("CuPy reference", summary_md)
+            self.assertIn(str((input_dir / "numpy_cpu.json").resolve()), summary_md)
+            self.assertIn("/tmp/inputs/numuya_raw.txt", summary_md)
             self.assertIn("## 第一版 CPU / GPU 对比报告", report_doc)
             self.assertIn("NumPy 无 GPU backend", report_doc)
             self.assertIn(str(input_dir), report_doc)
+            self.assertIn("原始 JSON / 文本来源", report_doc)
+            self.assertIn(str((input_dir / "numpy_cpu.json").resolve()), report_doc)
+            self.assertIn("/tmp/inputs/numuya_raw.txt", report_doc)
 
 
 if __name__ == "__main__":

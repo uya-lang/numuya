@@ -19,8 +19,8 @@
     {
       "operation": "add",
       "iterations": 200,
-      "total_ns": 313843539,
-      "ns_per_iter": 1569217.695,
+      "total_ns": 256309498,
+      "ns_per_iter": 1281547.49,
       "shape": [
         1000000
       ],
@@ -29,8 +29,8 @@
     {
       "operation": "mul",
       "iterations": 200,
-      "total_ns": 281865704,
-      "ns_per_iter": 1409328.52,
+      "total_ns": 253627010,
+      "ns_per_iter": 1268135.05,
       "shape": [
         1000000
       ],
@@ -39,8 +39,8 @@
     {
       "operation": "sum",
       "iterations": 400,
-      "total_ns": 165539250,
-      "ns_per_iter": 413848.125,
+      "total_ns": 160246118,
+      "ns_per_iter": 400615.295,
       "shape": [
         1000000
       ],
@@ -49,8 +49,8 @@
     {
       "operation": "matmul",
       "iterations": 20,
-      "total_ns": 2270128964,
-      "ns_per_iter": 113506448.2,
+      "total_ns": 2233611984,
+      "ns_per_iter": 111680599.2,
       "shape": [
         512,
         512
@@ -60,8 +60,8 @@
     {
       "operation": "random",
       "iterations": 100,
-      "total_ns": 432923375,
-      "ns_per_iter": 4329233.75,
+      "total_ns": 423501305,
+      "ns_per_iter": 4235013.05,
       "shape": [
         1000000
       ],

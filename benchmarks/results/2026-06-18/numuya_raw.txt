@@ -24,51 +24,51 @@ backend path: Cuda, vendor_libs=off, tf32=off, cublaslt=available, curand=availa
 
 array size: 1000000 elements (7 MiB), iterations: 100
 
-H2D bandwidth: total=97.23 ms, per-iter=0.972 ms, bandwidth=7.66 GB/s
-BENCH_JSON|operation=transfer_h2d|mode=end-to-end|metric=bandwidth|dtype=float64|shape=1000000|iterations=100|total_ns=97225076
-  H2D threshold=6.00 GB/s, measured=7.66 GB/s -> PASS
-D2H bandwidth: total=91.69 ms, per-iter=0.917 ms, bandwidth=8.13 GB/s
-BENCH_JSON|operation=transfer_d2h|mode=end-to-end|metric=bandwidth|dtype=float64|shape=1000000|iterations=100|total_ns=91692008
-  D2H threshold=6.00 GB/s, measured=8.13 GB/s -> PASS
-add_f32: per-iter=38886.93 ns (0.0389 ns/elem), throughput=25715.58 Melem/s, effective bandwidth=287.39 GB/s
-BENCH_JSON|operation=add|mode=kernel-only|metric=throughput|dtype=float32|shape=1000000|iterations=100|total_ns=3888693
-BENCH_JSON|operation=add|mode=end-to-end|metric=throughput|dtype=float32|shape=1000000|iterations=100|total_ns=192805777
-  add_f32 threshold=150.00 GB/s, measured=287.39 GB/s -> PASS
-add_f64: per-iter=79035.15 ns (0.0790 ns/elem), throughput=12652.60 Melem/s, effective bandwidth=282.81 GB/s
-BENCH_JSON|operation=add|mode=kernel-only|metric=throughput|dtype=float64|shape=1000000|iterations=100|total_ns=7903515
-BENCH_JSON|operation=add|mode=end-to-end|metric=throughput|dtype=float64|shape=1000000|iterations=100|total_ns=196820599
-  add_f64 threshold=100.00 GB/s, measured=282.81 GB/s -> PASS
+H2D bandwidth: total=78.95 ms, per-iter=0.789 ms, bandwidth=9.44 GB/s
+BENCH_JSON|operation=transfer_h2d|mode=end-to-end|metric=bandwidth|dtype=float64|shape=1000000|iterations=100|total_ns=78947194
+  H2D threshold=6.00 GB/s, measured=9.44 GB/s -> PASS
+D2H bandwidth: total=80.09 ms, per-iter=0.801 ms, bandwidth=9.30 GB/s
+BENCH_JSON|operation=transfer_d2h|mode=end-to-end|metric=bandwidth|dtype=float64|shape=1000000|iterations=100|total_ns=80094687
+  D2H threshold=6.00 GB/s, measured=9.30 GB/s -> PASS
+add_f32: per-iter=38853.91 ns (0.0389 ns/elem), throughput=25737.44 Melem/s, effective bandwidth=287.64 GB/s
+BENCH_JSON|operation=add|mode=kernel-only|metric=throughput|dtype=float32|shape=1000000|iterations=100|total_ns=3885391
+BENCH_JSON|operation=add|mode=end-to-end|metric=throughput|dtype=float32|shape=1000000|iterations=100|total_ns=162927272
+  add_f32 threshold=150.00 GB/s, measured=287.64 GB/s -> PASS
+add_f64: per-iter=76682.54 ns (0.0767 ns/elem), throughput=13040.78 Melem/s, effective bandwidth=291.48 GB/s
+BENCH_JSON|operation=add|mode=kernel-only|metric=throughput|dtype=float64|shape=1000000|iterations=100|total_ns=7668254
+BENCH_JSON|operation=add|mode=end-to-end|metric=throughput|dtype=float64|shape=1000000|iterations=100|total_ns=166710135
+  add_f64 threshold=100.00 GB/s, measured=291.48 GB/s -> PASS
 
 matmul_f32 benchmark
-matmul_f32 1024x1024: total=17.09 ms, per-iter=1.71 ms, matmul_f32 1024x1024=1.26 TFLOP/s
-BENCH_JSON|operation=matmul|mode=kernel-only|metric=tflops|dtype=float32|shape=1024x1024|iterations=10|total_ns=17086604
-  matmul_f32 1024x1024 threshold=1.00 TFLOP/s, measured=1.26 TFLOP/s -> PASS
-matmul_f32 2048x2048: total=139.14 ms, per-iter=13.91 ms, matmul_f32 2048x2048=1.23 TFLOP/s
-BENCH_JSON|operation=matmul|mode=kernel-only|metric=tflops|dtype=float32|shape=2048x2048|iterations=10|total_ns=139139445
-cublasLt TF32 matmul_f32 2048x2048: total=15.14 ms, per-iter=1.51 ms, cublasLt TF32 matmul_f32 2048x2048=11.35 TFLOP/s
-BENCH_JSON|operation=matmul_vendor_tf32|mode=kernel-only|metric=tflops|dtype=float32|shape=2048x2048|iterations=10|total_ns=15135346
-  cublasLt TF32 matmul_f32 2048x2048 threshold=6.00 TFLOP/s, measured=11.35 TFLOP/s -> PASS
+matmul_f32 1024x1024: total=16.59 ms, per-iter=1.66 ms, matmul_f32 1024x1024=1.29 TFLOP/s
+BENCH_JSON|operation=matmul|mode=kernel-only|metric=tflops|dtype=float32|shape=1024x1024|iterations=10|total_ns=16592064
+  matmul_f32 1024x1024 threshold=1.00 TFLOP/s, measured=1.29 TFLOP/s -> PASS
+matmul_f32 2048x2048: total=134.83 ms, per-iter=13.48 ms, matmul_f32 2048x2048=1.27 TFLOP/s
+BENCH_JSON|operation=matmul|mode=kernel-only|metric=tflops|dtype=float32|shape=2048x2048|iterations=10|total_ns=134827168
+cublasLt TF32 matmul_f32 2048x2048: total=14.70 ms, per-iter=1.47 ms, cublasLt TF32 matmul_f32 2048x2048=11.69 TFLOP/s
+BENCH_JSON|operation=matmul_vendor_tf32|mode=kernel-only|metric=tflops|dtype=float32|shape=2048x2048|iterations=10|total_ns=14700434
+  cublasLt TF32 matmul_f32 2048x2048 threshold=6.00 TFLOP/s, measured=11.69 TFLOP/s -> PASS
 sum_f32 correctness check: 1500000.000000 (expected 1500000.000000)
-sum_all_f32: per-iter=34270.79 ns (0.0343 ns/elem), throughput=29179.37 Melem/s, effective read bandwidth=108.70 GB/s
-BENCH_JSON|operation=sum|mode=kernel-only|metric=throughput|dtype=float32|shape=1000000|iterations=100|total_ns=3427079
-BENCH_JSON|operation=sum|mode=end-to-end|metric=throughput|dtype=float32|shape=1000000|iterations=100|total_ns=192344163
-  sum_all_f32 threshold=60.00 GB/s, measured=108.70 GB/s -> PASS
-sum_all_f64: per-iter=58383.78 ns (0.0584 ns/elem), throughput=17128.04 Melem/s, effective read bandwidth=127.61 GB/s
-BENCH_JSON|operation=sum|mode=kernel-only|metric=throughput|dtype=float64|shape=1000000|iterations=100|total_ns=5838378
-BENCH_JSON|operation=sum|mode=end-to-end|metric=throughput|dtype=float64|shape=1000000|iterations=100|total_ns=194755462
-random_f32: per-iter=26634.65 ns (0.0266 ns/elem), throughput=37545.08 Melem/s, effective read bandwidth=139.87 GB/s
-BENCH_JSON|operation=random|mode=kernel-only|metric=throughput|dtype=float32|shape=1000000|iterations=100|total_ns=2663465
-  random_f32 threshold=40.00 GB/s, measured=139.87 GB/s -> PASS
+sum_all_f32: per-iter=29937.92 ns (0.0299 ns/elem), throughput=33402.45 Melem/s, effective read bandwidth=124.43 GB/s
+BENCH_JSON|operation=sum|mode=kernel-only|metric=throughput|dtype=float32|shape=1000000|iterations=100|total_ns=2993792
+BENCH_JSON|operation=sum|mode=end-to-end|metric=throughput|dtype=float32|shape=1000000|iterations=100|total_ns=162035673
+  sum_all_f32 threshold=60.00 GB/s, measured=124.43 GB/s -> PASS
+sum_all_f64: per-iter=48514.70 ns (0.0485 ns/elem), throughput=20612.31 Melem/s, effective read bandwidth=153.57 GB/s
+BENCH_JSON|operation=sum|mode=kernel-only|metric=throughput|dtype=float64|shape=1000000|iterations=100|total_ns=4851470
+BENCH_JSON|operation=sum|mode=end-to-end|metric=throughput|dtype=float64|shape=1000000|iterations=100|total_ns=163893351
+random_f32: per-iter=23116.87 ns (0.0231 ns/elem), throughput=43258.45 Melem/s, effective read bandwidth=161.15 GB/s
+BENCH_JSON|operation=random|mode=kernel-only|metric=throughput|dtype=float32|shape=1000000|iterations=100|total_ns=2311687
+  random_f32 threshold=40.00 GB/s, measured=161.15 GB/s -> PASS
 
 H2D/D2H bandwidth benchmark completed; threshold results are informational
-add_f32 effective bandwidth: 287.39 GB/s
-add_f64 effective bandwidth: 282.81 GB/s
-sum_all_f32 effective read bandwidth: 108.70 GB/s
-sum_all_f64 effective read bandwidth: 127.61 GB/s
-matmul_f32 1024x1024: 1.26 TFLOP/s
-matmul_f32 2048x2048: 1.23 TFLOP/s
-cublasLt TF32 matmul_f32 2048x2048: 11.35 TFLOP/s
-random_f32 fill bandwidth: 139.87 GB/s
+add_f32 effective bandwidth: 287.64 GB/s
+add_f64 effective bandwidth: 291.48 GB/s
+sum_all_f32 effective read bandwidth: 124.43 GB/s
+sum_all_f64 effective read bandwidth: 153.57 GB/s
+matmul_f32 1024x1024: 1.29 TFLOP/s
+matmul_f32 2048x2048: 1.27 TFLOP/s
+cublasLt TF32 matmul_f32 2048x2048: 11.69 TFLOP/s
+random_f32 fill bandwidth: 161.15 GB/s
 Done.
 ../uya/bin/uya run src/numuya/_benchmarks/bench_simd.uya --manifest-path uya.toml
 [optimize] optimize_program called (level 1)
@@ -84,11 +84,11 @@ For correctness, run `make test`.
 
 array size: 1000000 elements, iterations: 100
 
-add_f64: scalar=6911698.23 ns/iter (6.9117 ns/elem), simd=92809319.73 ns/iter (92.8093 ns/elem), speedup=0.07x
-BENCH_JSON|operation=add|mode=cpu|metric=latency|dtype=float64|shape=1000000|iterations=100|total_ns=9280931973
-mul_f64: scalar=5572065.21 ns/iter (5.5721 ns/elem), simd=80313481.10 ns/iter (80.3135 ns/elem), speedup=0.07x
-BENCH_JSON|operation=mul|mode=cpu|metric=latency|dtype=float64|shape=1000000|iterations=100|total_ns=8031348110
-sum_all_f64: scalar=3344571.88 ns/iter (3.3446 ns/elem), simd=33221150.76 ns/iter (33.2212 ns/elem), speedup=0.10x
-BENCH_JSON|operation=sum|mode=cpu|metric=latency|dtype=float64|shape=1000000|iterations=100|total_ns=3322115076
+add_f64: scalar=3805663.38 ns/iter (3.8057 ns/elem), simd=75556897.87 ns/iter (75.5569 ns/elem), speedup=0.05x
+BENCH_JSON|operation=add|mode=cpu|metric=latency|dtype=float64|shape=1000000|iterations=100|total_ns=7555689787
+mul_f64: scalar=3734291.08 ns/iter (3.7343 ns/elem), simd=76196413.84 ns/iter (76.1964 ns/elem), speedup=0.05x
+BENCH_JSON|operation=mul|mode=cpu|metric=latency|dtype=float64|shape=1000000|iterations=100|total_ns=7619641384
+sum_all_f64: scalar=3132881.91 ns/iter (3.1329 ns/elem), simd=32349912.56 ns/iter (32.3499 ns/elem), speedup=0.10x
+BENCH_JSON|operation=sum|mode=cpu|metric=latency|dtype=float64|shape=1000000|iterations=100|total_ns=3234991256
 
 Done.
