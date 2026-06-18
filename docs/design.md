@@ -656,20 +656,25 @@ export fn normal_array_f64(allocator: IAllocator, rng: &PCG64, shape: Shape, mea
 第一版实现 power-of-two 1-D complex FFT。
 
 ```uya
-export struct Complex64 {
+export struct Complex {
     re: f64,
     im: f64,
 }
 
-export fn fft_f64(allocator: IAllocator, real: &Array<f64>) !Array<Complex64>;
-export fn ifft_complex64(allocator: IAllocator, freq: &Array<Complex64>) !Array<Complex64>;
+export struct ComplexArray {
+    values: Array<Complex>,
+}
+
+export fn fft_f64(allocator: IAllocator, real: &Array<f64>) !ComplexArray;
+export fn fft(allocator: IAllocator, freq: &ComplexArray) !ComplexArray;
+export fn ifft(allocator: IAllocator, freq: &ComplexArray) !ComplexArray;
+export fn rfft_f64(allocator: IAllocator, real: &Array<f64>) !ComplexArray;
+export fn irfft_f64(allocator: IAllocator, freq: &ComplexArray) !Array<f64>;
 ```
 
 后续扩展：
 
-- complex input。
 - non power-of-two fallback。
-- `rfft` / `irfft`。
 - axis 参数。
 
 ### 6.13 `.npy` I/O

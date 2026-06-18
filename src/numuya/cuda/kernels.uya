@@ -13,9 +13,39 @@ export const SUM_ALL_F32_KERNEL: &const byte = "numuya_sum_all_f32" as &const by
 export const SUM_ALL_F32_FINALIZE_KERNEL: &const byte = "numuya_sum_all_f32_finalize" as &const byte;
 export const SUM_ALL_F64_KERNEL: &const byte = "numuya_sum_all_f64" as &const byte;
 export const SUM_ALL_F64_FINALIZE_KERNEL: &const byte = "numuya_sum_all_f64_finalize" as &const byte;
+export const SUM_AXIS_F64_KERNEL: &const byte = "numuya_sum_axis_f64" as &const byte;
+export const MEAN_AXIS_F64_KERNEL: &const byte = "numuya_mean_axis_f64" as &const byte;
+export const ARGMAX_AXIS_F64_KERNEL: &const byte = "numuya_argmax_axis_f64" as &const byte;
 export const RANDOM_F32_KERNEL: &const byte = "numuya_random_f32" as &const byte;
 export const MATMUL_F32_KERNEL: &const byte = "numuya_matmul_f32" as &const byte;
 export const MATMUL_F32_ALIGNED_KERNEL: &const byte = "numuya_matmul_f32_aligned" as &const byte;
+
+fn module_has_function(module: usize, name: &const byte) bool {
+    _ = cuda_module_get_function(module, name) catch {
+        return false;
+    };
+    return true;
+}
+
+fn module_has_required_core_kernels(module: usize) bool {
+    return module_has_function(module, ADD_F32_KERNEL)
+        && module_has_function(module, ADD_F64_KERNEL)
+        && module_has_function(module, ADD_F64_STRIDED_KERNEL)
+        && module_has_function(module, SUB_F64_KERNEL)
+        && module_has_function(module, NEG_F64_KERNEL)
+        && module_has_function(module, DIV_F64_KERNEL)
+        && module_has_function(module, MUL_F64_KERNEL)
+        && module_has_function(module, SUM_ALL_F32_KERNEL)
+        && module_has_function(module, SUM_ALL_F32_FINALIZE_KERNEL)
+        && module_has_function(module, SUM_ALL_F64_KERNEL)
+        && module_has_function(module, SUM_ALL_F64_FINALIZE_KERNEL)
+        && module_has_function(module, SUM_AXIS_F64_KERNEL)
+        && module_has_function(module, MEAN_AXIS_F64_KERNEL)
+        && module_has_function(module, ARGMAX_AXIS_F64_KERNEL)
+        && module_has_function(module, RANDOM_F32_KERNEL)
+        && module_has_function(module, MATMUL_F32_KERNEL)
+        && module_has_function(module, MATMUL_F32_ALIGNED_KERNEL);
+}
 
 // Re-export the embedded PTX source-of-truth generated from
 // src/numuya/cuda/ptx/core_sm86.ptx by src/numuya/_tools/embed_ptx.uya.
@@ -44,9 +74,10 @@ export fn cuda_kernels_load(context: usize) !usize {
             };
             return ptx_module;
         };
-        if module != 0 {
+        if module != 0 && module_has_required_core_kernels(module) {
             return module;
         }
+        cuda_module_unload(module) catch {};
     }
     return cuda_module_load_data(context, core_sm86_ptx());
 }

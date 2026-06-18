@@ -176,6 +176,156 @@ test "gpu_add_f64 handles non-contiguous transpose input" {
     try expect_close_f64(try get2<f64>(&host_result, 2, 1), 7.0, 1e-12);
 }
 
+test "gpu_sub_f64 broadcasts row vector across matrix" {
+    if !backend_is_cuda_available() {
+        return;
+    }
+    var state: BackendState = try backend_init(BackendKind.Cuda);
+    defer backend_deinit(&state) catch {};
+
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var pool: MemoryPool = memory_pool_new(4 * NUMUYA_MIB);
+
+    var matrix_data: [f64: 6] = [10.0, 20.0, 30.0, 40.0, 50.0, 60.0];
+    var row_data: [f64: 3] = [1.0, 2.0, 3.0];
+    var host_matrix: Array<f64> = try from_slice<f64>(allocator, matrix_data[0:6], shape2(2, 3));
+    var host_row: Array<f64> = try from_slice<f64>(allocator, row_data[0:3], shape1(3));
+
+    var device_matrix: DeviceArray<f64> = try device_array_from_host<f64>(&pool, &host_matrix, state.context, state.stream);
+    var device_row: DeviceArray<f64> = try device_array_from_host<f64>(&pool, &host_row, state.context, state.stream);
+
+    var device_result: DeviceArray<f64> = try gpu_sub_f64(&state, &device_matrix, &device_row);
+    var host_result: Array<f64> = try device_array_to_host<f64>(allocator, &device_result);
+    var cpu_result: Array<f64> = try sub_f64(&host_matrix, &host_row);
+
+    try expect_shape_eq(host_result.shape.dims[0:host_result.shape.rank], cpu_result.shape.dims[0:cpu_result.shape.rank]);
+    try expect_close_f64(try get2<f64>(&host_result, 0, 0), try get2<f64>(&cpu_result, 0, 0), 1e-12);
+    try expect_close_f64(try get2<f64>(&host_result, 0, 1), try get2<f64>(&cpu_result, 0, 1), 1e-12);
+    try expect_close_f64(try get2<f64>(&host_result, 0, 2), try get2<f64>(&cpu_result, 0, 2), 1e-12);
+    try expect_close_f64(try get2<f64>(&host_result, 1, 0), try get2<f64>(&cpu_result, 1, 0), 1e-12);
+    try expect_close_f64(try get2<f64>(&host_result, 1, 1), try get2<f64>(&cpu_result, 1, 1), 1e-12);
+    try expect_close_f64(try get2<f64>(&host_result, 1, 2), try get2<f64>(&cpu_result, 1, 2), 1e-12);
+    try expect_close_f64(try get2<f64>(&host_result, 0, 0), 9.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&host_result, 0, 1), 18.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&host_result, 0, 2), 27.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&host_result, 1, 0), 39.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&host_result, 1, 1), 48.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&host_result, 1, 2), 57.0, 1e-12);
+}
+
+test "gpu_sub_f64 handles non-contiguous transpose input" {
+    if !backend_is_cuda_available() {
+        return;
+    }
+    var state: BackendState = try backend_init(BackendKind.Cuda);
+    defer backend_deinit(&state) catch {};
+
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var pool: MemoryPool = memory_pool_new(4 * NUMUYA_MIB);
+
+    var source: [f64: 6] = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
+    var host_original: Array<f64> = try from_slice<f64>(allocator, source[0:6], shape2(2, 3));
+    var host_transposed: Array<f64> = try transpose<f64>(&host_original);
+    var host_other: Array<f64> = try full_f64(allocator, shape2(3, 2), 1.0);
+
+    var device_transposed: DeviceArray<f64> = try device_array_from_host<f64>(&pool, &host_transposed, state.context, state.stream);
+    var device_other: DeviceArray<f64> = try device_array_from_host<f64>(&pool, &host_other, state.context, state.stream);
+
+    var device_result: DeviceArray<f64> = try gpu_sub_f64(&state, &device_transposed, &device_other);
+    var host_result: Array<f64> = try device_array_to_host<f64>(allocator, &device_result);
+    var cpu_result: Array<f64> = try sub_f64(&host_transposed, &host_other);
+
+    try expect_shape_eq(host_result.shape.dims[0:host_result.shape.rank], cpu_result.shape.dims[0:cpu_result.shape.rank]);
+    try expect_close_f64(try get2<f64>(&host_result, 0, 0), try get2<f64>(&cpu_result, 0, 0), 1e-12);
+    try expect_close_f64(try get2<f64>(&host_result, 0, 1), try get2<f64>(&cpu_result, 0, 1), 1e-12);
+    try expect_close_f64(try get2<f64>(&host_result, 1, 0), try get2<f64>(&cpu_result, 1, 0), 1e-12);
+    try expect_close_f64(try get2<f64>(&host_result, 1, 1), try get2<f64>(&cpu_result, 1, 1), 1e-12);
+    try expect_close_f64(try get2<f64>(&host_result, 2, 0), try get2<f64>(&cpu_result, 2, 0), 1e-12);
+    try expect_close_f64(try get2<f64>(&host_result, 2, 1), try get2<f64>(&cpu_result, 2, 1), 1e-12);
+    try expect_close_f64(try get2<f64>(&host_result, 0, 0), 0.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&host_result, 0, 1), 3.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&host_result, 1, 0), 1.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&host_result, 1, 1), 4.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&host_result, 2, 0), 2.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&host_result, 2, 1), 5.0, 1e-12);
+}
+
+test "gpu_neg_f64 handles non-contiguous transpose input" {
+    if !backend_is_cuda_available() {
+        return;
+    }
+    var state: BackendState = try backend_init(BackendKind.Cuda);
+    defer backend_deinit(&state) catch {};
+
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var pool: MemoryPool = memory_pool_new(4 * NUMUYA_MIB);
+
+    var source: [f64: 6] = [1.0, -2.0, 3.0, -4.0, 5.0, -6.0];
+    var host_original: Array<f64> = try from_slice<f64>(allocator, source[0:6], shape2(2, 3));
+    var host_transposed: Array<f64> = try transpose<f64>(&host_original);
+
+    var device_transposed: DeviceArray<f64> = try device_array_from_host<f64>(&pool, &host_transposed, state.context, state.stream);
+
+    var device_result: DeviceArray<f64> = try gpu_neg_f64(&state, &device_transposed);
+    var host_result: Array<f64> = try device_array_to_host<f64>(allocator, &device_result);
+    var cpu_result: Array<f64> = try neg_f64(&host_transposed);
+
+    try expect_shape_eq(host_result.shape.dims[0:host_result.shape.rank], cpu_result.shape.dims[0:cpu_result.shape.rank]);
+    try expect_close_f64(try get2<f64>(&host_result, 0, 0), try get2<f64>(&cpu_result, 0, 0), 1e-12);
+    try expect_close_f64(try get2<f64>(&host_result, 0, 1), try get2<f64>(&cpu_result, 0, 1), 1e-12);
+    try expect_close_f64(try get2<f64>(&host_result, 1, 0), try get2<f64>(&cpu_result, 1, 0), 1e-12);
+    try expect_close_f64(try get2<f64>(&host_result, 1, 1), try get2<f64>(&cpu_result, 1, 1), 1e-12);
+    try expect_close_f64(try get2<f64>(&host_result, 2, 0), try get2<f64>(&cpu_result, 2, 0), 1e-12);
+    try expect_close_f64(try get2<f64>(&host_result, 2, 1), try get2<f64>(&cpu_result, 2, 1), 1e-12);
+    try expect_close_f64(try get2<f64>(&host_result, 0, 0), -1.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&host_result, 0, 1), 4.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&host_result, 1, 0), 2.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&host_result, 1, 1), -5.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&host_result, 2, 0), -3.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&host_result, 2, 1), 6.0, 1e-12);
+}
+
+test "gpu_div_f64 broadcasts row vector across matrix" {
+    if !backend_is_cuda_available() {
+        return;
+    }
+    var state: BackendState = try backend_init(BackendKind.Cuda);
+    defer backend_deinit(&state) catch {};
+
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var pool: MemoryPool = memory_pool_new(4 * NUMUYA_MIB);
+
+    var matrix_data: [f64: 6] = [10.0, 20.0, 30.0, 40.0, 50.0, 60.0];
+    var row_data: [f64: 3] = [2.0, 4.0, 5.0];
+    var host_matrix: Array<f64> = try from_slice<f64>(allocator, matrix_data[0:6], shape2(2, 3));
+    var host_row: Array<f64> = try from_slice<f64>(allocator, row_data[0:3], shape1(3));
+
+    var device_matrix: DeviceArray<f64> = try device_array_from_host<f64>(&pool, &host_matrix, state.context, state.stream);
+    var device_row: DeviceArray<f64> = try device_array_from_host<f64>(&pool, &host_row, state.context, state.stream);
+
+    var device_result: DeviceArray<f64> = try gpu_div_f64(&state, &device_matrix, &device_row);
+    var host_result: Array<f64> = try device_array_to_host<f64>(allocator, &device_result);
+    var cpu_result: Array<f64> = try div_f64(&host_matrix, &host_row);
+
+    try expect_shape_eq(host_result.shape.dims[0:host_result.shape.rank], cpu_result.shape.dims[0:cpu_result.shape.rank]);
+    try expect_close_f64(try get2<f64>(&host_result, 0, 0), try get2<f64>(&cpu_result, 0, 0), 1e-12);
+    try expect_close_f64(try get2<f64>(&host_result, 0, 1), try get2<f64>(&cpu_result, 0, 1), 1e-12);
+    try expect_close_f64(try get2<f64>(&host_result, 0, 2), try get2<f64>(&cpu_result, 0, 2), 1e-12);
+    try expect_close_f64(try get2<f64>(&host_result, 1, 0), try get2<f64>(&cpu_result, 1, 0), 1e-12);
+    try expect_close_f64(try get2<f64>(&host_result, 1, 1), try get2<f64>(&cpu_result, 1, 1), 1e-12);
+    try expect_close_f64(try get2<f64>(&host_result, 1, 2), try get2<f64>(&cpu_result, 1, 2), 1e-12);
+    try expect_close_f64(try get2<f64>(&host_result, 0, 0), 5.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&host_result, 0, 1), 5.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&host_result, 0, 2), 6.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&host_result, 1, 0), 20.0, 1e-12);
+    try expect_close_f64(try get2<f64>(&host_result, 1, 1), 12.5, 1e-12);
+    try expect_close_f64(try get2<f64>(&host_result, 1, 2), 12.0, 1e-12);
+}
+
 test "gpu_add_f32 contiguous matches CPU add_f32" {
     if !backend_is_cuda_available() {
         return;

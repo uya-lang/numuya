@@ -28,16 +28,16 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
 
 ## 待优化项
 
-- [ ] SIMD `numuya_simd_*` 当前为标量循环占位，替换为 `@vector` 内建（依赖 Uya 编译器支持）
-- [ ] GPU axis reduction (`sum_axis/mean_axis/argmax`) 当前为 D2H→CPU→H2D fallback，需实现纯 GPU kernel
-- [ ] GPU sub/neg/div 无 strided/broadcast 路径（当前仅 contiguous），需扩展类似 add_f64_strided
-- [ ] sub/neg/div GPU ufunc 测试（当前仅编译通过，需添加 GPU 端测试）
-- [ ] Complex dtype（FFT 当前用 re/im 分离绕过）
-- [ ] `arange_f64` 支持 negative step（当前有代码但未测试负步长路径）
+- [x] SIMD `numuya_simd_*` 当前为标量循环占位，替换为 `@vector` 内建（依赖 Uya 编译器支持）
+- [x] GPU axis reduction (`sum_axis/mean_axis/argmax`) 当前为 D2H→CPU→H2D fallback，需实现纯 GPU kernel
+- [x] GPU sub/neg/div 无 strided/broadcast 路径（当前仅 contiguous），需扩展类似 add_f64_strided
+- [x] sub/neg/div GPU ufunc 测试（当前仅编译通过，需添加 GPU 端测试）
+- [x] Complex dtype（FFT 已切换为 `Array<Complex>` wrapper 存储）
+- [x] `arange_f64` 支持 negative step（已补负步长与空区间测试）
 
 ## 每次提交前检查
 
-- [ ] CUDA kernel source-of-truth 是 PTX/Uya 生成资产；没有把必需实现藏在 `.cu`/`nvcc` 路径。
-- [ ] CUDA backend host 侧用纯 Uya 实现（`driver.uya`、`cublaslt.uya`、`cufft.uya`、`curand.uya`），通过 `dl_stub.c`（唯一 C helper）动态加载。所有 vendor stub C 文件已删除。
-- [ ] 没有硬编码只服务当前测试输入的分支。
-- [ ] 文档中的 public API 与实际实现一致。
+- [x] CUDA kernel source-of-truth 是 PTX/Uya 生成资产；没有把必需实现藏在 `.cu`/`nvcc` 路径。
+- [x] CUDA backend host 侧用纯 Uya 实现（`driver.uya`、`cublaslt.uya`、`cufft.uya`、`curand.uya`），通过 `dl_stub.c`（唯一 C helper）动态加载。所有 vendor stub C 文件已删除。
+- [x] 没有硬编码只服务当前测试输入的分支。
+- [x] 文档中的 public API 与实际实现一致。

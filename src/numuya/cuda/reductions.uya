@@ -18,6 +18,9 @@ use std.mem.allocator.MallocAllocator;
 
 const REDUCTION_F32_ELEMENT_SIZE: usize = 4;
 const F64_ELEMENT_SIZE: usize = 8;
+const USIZE_ELEMENT_SIZE: usize = 8;
+const AXIS_REDUCTION_BLOCK_SIZE: u32 = 256;
+const CUDA_REDUCTIONS_MAX_USIZE: usize = 18446744073709551615;
 
 fn device_ptr_with_offset_f32(array_value: &DeviceArray<f32>) usize {
     const base: usize = array_value.storage.ptr as usize;
@@ -28,6 +31,12 @@ fn device_ptr_with_offset_f32(array_value: &DeviceArray<f32>) usize {
 fn device_ptr_with_offset_f64(array_value: &DeviceArray<f64>) usize {
     const base: usize = array_value.storage.ptr as usize;
     const offset_bytes: usize = array_value.offset * F64_ELEMENT_SIZE;
+    return base + offset_bytes;
+}
+
+fn device_ptr_with_offset_usize(array_value: &DeviceArray<usize>) usize {
+    const base: usize = array_value.storage.ptr as usize;
+    const offset_bytes: usize = array_value.offset * USIZE_ELEMENT_SIZE;
     return base + offset_bytes;
 }
 
@@ -109,6 +118,140 @@ fn clone_shape_local(shape_value: &Shape) Shape {
         i = i + 1;
     }
     return cloned;
+}
+
+fn ceil_div_u32(numerator: usize, denominator: usize) u32 {
+    return ((numerator + denominator - 1) / denominator) as u32;
+}
+
+fn multiply_dims_range(shape_value: &Shape, start: usize, end: usize) !usize {
+    var total: usize = 1;
+    var axis: usize = start;
+    while axis < end {
+        if axis >= NUMUYA_MAX_DIMS {
+            return error.NumuyaRankTooLarge;
+        }
+        const dim: usize = shape_value.dims[axis];
+        if dim != 0 && total > CUDA_REDUCTIONS_MAX_USIZE / dim {
+            return error.NumuyaShapeOverflow;
+        }
+        total = total * dim;
+        axis = axis + 1;
+    }
+    return total;
+}
+
+fn compute_axis_shape_local(input_shape: &Shape, axis: usize, keepdims: bool) Shape {
+    var result: Shape = shape_scalar();
+    if keepdims {
+        result.rank = input_shape.rank;
+    } else {
+        result.rank = input_shape.rank - 1;
+    }
+
+    var in_axis: usize = 0;
+    var out_axis: usize = 0;
+    while in_axis < input_shape.rank {
+        if in_axis == axis {
+            if keepdims {
+                result.dims[out_axis] = 1;
+                out_axis = out_axis + 1;
+            }
+        } else {
+            result.dims[out_axis] = input_shape.dims[in_axis];
+            out_axis = out_axis + 1;
+        }
+        in_axis = in_axis + 1;
+    }
+    return result;
+}
+
+struct AxisReductionPlan {
+    output_shape: Shape,
+    normalized_axis: usize,
+    output_size: usize,
+    outer: usize,
+    reduce_dim: usize,
+    inner: usize,
+}
+
+fn build_axis_reduction_plan(input_shape: &Shape, axis: i32, keepdims: bool) !AxisReductionPlan {
+    if input_shape.rank == 0 {
+        return error.NumuyaAxisOutOfBounds;
+    }
+
+    const normalized_axis: usize = try normalize_axis(axis, input_shape.rank);
+    if normalized_axis >= NUMUYA_MAX_DIMS {
+        return error.NumuyaAxisOutOfBounds;
+    }
+
+    const output_shape: Shape = compute_axis_shape_local(input_shape, normalized_axis, keepdims);
+    const output_size: usize = try shape_size(output_shape);
+    const outer: usize = try multiply_dims_range(input_shape, 0, normalized_axis);
+    const reduce_dim: usize = input_shape.dims[normalized_axis];
+    const inner: usize = try multiply_dims_range(input_shape, normalized_axis + 1, input_shape.rank);
+
+    return AxisReductionPlan{
+        output_shape: output_shape,
+        normalized_axis: normalized_axis,
+        output_size: output_size,
+        outer: outer,
+        reduce_dim: reduce_dim,
+        inner: inner,
+    };
+}
+
+fn launch_axis_reduction_kernel(
+    state: &BackendState,
+    kernel_name: &const byte,
+    output_ptr: usize,
+    input_ptr: usize,
+    output_size: usize,
+    outer: usize,
+    reduce_dim: usize,
+    inner: usize,
+) !void {
+    if output_size == 0 {
+        return;
+    }
+
+    if state.module == 0 {
+        state.module = try cuda_kernels_load(state.context);
+    }
+
+    const func: usize = try cuda_module_get_function(state.module, kernel_name);
+    if func == 0 {
+        return error.NumuyaCudaError;
+    }
+
+    const grid_size: u32 = ceil_div_u32(output_size, AXIS_REDUCTION_BLOCK_SIZE as usize);
+
+    var arg_output_ptr: usize = output_ptr;
+    var arg_input_ptr: usize = input_ptr;
+    var arg_output_size: usize = output_size;
+    var arg_outer: usize = outer;
+    var arg_reduce_dim: usize = reduce_dim;
+    var arg_inner: usize = inner;
+
+    var args: [usize: 6] = [
+        (&arg_output_ptr) as usize,
+        (&arg_input_ptr) as usize,
+        (&arg_output_size) as usize,
+        (&arg_outer) as usize,
+        (&arg_reduce_dim) as usize,
+        (&arg_inner) as usize,
+    ];
+
+    try cuda_launch_kernel(
+        func,
+        grid_size, 1, 1,
+        AXIS_REDUCTION_BLOCK_SIZE, 1, 1,
+        0,
+        state.stream,
+        &args[0]
+    );
+
+    try cuda_synchronize_stream(state.context, state.stream);
 }
 
 fn copy_device_storage_to_host(
@@ -332,6 +475,39 @@ export fn gpu_sum_axis_f64(
     axis: i32,
     keepdims: bool,
 ) !DeviceArray<f64> {
+    const plan: AxisReductionPlan = try build_axis_reduction_plan(&array_value.shape, axis, keepdims);
+
+    if device_array_is_c_contiguous_local(&array_value.shape, &array_value.strides) {
+        var device_result: DeviceArray<f64> = try device_array_new<f64>(
+            array_value.storage.pool,
+            clone_shape_local(&plan.output_shape),
+            array_value.context,
+            array_value.stream,
+        );
+
+        try launch_axis_reduction_kernel(
+            state,
+            SUM_AXIS_F64_KERNEL,
+            device_ptr_with_offset_f64(&device_result),
+            device_ptr_with_offset_f64(array_value),
+            plan.output_size,
+            plan.outer,
+            plan.reduce_dim,
+            plan.inner,
+        );
+
+        device_storage_retain<f64>(device_result.storage);
+        return DeviceArray<f64>{
+            storage: device_result.storage,
+            offset: device_result.offset,
+            shape: device_result.shape,
+            strides: device_result.strides,
+            flags: device_result.flags,
+            context: device_result.context,
+            stream: device_result.stream,
+        };
+    }
+
     var malloc_allocator: MallocAllocator = MallocAllocator{};
     var allocator: IAllocator = malloc_allocator;
 
@@ -364,6 +540,42 @@ export fn gpu_mean_axis_f64(
     axis: i32,
     keepdims: bool,
 ) !DeviceArray<f64> {
+    const plan: AxisReductionPlan = try build_axis_reduction_plan(&array_value.shape, axis, keepdims);
+    if plan.reduce_dim == 0 {
+        return error.NumuyaInvalidArgument;
+    }
+
+    if device_array_is_c_contiguous_local(&array_value.shape, &array_value.strides) {
+        var device_result: DeviceArray<f64> = try device_array_new<f64>(
+            array_value.storage.pool,
+            clone_shape_local(&plan.output_shape),
+            array_value.context,
+            array_value.stream,
+        );
+
+        try launch_axis_reduction_kernel(
+            state,
+            MEAN_AXIS_F64_KERNEL,
+            device_ptr_with_offset_f64(&device_result),
+            device_ptr_with_offset_f64(array_value),
+            plan.output_size,
+            plan.outer,
+            plan.reduce_dim,
+            plan.inner,
+        );
+
+        device_storage_retain<f64>(device_result.storage);
+        return DeviceArray<f64>{
+            storage: device_result.storage,
+            offset: device_result.offset,
+            shape: device_result.shape,
+            strides: device_result.strides,
+            flags: device_result.flags,
+            context: device_result.context,
+            stream: device_result.stream,
+        };
+    }
+
     var malloc_allocator: MallocAllocator = MallocAllocator{};
     var allocator: IAllocator = malloc_allocator;
 
@@ -396,6 +608,42 @@ export fn gpu_argmax_axis_f64(
     axis: i32,
     keepdims: bool,
 ) !DeviceArray<usize> {
+    const plan: AxisReductionPlan = try build_axis_reduction_plan(&array_value.shape, axis, keepdims);
+    if plan.reduce_dim == 0 {
+        return error.NumuyaInvalidArgument;
+    }
+
+    if device_array_is_c_contiguous_local(&array_value.shape, &array_value.strides) {
+        var device_result: DeviceArray<usize> = try device_array_new<usize>(
+            array_value.storage.pool,
+            clone_shape_local(&plan.output_shape),
+            array_value.context,
+            array_value.stream,
+        );
+
+        try launch_axis_reduction_kernel(
+            state,
+            ARGMAX_AXIS_F64_KERNEL,
+            device_ptr_with_offset_usize(&device_result),
+            device_ptr_with_offset_f64(array_value),
+            plan.output_size,
+            plan.outer,
+            plan.reduce_dim,
+            plan.inner,
+        );
+
+        device_storage_retain<usize>(device_result.storage);
+        return DeviceArray<usize>{
+            storage: device_result.storage,
+            offset: device_result.offset,
+            shape: device_result.shape,
+            strides: device_result.strides,
+            flags: device_result.flags,
+            context: device_result.context,
+            stream: device_result.stream,
+        };
+    }
+
     var malloc_allocator: MallocAllocator = MallocAllocator{};
     var allocator: IAllocator = malloc_allocator;
 

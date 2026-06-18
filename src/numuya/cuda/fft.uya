@@ -31,13 +31,14 @@ fn device_ptr_with_offset_f64(array_value: &DeviceArray<f64>) usize {
 }
 
 fn interleaved_from_complex_array(allocator: IAllocator, input: &ComplexArray) !Array<f64> {
-    const n: usize = input.re.shape.dims[0];
+    const n: usize = input.values.shape.dims[0];
     var buffer: Array<f64> = try empty<f64>(allocator, shape1(n * 2));
 
     var i: usize = 0;
     while i < n {
-        buffer.storage.data[i * 2] = input.re.storage.data[i];
-        buffer.storage.data[i * 2 + 1] = input.im.storage.data[i];
+        const value: Complex = input.values.storage.data[i];
+        buffer.storage.data[i * 2] = value.re;
+        buffer.storage.data[i * 2 + 1] = value.im;
         i = i + 1;
     }
 
@@ -50,32 +51,26 @@ fn complex_array_from_interleaved(allocator: IAllocator, input: &Array<f64>) !Co
         return error.NumuyaInvalidArgument;
     }
     const n: usize = total / 2;
-
-    var re: Array<f64> = try zeros_f64(allocator, shape1(n));
-    var im: Array<f64> = try zeros_f64(allocator, shape1(n));
+    var output_values: Array<Complex> = try empty<Complex>(allocator, shape1(n));
 
     var i: usize = 0;
     while i < n {
-        re.storage.data[i] = input.storage.data[i * 2];
-        im.storage.data[i] = input.storage.data[i * 2 + 1];
+        output_values.storage.data[i] = Complex{
+            re: input.storage.data[i * 2],
+            im: input.storage.data[i * 2 + 1],
+        };
         i = i + 1;
     }
 
-    return ComplexArray{
-        re: re,
-        im: im,
-    };
+    return ComplexArray{ values: output_values };
 }
 
 fn fft_auto_impl(allocator: IAllocator, input: &ComplexArray, direction: i32) !ComplexArray {
-    if input.re.shape.rank != 1 || input.im.shape.rank != 1 {
+    if input.values.shape.rank != 1 {
         return error.NumuyaInvalidArgument;
     }
 
-    const n: usize = input.re.shape.dims[0];
-    if n != input.im.shape.dims[0] {
-        return error.NumuyaInvalidArgument;
-    }
+    const n: usize = input.values.shape.dims[0];
     if !is_power_of_two(n) {
         return error.NumuyaInvalidArgument;
     }
@@ -138,20 +133,17 @@ export fn fft_f64_auto(allocator: IAllocator, input: &Array<f64>) !ComplexArray 
         return error.NumuyaInvalidArgument;
     }
 
-    var re: Array<f64> = try zeros_f64(allocator, shape1(n));
-    var im: Array<f64> = try zeros_f64(allocator, shape1(n));
-
+    var complex_input_values: Array<Complex> = try empty<Complex>(allocator, shape1(n));
     var i: usize = 0;
     while i < n {
-        re.storage.data[i] = input.storage.data[i];
+        complex_input_values.storage.data[i] = Complex{
+            re: input.storage.data[i],
+            im: 0.0,
+        };
         i = i + 1;
     }
 
-    var complex_input: ComplexArray = ComplexArray{
-        re: re,
-        im: im,
-    };
-
+    var complex_input: ComplexArray = ComplexArray{ values: complex_input_values };
     return fft_auto_impl(allocator, &complex_input, CUFFT_FORWARD);
 }
 

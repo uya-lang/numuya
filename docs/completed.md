@@ -4,7 +4,7 @@
 
 - [x] `empty<T>` / `full<T>` / `from_slice<T>` — creation.uya
 - [x] `zeros_f64` / `ones_f64` / `full_f64` — creation.uya
-- [x] `arange_f64` / `linspace_f64` — creation.uya（新增）
+- [x] `arange_f64` / `linspace_f64` — creation.uya（新增；`arange_f64` 负步长路径已补测试）
 - [x] `get1/get2/get3/getn` / `set1/set2/setn` — indexing.uya
 - [x] boolean_mask / take / advanced indexing — indexing.uya
 - [x] SliceSpec / slice_axis — slicing.uya
@@ -18,7 +18,7 @@
 
 ## Phase 19: SIMD 与性能
 
-- [x] `numuya_simd_add_f64` / `numuya_simd_mul_f64` / `numuya_simd_sum_f64` — ufunc.uya / reductions.uya（当前为标量循环占位，等待 `@vector` 内建支持）
+- [x] `numuya_simd_add_f64` / `numuya_simd_mul_f64` / `numuya_simd_sum_f64` — ufunc.uya / reductions.uya（已切换为 `@vector` 分块实现，保留 tail 标量收尾）
 - [x] SIMD 等价性测试 — test_simd_equivalence.uya
 - [x] SIMD benchmark — bench_simd.uya
 
@@ -26,9 +26,10 @@
 
 - [x] `gpu_add_f32` / `gpu_add_f64`（strided + broadcast）— cuda/ufunc.uya
 - [x] `gpu_mul_f64` — cuda/ufunc.uya
-- [x] `gpu_sub_f64` / `gpu_neg_f64` / `gpu_div_f64` — cuda/ufunc.uya（新增）
+- [x] `gpu_sub_f64` / `gpu_neg_f64` / `gpu_div_f64` — cuda/ufunc.uya（`sub/div` 支持 broadcast + strided，`neg` 支持 strided view）
+- [x] `gpu_sub_f64` / `gpu_neg_f64` / `gpu_div_f64` CUDA 测试 — _tests/test_cuda_ufunc.uya
 - [x] `gpu_sum_all_f32/f64` — cuda/reductions.uya（两阶段 block reduction）
-- [x] `gpu_sum_axis_f64` / `gpu_mean_axis_f64` / `gpu_argmax_axis_f64` — cuda/reductions.uya（当前 D2H→CPU→H2D fallback）
+- [x] `gpu_sum_axis_f64` / `gpu_mean_axis_f64` / `gpu_argmax_axis_f64` — cuda/reductions.uya（contiguous 输入走纯 GPU kernel；非 contiguous 维持 host fallback）
 - [x] `add_f64_auto` / `sum_all_f64_auto` / `sum_axis_f64_auto` — cuda/auto.uya
 - [x] `add_f64_on` location-preserving API — cuda/auto.uya
 
@@ -37,7 +38,7 @@
 - [x] `gpu_matmul_f32` (纯 kernel tiled SGEMM 16×16 + aligned 16×64) — cuda/linalg.uya
 - [x] `gpu_matmul_f32` (cuBLASLt vendor TF32/FP32) — cuda/linalg.uya + cuda/cublaslt.uya
 - [x] `gpu_random_f32` (纯 kernel + cuRAND vendor) — cuda/random.uya + cuda/curand.uya
-- [x] FFT (cuFFT Z2Z vendor + CPU fallback) — cuda/fft.uya + cuda/cufft.uya
+- [x] FFT (cuFFT Z2Z vendor + CPU fallback) — cuda/fft.uya + cuda/cufft.uya（`ComplexArray` 已改为 `Array<Complex>` wrapper）
 - [x] Benchmark (H2D/D2H/add/sum/matmul/random) — bench_cuda.uya
 
 ## Phase 24: NumPy 兼容面扩展

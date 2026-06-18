@@ -226,6 +226,23 @@ test "arange_f64 returns empty when stop <= start with positive step" {
     try expect_eq_usize(array_size<f64>(&arr), 0);
 }
 
+test "arange_f64 supports negative step" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var arr: Array<f64> = try arange_f64(allocator, 5.0, -1.0, -2.0);
+    try expect_eq_usize(array_size<f64>(&arr), 3);
+    try expect_close_f64(arr.storage.data[0], 5.0, 1e-12);
+    try expect_close_f64(arr.storage.data[1], 3.0, 1e-12);
+    try expect_close_f64(arr.storage.data[2], 1.0, 1e-12);
+}
+
+test "arange_f64 returns empty when stop >= start with negative step" {
+    var malloc_allocator: MallocAllocator = MallocAllocator{};
+    var allocator: IAllocator = malloc_allocator;
+    var arr: Array<f64> = try arange_f64(allocator, 2.0, 5.0, -1.0);
+    try expect_eq_usize(array_size<f64>(&arr), 0);
+}
+
 test "arange_f64 rejects zero step" {
     var malloc_allocator: MallocAllocator = MallocAllocator{};
     var allocator: IAllocator = malloc_allocator;

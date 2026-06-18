@@ -5,9 +5,19 @@ use storage;
 
 use std.mem.allocator.IAllocator;
 
+type F64x4 = @vector(f64, 4);
+
+const REDUCTIONS_SIMD_F64_LANES: usize = 4;
+
 fn numuya_simd_sum_f64(data: &f64, n: usize) f64 {
-    var total: f64 = 0.0;
     var i: usize = 0;
+    var total_vec: F64x4 = @vector.splat(0.0);
+    while i + REDUCTIONS_SIMD_F64_LANES <= n {
+        const chunk: F64x4 = @vector.load(&data[i]);
+        total_vec = total_vec + chunk;
+        i = i + REDUCTIONS_SIMD_F64_LANES;
+    }
+    var total: f64 = @vector.reduce_add(total_vec);
     while i < n {
         total = total + data[i];
         i = i + 1;

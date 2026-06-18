@@ -5,8 +5,19 @@ use shape;
 use storage;
 use stride;
 
+type F64x4 = @vector(f64, 4);
+
+const UFUNC_SIMD_F64_LANES: usize = 4;
+
 fn numuya_simd_add_f64(left: &f64, right: &f64, result: &f64, n: usize) void {
     var i: usize = 0;
+    while i + UFUNC_SIMD_F64_LANES <= n {
+        const left_chunk: F64x4 = @vector.load(&left[i]);
+        const right_chunk: F64x4 = @vector.load(&right[i]);
+        const sum_chunk: F64x4 = left_chunk + right_chunk;
+        @vector.store(&result[i], sum_chunk);
+        i = i + UFUNC_SIMD_F64_LANES;
+    }
     while i < n {
         result[i] = left[i] + right[i];
         i = i + 1;
@@ -15,6 +26,13 @@ fn numuya_simd_add_f64(left: &f64, right: &f64, result: &f64, n: usize) void {
 
 fn numuya_simd_mul_f64(left: &f64, right: &f64, result: &f64, n: usize) void {
     var i: usize = 0;
+    while i + UFUNC_SIMD_F64_LANES <= n {
+        const left_chunk: F64x4 = @vector.load(&left[i]);
+        const right_chunk: F64x4 = @vector.load(&right[i]);
+        const product_chunk: F64x4 = left_chunk * right_chunk;
+        @vector.store(&result[i], product_chunk);
+        i = i + UFUNC_SIMD_F64_LANES;
+    }
     while i < n {
         result[i] = left[i] * right[i];
         i = i + 1;
