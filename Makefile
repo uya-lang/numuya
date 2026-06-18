@@ -7,6 +7,8 @@ TEST ?= src/numuya/_tests/test_testing_helpers.uya
 TESTS := $(sort $(wildcard src/numuya/_tests/test_*.uya))
 BENCH ?= src/numuya/_benchmarks/bench_simd.uya
 BENCHES := $(sort $(wildcard src/numuya/_benchmarks/bench_*.uya))
+BENCH_RESULTS_DIR ?= benchmarks/results/$(shell date +%F)
+BENCH_REPORT_DOC ?= docs/benchmarks/numpy_comparison.md
 
 .PHONY: bootstrap-upm upm-install test-one test test-cuda test-cuda-vendor check-one check-cpu-core-deps verify-upm-consumer require-upm bench bench-numpy-cpu bench-numpy-gpu-ref bench-compare bench-report bench-spotcheck bench-spotcheck-gpu bench-guardrails-cpu bench-guardrails-gpu bench-guardrails-gpu-vendor cuda-ptx-embed cuda-cubin-embed cuda-ptx-validate
 
@@ -107,7 +109,7 @@ bench-guardrails-gpu-vendor: test-cuda-vendor bench-spotcheck-gpu
 bench-compare: bench bench-numpy-cpu bench-numpy-gpu-ref
 
 bench-report:
-	python benchmarks/python/summarize_benchmarks.py --input-dir benchmarks/results/latest --output-dir benchmarks/results/latest
+	python benchmarks/python/summarize_benchmarks.py --input-dir $(BENCH_RESULTS_DIR) --output-dir $(BENCH_RESULTS_DIR) --doc-path $(BENCH_REPORT_DOC)
 
 verify-upm-consumer: require-upm
 	$(UPM) install --manifest-path $(CONSUMER_MANIFEST)

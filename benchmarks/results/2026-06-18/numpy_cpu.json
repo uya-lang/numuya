@@ -1,0 +1,71 @@
+{
+  "benchmark": "numpy_cpu",
+  "metadata": {
+    "python_version": "3.12.11",
+    "numpy_version": "2.2.3",
+    "blas": "Build Dependencies:\n  blas:\n    detection method: pkgconfig\n    found: true\n    include directory: /usr/include/x86_64-linux-gnu\n    lib directory: /usr/lib/x86_64-linux-gnu\n    name: blas\n    openblas configuration: unknown\n    pc file directory: /usr/lib/x86_64-linux-gnu/pkgconfig\n    version: 3.11.0\n  lapack:\n    detection method: pkgconfig\n    found: true\n    include directory: /usr/include/x86_64-linux-gnu\n    lib directory: /usr/lib/x86_64-linux-gnu\n    name: lapack\n    openblas configuration: unknown\n    pc file directory: /usr/lib/x86_64-linux-gnu/pkgconfig\n    version: 3.11.0\nCompilers:\n  c:\n    args: -g, -O2, -ffile-prefix-map=$BUILDDIR=., -fstack-protector-strong, -fstack-clash-protection,\n      -Wformat, -Werror=format-security, -fcf-protection, -Wdate-time, -D_FORTIFY_SOURCE=2\n    commands: cc\n    linker: ld.bfd\n    linker args: -Wl,-z,relro, -g, -O2, -ffile-prefix-map=$BUILDDIR=., -fstack-protector-strong,\n      -fstack-clash-protection, -Wformat, -Werror=format-security, -fcf-protection,\n      -Wdate-time, -D_FORTIFY_SOURCE=2\n    name: gcc\n    version: 12.3.0\n  c++:\n    args: -g, -O2, -ffile-prefix-map=$BUILDDIR=., -fstack-protector-strong, -fstack-clash-protection,\n      -Wformat, -Werror=format-security, -fcf-protection, -Wdate-time, -D_FORTIFY_SOURCE=2\n    commands: c++\n    linker: ld.bfd\n    linker args: -Wl,-z,relro, -g, -O2, -ffile-prefix-map=$BUILDDIR=., -fstack-protector-strong,\n      -fstack-clash-protection, -Wformat, -Werror=format-security, -fcf-protection,\n      -Wdate-time, -D_FORTIFY_SOURCE=2\n    name: gcc\n    version: 12.3.0\n  cython:\n    commands: cython\n    linker: cython\n    name: cython\n    version: 3.0.10\nMachine Information:\n  build:\n    cpu: x86_64\n    endian: little\n    family: x86_64\n    system: linux\n  host:\n    cpu: x86_64\n    endian: little\n    family: x86_64\n    system: linux\nSIMD Extensions:\n  baseline:\n  - SSE\n  - SSE2\n  - SSE3\n  found:\n  - SSSE3\n  - SSE41\n  - POPCNT\n  - SSE42\n  - AVX\n  - F16C\n  - FMA3\n  - AVX2\n  not found:\n  - AVX512F\n  - AVX512CD\n  - AVX512_KNL\n  - AVX512_KNM\n  - AVX512_SKX\n  - AVX512_CLX\n  - AVX512_CNL\n  - AVX512_ICL\n  - AVX512_SPR",
+    "thread_env": {
+      "OMP_NUM_THREADS": "1",
+      "OPENBLAS_NUM_THREADS": "1",
+      "MKL_NUM_THREADS": "1",
+      "VECLIB_MAXIMUM_THREADS": "",
+      "NUMEXPR_NUM_THREADS": "1"
+    },
+    "machine": "x86_64",
+    "processor": "",
+    "platform": "Linux-6.12.65-amd64-desktop-rolling-x86_64-with-glibc2.38"
+  },
+  "results": [
+    {
+      "operation": "add",
+      "iterations": 200,
+      "total_ns": 313843539,
+      "ns_per_iter": 1569217.695,
+      "shape": [
+        1000000
+      ],
+      "dtype": "float64"
+    },
+    {
+      "operation": "mul",
+      "iterations": 200,
+      "total_ns": 281865704,
+      "ns_per_iter": 1409328.52,
+      "shape": [
+        1000000
+      ],
+      "dtype": "float64"
+    },
+    {
+      "operation": "sum",
+      "iterations": 400,
+      "total_ns": 165539250,
+      "ns_per_iter": 413848.125,
+      "shape": [
+        1000000
+      ],
+      "dtype": "float64"
+    },
+    {
+      "operation": "matmul",
+      "iterations": 20,
+      "total_ns": 2270128964,
+      "ns_per_iter": 113506448.2,
+      "shape": [
+        512,
+        512
+      ],
+      "dtype": "float64"
+    },
+    {
+      "operation": "random",
+      "iterations": 100,
+      "total_ns": 432923375,
+      "ns_per_iter": 4329233.75,
+      "shape": [
+        1000000
+      ],
+      "dtype": "float64"
+    }
+  ]
+}

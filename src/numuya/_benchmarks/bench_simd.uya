@@ -187,6 +187,22 @@ fn print_result(name: &const byte, scalar_ns: u64, simd_ns: u64, elements: usize
     write_str("x\n");
 }
 
+fn print_json_result(operation: &const byte, dtype: &const byte, elements: usize, total_ns: u64, iterations: usize) void {
+    write_str("BENCH_JSON|operation=");
+    write_str(operation);
+    write_str("|mode=cpu");
+    write_str("|metric=latency");
+    write_str("|dtype=");
+    write_str(dtype);
+    write_str("|shape=");
+    write_usize(elements);
+    write_str("|iterations=");
+    write_usize(iterations);
+    write_str("|total_ns=");
+    write_usize(total_ns as usize);
+    write_newline();
+}
+
 export fn main() i32 {
     var malloc_allocator: MallocAllocator = MallocAllocator{};
     var allocator: IAllocator = malloc_allocator;
@@ -220,6 +236,7 @@ export fn main() i32 {
         return 1;
     };
     print_result("add_f64", add_scalar_ns, add_simd_ns, size, iterations);
+    print_json_result("add", "float64", size, add_simd_ns, iterations);
 
     const mul_scalar_ns: u64 = bench_mul_scalar(&left, &right, iterations) catch {
         write_str("error: scalar mul benchmark failed\n");
@@ -230,6 +247,7 @@ export fn main() i32 {
         return 1;
     };
     print_result("mul_f64", mul_scalar_ns, mul_simd_ns, size, iterations);
+    print_json_result("mul", "float64", size, mul_simd_ns, iterations);
 
     const sum_scalar_ns: u64 = bench_sum_scalar(&left, iterations) catch {
         write_str("error: scalar sum benchmark failed\n");
@@ -240,6 +258,7 @@ export fn main() i32 {
         return 1;
     };
     print_result("sum_all_f64", sum_scalar_ns, sum_simd_ns, size, iterations);
+    print_json_result("sum", "float64", size, sum_simd_ns, iterations);
 
     write_newline();
     write_str("Done.\n");

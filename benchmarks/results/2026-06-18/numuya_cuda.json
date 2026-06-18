@@ -1,0 +1,182 @@
+{
+  "benchmark": "numuya_cuda",
+  "metadata": {
+    "numuya_commit": "bba2b7af2be1e8c9b097c3146e330dec134f8958",
+    "run_date": "2026-06-18",
+    "command": "OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 NUMEXPR_NUM_THREADS=1 make bench",
+    "raw_output_path": "/media/winger/_dde_data/winger/uya/numuya/benchmarks/results/2026-06-18/numuya_raw.txt"
+  },
+  "results": [
+    {
+      "operation": "transfer_h2d",
+      "mode": "end-to-end",
+      "metric": "bandwidth",
+      "dtype": "float64",
+      "shape": [
+        1000000
+      ],
+      "iterations": 100,
+      "total_ns": 97225076,
+      "ns_per_iter": 972250.76
+    },
+    {
+      "operation": "transfer_d2h",
+      "mode": "end-to-end",
+      "metric": "bandwidth",
+      "dtype": "float64",
+      "shape": [
+        1000000
+      ],
+      "iterations": 100,
+      "total_ns": 91692008,
+      "ns_per_iter": 916920.08
+    },
+    {
+      "operation": "add",
+      "mode": "kernel-only",
+      "metric": "throughput",
+      "dtype": "float32",
+      "shape": [
+        1000000
+      ],
+      "iterations": 100,
+      "total_ns": 3888693,
+      "ns_per_iter": 38886.93
+    },
+    {
+      "operation": "add",
+      "mode": "end-to-end",
+      "metric": "throughput",
+      "dtype": "float32",
+      "shape": [
+        1000000
+      ],
+      "iterations": 100,
+      "total_ns": 192805777,
+      "ns_per_iter": 1928057.77
+    },
+    {
+      "operation": "add",
+      "mode": "kernel-only",
+      "metric": "throughput",
+      "dtype": "float64",
+      "shape": [
+        1000000
+      ],
+      "iterations": 100,
+      "total_ns": 7903515,
+      "ns_per_iter": 79035.15
+    },
+    {
+      "operation": "add",
+      "mode": "end-to-end",
+      "metric": "throughput",
+      "dtype": "float64",
+      "shape": [
+        1000000
+      ],
+      "iterations": 100,
+      "total_ns": 196820599,
+      "ns_per_iter": 1968205.99
+    },
+    {
+      "operation": "matmul",
+      "mode": "kernel-only",
+      "metric": "tflops",
+      "dtype": "float32",
+      "shape": [
+        1024,
+        1024
+      ],
+      "iterations": 10,
+      "total_ns": 17086604,
+      "ns_per_iter": 1708660.4
+    },
+    {
+      "operation": "matmul",
+      "mode": "kernel-only",
+      "metric": "tflops",
+      "dtype": "float32",
+      "shape": [
+        2048,
+        2048
+      ],
+      "iterations": 10,
+      "total_ns": 139139445,
+      "ns_per_iter": 13913944.5
+    },
+    {
+      "operation": "matmul_vendor_tf32",
+      "mode": "kernel-only",
+      "metric": "tflops",
+      "dtype": "float32",
+      "shape": [
+        2048,
+        2048
+      ],
+      "iterations": 10,
+      "total_ns": 15135346,
+      "ns_per_iter": 1513534.6
+    },
+    {
+      "operation": "sum",
+      "mode": "kernel-only",
+      "metric": "throughput",
+      "dtype": "float32",
+      "shape": [
+        1000000
+      ],
+      "iterations": 100,
+      "total_ns": 3427079,
+      "ns_per_iter": 34270.79
+    },
+    {
+      "operation": "sum",
+      "mode": "end-to-end",
+      "metric": "throughput",
+      "dtype": "float32",
+      "shape": [
+        1000000
+      ],
+      "iterations": 100,
+      "total_ns": 192344163,
+      "ns_per_iter": 1923441.63
+    },
+    {
+      "operation": "sum",
+      "mode": "kernel-only",
+      "metric": "throughput",
+      "dtype": "float64",
+      "shape": [
+        1000000
+      ],
+      "iterations": 100,
+      "total_ns": 5838378,
+      "ns_per_iter": 58383.78
+    },
+    {
+      "operation": "sum",
+      "mode": "end-to-end",
+      "metric": "throughput",
+      "dtype": "float64",
+      "shape": [
+        1000000
+      ],
+      "iterations": 100,
+      "total_ns": 194755462,
+      "ns_per_iter": 1947554.62
+    },
+    {
+      "operation": "random",
+      "mode": "kernel-only",
+      "metric": "throughput",
+      "dtype": "float32",
+      "shape": [
+        1000000
+      ],
+      "iterations": 100,
+      "total_ns": 2663465,
+      "ns_per_iter": 26634.65
+    }
+  ]
+}

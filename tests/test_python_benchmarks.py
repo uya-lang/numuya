@@ -128,8 +128,10 @@ class PythonBenchmarkScriptsTest(unittest.TestCase):
             tmpdir = Path(tmp)
             input_dir = tmpdir / "inputs"
             output_dir = tmpdir / "outputs"
+            doc_path = tmpdir / "numpy_comparison.md"
             input_dir.mkdir()
             output_dir.mkdir()
+            doc_path.write_text("# NumUya vs NumPy Benchmark 规则\n", encoding="utf-8")
 
             (input_dir / "numpy_cpu.json").write_text(
                 json.dumps(
@@ -262,6 +264,17 @@ class PythonBenchmarkScriptsTest(unittest.TestCase):
                         },
                         "results": [
                             {
+                                "operation": "transfer_h2d",
+                                "mode": "end-to-end",
+                                "dtype": "float64",
+                                "shape": [1000000],
+                                "iterations": 100,
+                                "metric": "bandwidth",
+                                "unit": "GB/s",
+                                "total_ns": 400000,
+                                "throughput": 12.0,
+                            },
+                            {
                                 "operation": "add",
                                 "mode": "end-to-end",
                                 "dtype": "float64",
@@ -297,6 +310,8 @@ class PythonBenchmarkScriptsTest(unittest.TestCase):
                     str(input_dir),
                     "--output-dir",
                     str(output_dir),
+                    "--doc-path",
+                    str(doc_path),
                 ],
                 check=True,
                 capture_output=True,
@@ -307,6 +322,7 @@ class PythonBenchmarkScriptsTest(unittest.TestCase):
 
             summary_json = json.loads((output_dir / "benchmark_summary.json").read_text(encoding="utf-8"))
             summary_md = (output_dir / "benchmark_summary.md").read_text(encoding="utf-8")
+            report_doc = doc_path.read_text(encoding="utf-8")
 
             self.assertEqual(summary_json["metadata"]["run_date"], "2026-06-18")
             self.assertEqual(
@@ -319,11 +335,18 @@ class PythonBenchmarkScriptsTest(unittest.TestCase):
             self.assertEqual(cpu_rows[1]["baseline_status"], "ok")
             self.assertEqual(summary_json["sections"][1]["rows"][0]["speedup_vs_numpy_cpu"], 1.11)
             self.assertEqual(summary_json["sections"][3]["rows"][0]["speedup_vs_numpy_cpu"], 2.0)
+            self.assertIn(
+                "transfer_h2d",
+                [row["operation"] for row in summary_json["sections"][1]["rows"]],
+            )
             self.assertIn("missing", summary_md)
             self.assertIn("failed", summary_md)
             self.assertIn("CUDA end-to-end", summary_md)
             self.assertIn("CUDA kernel-only", summary_md)
             self.assertIn("CuPy reference", summary_md)
+            self.assertIn("## 第一版 CPU / GPU 对比报告", report_doc)
+            self.assertIn("NumPy 无 GPU backend", report_doc)
+            self.assertIn(str(input_dir), report_doc)
 
 
 if __name__ == "__main__":

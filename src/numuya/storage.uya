@@ -55,12 +55,14 @@ export fn storage_release<T>(storage_value: &Storage<T>) void {
 fn _force_storage_release_instantiations() void {
     var _f64: &Storage<f64> = null;
     var _f32: &Storage<f32> = null;
+    var _bool: &Storage<bool> = null;
     var _i32: &Storage<i32> = null;
     var _i64: &Storage<i64> = null;
     var _u8: &Storage<u8> = null;
     var _usz: &Storage<usize> = null;
     storage_release<f64>(_f64);
     storage_release<f32>(_f32);
+    storage_release<bool>(_bool);
     storage_release<i32>(_i32);
     storage_release<i64>(_i64);
     storage_release<u8>(_u8);

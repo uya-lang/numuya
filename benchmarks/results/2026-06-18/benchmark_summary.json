@@ -1,0 +1,519 @@
+{
+  "metadata": {
+    "run_date": "2026-06-18",
+    "numuya_commit": "bba2b7af2be1e8c9b097c3146e330dec134f8958",
+    "commands": [
+      "OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 NUMEXPR_NUM_THREADS=1 make bench",
+      "OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 NUMEXPR_NUM_THREADS=1 make bench"
+    ]
+  },
+  "sections": [
+    {
+      "category": "CPU",
+      "rows": [
+        {
+          "category": "CPU",
+          "operation": "add",
+          "dtype": "float64",
+          "shape": [
+            1000000
+          ],
+          "status": "ok",
+          "baseline_status": "ok",
+          "total_ns": 9280931973,
+          "ns_per_iter": 92809319.73,
+          "metric": "latency",
+          "unit": "ns/iter",
+          "throughput": null,
+          "speedup_vs_numpy_cpu": 0.02
+        },
+        {
+          "category": "CPU",
+          "operation": "matmul",
+          "dtype": "float64",
+          "shape": [
+            512,
+            512
+          ],
+          "status": "missing",
+          "baseline_status": "ok",
+          "total_ns": null,
+          "ns_per_iter": null,
+          "metric": "latency",
+          "unit": "ns/iter",
+          "throughput": null,
+          "speedup_vs_numpy_cpu": null
+        },
+        {
+          "category": "CPU",
+          "operation": "mul",
+          "dtype": "float64",
+          "shape": [
+            1000000
+          ],
+          "status": "ok",
+          "baseline_status": "ok",
+          "total_ns": 8031348110,
+          "ns_per_iter": 80313481.1,
+          "metric": "latency",
+          "unit": "ns/iter",
+          "throughput": null,
+          "speedup_vs_numpy_cpu": 0.02
+        },
+        {
+          "category": "CPU",
+          "operation": "random",
+          "dtype": "float64",
+          "shape": [
+            1000000
+          ],
+          "status": "missing",
+          "baseline_status": "ok",
+          "total_ns": null,
+          "ns_per_iter": null,
+          "metric": "latency",
+          "unit": "ns/iter",
+          "throughput": null,
+          "speedup_vs_numpy_cpu": null
+        },
+        {
+          "category": "CPU",
+          "operation": "sum",
+          "dtype": "float64",
+          "shape": [
+            1000000
+          ],
+          "status": "ok",
+          "baseline_status": "ok",
+          "total_ns": 3322115076,
+          "ns_per_iter": 33221150.76,
+          "metric": "latency",
+          "unit": "ns/iter",
+          "throughput": null,
+          "speedup_vs_numpy_cpu": 0.01
+        }
+      ]
+    },
+    {
+      "category": "CUDA end-to-end",
+      "rows": [
+        {
+          "category": "CUDA end-to-end",
+          "operation": "add",
+          "dtype": "float32",
+          "shape": [
+            1000000
+          ],
+          "status": "ok",
+          "baseline_status": "missing",
+          "total_ns": 192805777,
+          "ns_per_iter": 1928057.77,
+          "metric": "throughput",
+          "unit": "ns/iter",
+          "throughput": null,
+          "speedup_vs_numpy_cpu": null
+        },
+        {
+          "category": "CUDA end-to-end",
+          "operation": "add",
+          "dtype": "float64",
+          "shape": [
+            1000000
+          ],
+          "status": "ok",
+          "baseline_status": "ok",
+          "total_ns": 196820599,
+          "ns_per_iter": 1968205.99,
+          "metric": "throughput",
+          "unit": "ns/iter",
+          "throughput": null,
+          "speedup_vs_numpy_cpu": 0.8
+        },
+        {
+          "category": "CUDA end-to-end",
+          "operation": "matmul",
+          "dtype": "float64",
+          "shape": [
+            512,
+            512
+          ],
+          "status": "missing",
+          "baseline_status": "ok",
+          "total_ns": null,
+          "ns_per_iter": null,
+          "metric": "latency",
+          "unit": "ns/iter",
+          "throughput": null,
+          "speedup_vs_numpy_cpu": null
+        },
+        {
+          "category": "CUDA end-to-end",
+          "operation": "mul",
+          "dtype": "float64",
+          "shape": [
+            1000000
+          ],
+          "status": "missing",
+          "baseline_status": "ok",
+          "total_ns": null,
+          "ns_per_iter": null,
+          "metric": "latency",
+          "unit": "ns/iter",
+          "throughput": null,
+          "speedup_vs_numpy_cpu": null
+        },
+        {
+          "category": "CUDA end-to-end",
+          "operation": "random",
+          "dtype": "float64",
+          "shape": [
+            1000000
+          ],
+          "status": "missing",
+          "baseline_status": "ok",
+          "total_ns": null,
+          "ns_per_iter": null,
+          "metric": "latency",
+          "unit": "ns/iter",
+          "throughput": null,
+          "speedup_vs_numpy_cpu": null
+        },
+        {
+          "category": "CUDA end-to-end",
+          "operation": "sum",
+          "dtype": "float32",
+          "shape": [
+            1000000
+          ],
+          "status": "ok",
+          "baseline_status": "missing",
+          "total_ns": 192344163,
+          "ns_per_iter": 1923441.63,
+          "metric": "throughput",
+          "unit": "ns/iter",
+          "throughput": null,
+          "speedup_vs_numpy_cpu": null
+        },
+        {
+          "category": "CUDA end-to-end",
+          "operation": "sum",
+          "dtype": "float64",
+          "shape": [
+            1000000
+          ],
+          "status": "ok",
+          "baseline_status": "ok",
+          "total_ns": 194755462,
+          "ns_per_iter": 1947554.62,
+          "metric": "throughput",
+          "unit": "ns/iter",
+          "throughput": null,
+          "speedup_vs_numpy_cpu": 0.21
+        },
+        {
+          "category": "CUDA end-to-end",
+          "operation": "transfer_d2h",
+          "dtype": "float64",
+          "shape": [
+            1000000
+          ],
+          "status": "ok",
+          "baseline_status": "missing",
+          "total_ns": 91692008,
+          "ns_per_iter": 916920.08,
+          "metric": "bandwidth",
+          "unit": "ns/iter",
+          "throughput": null,
+          "speedup_vs_numpy_cpu": null
+        },
+        {
+          "category": "CUDA end-to-end",
+          "operation": "transfer_h2d",
+          "dtype": "float64",
+          "shape": [
+            1000000
+          ],
+          "status": "ok",
+          "baseline_status": "missing",
+          "total_ns": 97225076,
+          "ns_per_iter": 972250.76,
+          "metric": "bandwidth",
+          "unit": "ns/iter",
+          "throughput": null,
+          "speedup_vs_numpy_cpu": null
+        }
+      ]
+    },
+    {
+      "category": "CUDA kernel-only",
+      "rows": [
+        {
+          "category": "CUDA kernel-only",
+          "operation": "add",
+          "dtype": "float32",
+          "shape": [
+            1000000
+          ],
+          "status": "ok",
+          "baseline_status": "missing",
+          "total_ns": 3888693,
+          "ns_per_iter": 38886.93,
+          "metric": "throughput",
+          "unit": "ns/iter",
+          "throughput": null,
+          "speedup_vs_numpy_cpu": null
+        },
+        {
+          "category": "CUDA kernel-only",
+          "operation": "add",
+          "dtype": "float64",
+          "shape": [
+            1000000
+          ],
+          "status": "ok",
+          "baseline_status": "ok",
+          "total_ns": 7903515,
+          "ns_per_iter": 79035.15,
+          "metric": "throughput",
+          "unit": "ns/iter",
+          "throughput": null,
+          "speedup_vs_numpy_cpu": 19.85
+        },
+        {
+          "category": "CUDA kernel-only",
+          "operation": "matmul",
+          "dtype": "float32",
+          "shape": [
+            1024,
+            1024
+          ],
+          "status": "ok",
+          "baseline_status": "missing",
+          "total_ns": 17086604,
+          "ns_per_iter": 1708660.4,
+          "metric": "tflops",
+          "unit": "ns/iter",
+          "throughput": null,
+          "speedup_vs_numpy_cpu": null
+        },
+        {
+          "category": "CUDA kernel-only",
+          "operation": "matmul",
+          "dtype": "float32",
+          "shape": [
+            2048,
+            2048
+          ],
+          "status": "ok",
+          "baseline_status": "missing",
+          "total_ns": 139139445,
+          "ns_per_iter": 13913944.5,
+          "metric": "tflops",
+          "unit": "ns/iter",
+          "throughput": null,
+          "speedup_vs_numpy_cpu": null
+        },
+        {
+          "category": "CUDA kernel-only",
+          "operation": "matmul",
+          "dtype": "float64",
+          "shape": [
+            512,
+            512
+          ],
+          "status": "missing",
+          "baseline_status": "ok",
+          "total_ns": null,
+          "ns_per_iter": null,
+          "metric": "latency",
+          "unit": "ns/iter",
+          "throughput": null,
+          "speedup_vs_numpy_cpu": null
+        },
+        {
+          "category": "CUDA kernel-only",
+          "operation": "matmul_vendor_tf32",
+          "dtype": "float32",
+          "shape": [
+            2048,
+            2048
+          ],
+          "status": "ok",
+          "baseline_status": "missing",
+          "total_ns": 15135346,
+          "ns_per_iter": 1513534.6,
+          "metric": "tflops",
+          "unit": "ns/iter",
+          "throughput": null,
+          "speedup_vs_numpy_cpu": null
+        },
+        {
+          "category": "CUDA kernel-only",
+          "operation": "mul",
+          "dtype": "float64",
+          "shape": [
+            1000000
+          ],
+          "status": "missing",
+          "baseline_status": "ok",
+          "total_ns": null,
+          "ns_per_iter": null,
+          "metric": "latency",
+          "unit": "ns/iter",
+          "throughput": null,
+          "speedup_vs_numpy_cpu": null
+        },
+        {
+          "category": "CUDA kernel-only",
+          "operation": "random",
+          "dtype": "float32",
+          "shape": [
+            1000000
+          ],
+          "status": "ok",
+          "baseline_status": "missing",
+          "total_ns": 2663465,
+          "ns_per_iter": 26634.65,
+          "metric": "throughput",
+          "unit": "ns/iter",
+          "throughput": null,
+          "speedup_vs_numpy_cpu": null
+        },
+        {
+          "category": "CUDA kernel-only",
+          "operation": "random",
+          "dtype": "float64",
+          "shape": [
+            1000000
+          ],
+          "status": "missing",
+          "baseline_status": "ok",
+          "total_ns": null,
+          "ns_per_iter": null,
+          "metric": "latency",
+          "unit": "ns/iter",
+          "throughput": null,
+          "speedup_vs_numpy_cpu": null
+        },
+        {
+          "category": "CUDA kernel-only",
+          "operation": "sum",
+          "dtype": "float32",
+          "shape": [
+            1000000
+          ],
+          "status": "ok",
+          "baseline_status": "missing",
+          "total_ns": 3427079,
+          "ns_per_iter": 34270.79,
+          "metric": "throughput",
+          "unit": "ns/iter",
+          "throughput": null,
+          "speedup_vs_numpy_cpu": null
+        },
+        {
+          "category": "CUDA kernel-only",
+          "operation": "sum",
+          "dtype": "float64",
+          "shape": [
+            1000000
+          ],
+          "status": "ok",
+          "baseline_status": "ok",
+          "total_ns": 5838378,
+          "ns_per_iter": 58383.78,
+          "metric": "throughput",
+          "unit": "ns/iter",
+          "throughput": null,
+          "speedup_vs_numpy_cpu": 7.09
+        }
+      ]
+    },
+    {
+      "category": "CuPy reference",
+      "rows": [
+        {
+          "category": "CuPy reference",
+          "operation": "add",
+          "dtype": "float64",
+          "shape": [
+            1000000
+          ],
+          "status": "missing",
+          "baseline_status": "ok",
+          "total_ns": null,
+          "ns_per_iter": null,
+          "metric": "latency",
+          "unit": "ns/iter",
+          "throughput": null,
+          "speedup_vs_numpy_cpu": null
+        },
+        {
+          "category": "CuPy reference",
+          "operation": "matmul",
+          "dtype": "float64",
+          "shape": [
+            512,
+            512
+          ],
+          "status": "missing",
+          "baseline_status": "ok",
+          "total_ns": null,
+          "ns_per_iter": null,
+          "metric": "latency",
+          "unit": "ns/iter",
+          "throughput": null,
+          "speedup_vs_numpy_cpu": null
+        },
+        {
+          "category": "CuPy reference",
+          "operation": "mul",
+          "dtype": "float64",
+          "shape": [
+            1000000
+          ],
+          "status": "missing",
+          "baseline_status": "ok",
+          "total_ns": null,
+          "ns_per_iter": null,
+          "metric": "latency",
+          "unit": "ns/iter",
+          "throughput": null,
+          "speedup_vs_numpy_cpu": null
+        },
+        {
+          "category": "CuPy reference",
+          "operation": "random",
+          "dtype": "float64",
+          "shape": [
+            1000000
+          ],
+          "status": "missing",
+          "baseline_status": "ok",
+          "total_ns": null,
+          "ns_per_iter": null,
+          "metric": "latency",
+          "unit": "ns/iter",
+          "throughput": null,
+          "speedup_vs_numpy_cpu": null
+        },
+        {
+          "category": "CuPy reference",
+          "operation": "sum",
+          "dtype": "float64",
+          "shape": [
+            1000000
+          ],
+          "status": "missing",
+          "baseline_status": "ok",
+          "total_ns": null,
+          "ns_per_iter": null,
+          "metric": "latency",
+          "unit": "ns/iter",
+          "throughput": null,
+          "speedup_vs_numpy_cpu": null
+        }
+      ]
+    }
+  ]
+}

@@ -18,6 +18,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--input-dir", required=True)
     parser.add_argument("--output-dir", required=True)
+    parser.add_argument("--doc-path")
     return parser.parse_args()
 
 
@@ -83,9 +84,9 @@ def make_row(
     target = row or {}
     return {
         "category": category,
-        "operation": target.get("operation") or baseline.get("operation") if baseline else "",
-        "dtype": target.get("dtype") or baseline.get("dtype") if baseline else "",
-        "shape": target.get("shape") or baseline.get("shape") if baseline else [],
+        "operation": target.get("operation") or (baseline.get("operation") if baseline else ""),
+        "dtype": target.get("dtype") or (baseline.get("dtype") if baseline else ""),
+        "shape": target.get("shape") or (baseline.get("shape") if baseline else []),
         "status": row_status(row),
         "baseline_status": baseline_status(baseline),
         "total_ns": target.get("total_ns") if row else None,
@@ -137,6 +138,51 @@ def render_markdown(metadata: dict[str, Any], sections: list[dict[str, Any]]) ->
             )
         lines.append("")
     return "\n".join(lines)
+
+
+def render_report_section(input_dir: Path, metadata: dict[str, Any], sections: list[dict[str, Any]], gpu_reference: dict[str, Any]) -> str:
+    lines = [
+        "## 第一版 CPU / GPU 对比报告",
+        "",
+        f"- 原始结果目录：`{input_dir}`",
+        f"- benchmark 运行日期：`{metadata.get('run_date', 'unknown')}`",
+        f"- NumUya commit：`{metadata.get('numuya_commit', 'unknown')}`",
+        "- 计时口径：CPU 与 `NumPy CPU baseline` 结论来自 wall-clock；`NumUya CUDA kernel-only` 只代表设备端 kernel 时间；当前 `CuPy` 未安装则不生成同机 GPU reference。",
+        "- 说明：NumPy 无 GPU backend，因此 GPU 主表只比较 `NumUya CUDA end-to-end` 与 `NumPy CPU baseline`；`NumUya CUDA kernel-only` 单列报告，不伪造 `NumPy GPU` 数据。",
+        "",
+    ]
+    for section in sections:
+        lines.append(f"### {section['category']}")
+        if section["category"] == "CUDA end-to-end":
+            lines.append("")
+            lines.append("非同类设备对比，仅作端到端参考。")
+        lines.append("")
+        lines.append("| operation | dtype | shape | status | ns_per_iter | throughput | speedup_vs_numpy_cpu |")
+        lines.append("| --- | --- | --- | --- | --- | --- | --- |")
+        for row in section["rows"]:
+            shape = "x".join(str(v) for v in row["shape"]) if row["shape"] else "-"
+            lines.append(
+                f"| {row['operation'] or '-'} | {row['dtype'] or '-'} | {shape} | {row['status']} | "
+                f"{row['ns_per_iter'] if row['ns_per_iter'] is not None else 'missing'} | "
+                f"{row['throughput'] if row['throughput'] is not None else 'missing'} | "
+                f"{row['speedup_vs_numpy_cpu'] if row['speedup_vs_numpy_cpu'] is not None else 'missing'} |"
+            )
+        lines.append("")
+    if not gpu_reference.get("available", False):
+        lines.append(f"- CuPy reference：不可用（{gpu_reference.get('reason', 'unknown')}）。")
+    lines.append("")
+    return "\n".join(lines)
+
+
+def write_report_doc(doc_path: Path, input_dir: Path, metadata: dict[str, Any], sections: list[dict[str, Any]], gpu_reference: dict[str, Any]) -> None:
+    original = doc_path.read_text(encoding="utf-8") if doc_path.exists() else ""
+    marker = "## 第一版 CPU / GPU 对比报告"
+    if marker in original:
+        original = original.split(marker, 1)[0].rstrip() + "\n\n"
+    elif original and not original.endswith("\n"):
+        original += "\n"
+    report = render_report_section(input_dir, metadata, sections, gpu_reference)
+    doc_path.write_text(f"{original}{report}", encoding="utf-8")
 
 
 def main() -> None:
@@ -197,6 +243,8 @@ def main() -> None:
 
     (output_dir / "benchmark_summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
     (output_dir / "benchmark_summary.md").write_text(render_markdown(metadata, sections), encoding="utf-8")
+    if args.doc_path:
+        write_report_doc(Path(args.doc_path), input_dir, metadata, sections, gpu_reference.get("gpu_reference", {}))
 
 
 if __name__ == "__main__":

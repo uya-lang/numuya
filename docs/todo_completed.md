@@ -1532,3 +1532,36 @@ NUMUYA_CUDA_REQUIRED=1 LDFLAGS="-lcublasLt -lcublas -lcufft -lcurand -lcuda" ../
   - 验证：
     - `python -m unittest tests.test_python_benchmarks` -> `Ran 12 tests in 8.902s`, `OK`
     - `make bench-report` -> 生成 `benchmarks/results/latest/benchmark_summary.json` 与 `benchmarks/results/latest/benchmark_summary.md`（验证后已清理临时产物）
+### Phase 24: NumPy 性能对比（CPU / GPU）
+
+- [x] 生成第一版 CPU / GPU 对比报告。
+  - CPU 段落：先给 `NumUya CPU/SIMD` vs `NumPy CPU`。
+  - GPU 段落：先给 `NumUya CUDA end-to-end` vs `NumPy CPU`，再单列 `NumUya CUDA kernel-only`。
+  - 若 `CuPy` 可用，再附一张 `NumUya CUDA` vs `CuPy` 的同机 GPU 横向表，但和 NumPy 主表分开。
+  - 明确写出哪些结论来自 wall-clock，哪些来自 kernel/event 计时。
+  - 实现：
+    - `src/numuya/_benchmarks/bench_simd.uya` 新增 `BENCH_JSON` 输出，补齐 CPU benchmark 的机器可读原始数据。
+    - `src/numuya/storage.uya` 补上 `Storage<bool>` 的强制实例化，修复 `make bench` 真实运行时的代码生成缺口。
+    - `benchmarks/python/collect_numuya_benchmarks.py` 新增原始 `make bench` 文本解析链路，生成 `numuya_cpu.json` / `numuya_cuda.json`。
+    - `benchmarks/python/summarize_benchmarks.py` 新增 `--doc-path` 并把 `benchmarks/results/2026-06-18/` 的 summary 同步进 `docs/benchmarks/numpy_comparison.md`。
+    - `Makefile` 的 `bench-report` 改为支持 `BENCH_RESULTS_DIR` / `BENCH_REPORT_DOC`，不再写死 `benchmarks/results/latest`。
+  - 产物：
+    - `benchmarks/results/2026-06-18/numpy_cpu.json`
+    - `benchmarks/results/2026-06-18/gpu_reference.json`
+    - `benchmarks/results/2026-06-18/numuya_raw.txt`
+    - `benchmarks/results/2026-06-18/numuya_cpu.json`
+    - `benchmarks/results/2026-06-18/numuya_cuda.json`
+    - `benchmarks/results/2026-06-18/benchmark_summary.json`
+    - `benchmarks/results/2026-06-18/benchmark_summary.md`
+  - 验证命令：
+    - `OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 NUMEXPR_NUM_THREADS=1 make bench-guardrails-cpu`
+    - `OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 NUMEXPR_NUM_THREADS=1 make bench-guardrails-gpu`
+    - `OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 NUMEXPR_NUM_THREADS=1 python benchmarks/python/bench_numpy_cpu.py --json > benchmarks/results/2026-06-18/numpy_cpu.json`
+    - `OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 NUMEXPR_NUM_THREADS=1 python benchmarks/python/bench_gpu_reference.py --json > benchmarks/results/2026-06-18/gpu_reference.json`
+    - `OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 NUMEXPR_NUM_THREADS=1 make bench > benchmarks/results/2026-06-18/numuya_raw.txt`
+    - `python benchmarks/python/collect_numuya_benchmarks.py --input benchmarks/results/2026-06-18/numuya_raw.txt --output-dir benchmarks/results/2026-06-18 --run-date 2026-06-18 --command 'OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 NUMEXPR_NUM_THREADS=1 make bench'`
+    - `BENCH_RESULTS_DIR=benchmarks/results/2026-06-18 BENCH_REPORT_DOC=docs/benchmarks/numpy_comparison.md make bench-report`
+    - `python -m unittest tests.test_python_benchmarks`
+  - 验证结果：
+    - 以上命令均通过；`docs/benchmarks/numpy_comparison.md` 已追加 CPU / CUDA end-to-end / CUDA kernel-only / CuPy reference 报告段落，并明确写出 `NumPy` 无 GPU backend。
+    - 本机 `CuPy` 未安装，因此 `CuPy reference` 在报告中保留为不可用说明，不伪造同机 GPU 对照数据。

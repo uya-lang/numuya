@@ -40,12 +40,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
   - `NumUya CUDA kernel-only` 单独报告，不伪造“NumPy GPU”数据。
 - 如环境允许，可额外记录 `CuPy` 作为同机 GPU reference，但必须单列展示，不能替代 NumPy baseline。
 
-- [ ] 生成第一版 CPU / GPU 对比报告。
-  - CPU 段落：先给 `NumUya CPU/SIMD` vs `NumPy CPU`。
-  - GPU 段落：先给 `NumUya CUDA end-to-end` vs `NumPy CPU`，再单列 `NumUya CUDA kernel-only`。
-  - 若 `CuPy` 可用，再附一张 `NumUya CUDA` vs `CuPy` 的同机 GPU 横向表，但和 NumPy 主表分开。
-  - 明确写出哪些结论来自 wall-clock，哪些来自 kernel/event 计时。
-
 - [ ] 验收：本机能稳定复现一版对比结果。
   - `make bench`、Python 对照脚本、汇总脚本都能独立运行。
   - `docs/benchmarks/numpy_comparison.md` 同时包含 CPU 与 GPU 两部分。

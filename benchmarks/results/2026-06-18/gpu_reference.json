@@ -1,0 +1,46 @@
+{
+  "benchmark": "gpu_reference",
+  "metadata": {
+    "python_version": "3.12.11",
+    "numpy_version": "2.2.3",
+    "blas": "Build Dependencies:\n  blas:\n    detection method: pkgconfig\n    found: true\n    include directory: /usr/include/x86_64-linux-gnu\n    lib directory: /usr/lib/x86_64-linux-gnu\n    name: blas\n    openblas configuration: unknown\n    pc file directory: /usr/lib/x86_64-linux-gnu/pkgconfig\n    version: 3.11.0\n  lapack:\n    detection method: pkgconfig\n    found: true\n    include directory: /usr/include/x86_64-linux-gnu\n    lib directory: /usr/lib/x86_64-linux-gnu\n    name: lapack\n    openblas configuration: unknown\n    pc file directory: /usr/lib/x86_64-linux-gnu/pkgconfig\n    version: 3.11.0\nCompilers:\n  c:\n    args: -g, -O2, -ffile-prefix-map=$BUILDDIR=., -fstack-protector-strong, -fstack-clash-protection,\n      -Wformat, -Werror=format-security, -fcf-protection, -Wdate-time, -D_FORTIFY_SOURCE=2\n    commands: cc\n    linker: ld.bfd\n    linker args: -Wl,-z,relro, -g, -O2, -ffile-prefix-map=$BUILDDIR=., -fstack-protector-strong,\n      -fstack-clash-protection, -Wformat, -Werror=format-security, -fcf-protection,\n      -Wdate-time, -D_FORTIFY_SOURCE=2\n    name: gcc\n    version: 12.3.0\n  c++:\n    args: -g, -O2, -ffile-prefix-map=$BUILDDIR=., -fstack-protector-strong, -fstack-clash-protection,\n      -Wformat, -Werror=format-security, -fcf-protection, -Wdate-time, -D_FORTIFY_SOURCE=2\n    commands: c++\n    linker: ld.bfd\n    linker args: -Wl,-z,relro, -g, -O2, -ffile-prefix-map=$BUILDDIR=., -fstack-protector-strong,\n      -fstack-clash-protection, -Wformat, -Werror=format-security, -fcf-protection,\n      -Wdate-time, -D_FORTIFY_SOURCE=2\n    name: gcc\n    version: 12.3.0\n  cython:\n    commands: cython\n    linker: cython\n    name: cython\n    version: 3.0.10\nMachine Information:\n  build:\n    cpu: x86_64\n    endian: little\n    family: x86_64\n    system: linux\n  host:\n    cpu: x86_64\n    endian: little\n    family: x86_64\n    system: linux\nSIMD Extensions:\n  baseline:\n  - SSE\n  - SSE2\n  - SSE3\n  found:\n  - SSSE3\n  - SSE41\n  - POPCNT\n  - SSE42\n  - AVX\n  - F16C\n  - FMA3\n  - AVX2\n  not found:\n  - AVX512F\n  - AVX512CD\n  - AVX512_KNL\n  - AVX512_KNM\n  - AVX512_SKX\n  - AVX512_CLX\n  - AVX512_CNL\n  - AVX512_ICL\n  - AVX512_SPR",
+    "thread_env": {
+      "OMP_NUM_THREADS": "1",
+      "OPENBLAS_NUM_THREADS": "1",
+      "MKL_NUM_THREADS": "1",
+      "VECLIB_MAXIMUM_THREADS": "",
+      "NUMEXPR_NUM_THREADS": "1"
+    },
+    "machine": "x86_64",
+    "processor": "",
+    "platform": "Linux-6.12.65-amd64-desktop-rolling-x86_64-with-glibc2.38",
+    "cupy_version": "",
+    "host_python": "CPython"
+  },
+  "numpy_cpu_baseline": [
+    {
+      "operation": "add",
+      "iterations": 200,
+      "total_ns": 322868382,
+      "ns_per_iter": 1614341.91,
+      "shape": [
+        1000000
+      ],
+      "dtype": "float64"
+    },
+    {
+      "operation": "sum",
+      "iterations": 400,
+      "total_ns": 174166393,
+      "ns_per_iter": 435415.9825,
+      "shape": [
+        1000000
+      ],
+      "dtype": "float64"
+    }
+  ],
+  "gpu_reference": {
+    "available": false,
+    "reason": "cupy not installed"
+  }
+}
