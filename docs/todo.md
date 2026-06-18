@@ -40,12 +40,6 @@ test -x ../uya/bin/cmd/upm || make -C ../uya cmd-upm
   - `NumUya CUDA kernel-only` 单独报告，不伪造“NumPy GPU”数据。
 - 如环境允许，可额外记录 `CuPy` 作为同机 GPU reference，但必须单列展示，不能替代 NumPy baseline。
 
-- [ ] 明确 benchmark 口径并写成固定规则。
-  - 固定 dtype、shape、warmup 次数、repeat 次数、统计方式（建议 median + best + p95）。
-  - 固定线程相关环境变量：`OMP_NUM_THREADS`、`OPENBLAS_NUM_THREADS`、`MKL_NUM_THREADS`、`NUMEXPR_NUM_THREADS`。
-  - CPU benchmark 明确是否允许 NumPy 调用 BLAS；若允许，必须记录底层 backend。
-  - GPU benchmark 明确哪些数据包含传输时间，哪些只统计 kernel 时间；所有 GPU 计时前后都必须显式 synchronize。
-
 - [ ] 准备 Python 对照 benchmark 脚本。
   - 建议新增 `benchmarks/python/bench_numpy_cpu.py`，覆盖 `add`、`mul`、`sum`、`matmul`、`random`。
   - 建议新增 `benchmarks/python/bench_gpu_reference.py`，至少输出 NumPy CPU baseline；检测到 `cupy` 时再追加 GPU reference。

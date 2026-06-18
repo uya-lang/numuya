@@ -119,6 +119,13 @@
   - 验证命令：`TEST=src/numuya/_tests/test_fft.uya make test-one`
   - 结果：7/7 测试通过，包含 `fft_f64 length 2 on impulse`。
 
+## Phase 24: NumPy 性能对比（CPU / GPU）
+
+- [x] 明确 benchmark 口径并写成固定规则。
+  - 交付物：`docs/benchmarks/numpy_comparison.md`，新增 “Benchmark 固定规则” 章节，固定 CPU 主表、CUDA end-to-end、CUDA kernel-only 与可选 `CuPy reference` 的对比分组，并写死 workload、dtype、shape、warmup/repeat、统计口径、线程环境变量、BLAS backend 记录要求与 GPU synchronize 边界。
+  - 验证命令：`test -f docs/benchmarks/numpy_comparison.md && rg -n "Benchmark 固定规则|OMP_NUM_THREADS|CUDA kernel-only|CuPy reference|median|p95|OpenBLAS|MKL" docs/benchmarks/numpy_comparison.md`
+  - 结果：命令返回 0；关键规则已命中，包括 `Benchmark 固定规则`、`OMP_NUM_THREADS=1`、`CUDA kernel-only`、`CuPy reference`、`median`、`p95` 与 BLAS backend 记录要求。
+
 ## Phase 15: FFT
 
 - [x] TDD: impulse 输入。
